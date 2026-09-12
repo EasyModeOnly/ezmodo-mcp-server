@@ -35,6 +35,8 @@ import {
   signInRequired,
 } from './auth-guidance.js';
 import { getInstructions } from './instructions.js';
+import { getApiKey } from './env.js';
+import { startSignIn as defaultStartSignIn } from '../handlers/auth.js';
 
 /**
  * @param {object} [options]
@@ -81,7 +83,7 @@ function isEmailAlreadyRegistered(error) {
   return error?.code === EMAIL_ALREADY_REGISTERED;
 }
 
-export function createServer({ surface = 'local' } = {}) {
+export function createServer({ surface = 'local', startSignIn = defaultStartSignIn } = {}) {
   const log = getLogger();
 
   // Filtered ONCE here rather than at each call site, so listing and dispatch
@@ -144,11 +146,40 @@ export function createServer({ surface = 'local' } = {}) {
       // every tool goes through it, so none of them can be missed or drift
       // (#2632). Only on the local surface; over the connector Claude owns the
       // OAuth and this advice would be wrong.
+      //
+      // Two changes from the first version (#2654), both from its first real
+      // run:
+      //
+      // - It STARTS the sign-in, instead of telling the agent to call
+      //   `authenticate`. The URL is what the user needs, and making it take a
+      //   second tool call bought nothing.
+      // - It is NOT flagged isError. Nothing is broken; the user has something
+      //   to do. Clients differ in how they treat an error result — some drop
+      //   its text or report the call as failed — and this text is the one
+      //   thing that must reach the user.
+      //
+      // Except when EZMODO_API_KEY was the credential that got rejected: an
+      // explicit key outranks OAuth, so a browser sign-in could not take
+      // effect, and opening one would send the user on an errand that cannot
+      // work. That case says so, and stays an error.
       if (surface !== 'remote' && isAuthFailure(error)) {
-        return {
-          content: [{ type: 'text', text: JSON.stringify(signInRequired({ reason: errMsg }), null, 2) }],
-          isError: true,
-        };
+        if (getApiKey()) {
+          return {
+            content: [{ type: 'text', text: JSON.stringify(signInRequired({
+              reason: `EZMODO_API_KEY was rejected (${errMsg}). It takes precedence over a browser ` +
+                'sign-in, so fix or unset it — signing in will not help while it is set.',
+            }), null, 2) }],
+            isError: true,
+          };
+        }
+        let payload;
+        try {
+          payload = await startSignIn({ reason: 'Not signed in to EzModo.' });
+        } catch (signInError) {
+          log.warn('Could not start sign-in from the dispatch funnel', { error: signInError.message });
+          payload = signInRequired({ reason: errMsg });
+        }
+        return { content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }] };
       }
       // Answered on EVERY surface, unlike the sign-in prompt above. Sign-in
       // advice is surface-specific because over the connector Claude owns the

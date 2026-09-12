@@ -1,7 +1,13 @@
 /**
  * MCP Server Logger - Structured JSON Lines logging to disk
  *
- * Writes to ~/.zephly/logs/zephly-YYYY-MM-DD.log
+ * Writes to ~/.ezmodo/logs/ezmodo-YYYY-MM-DD.log
+ *
+ * Moved from ~/.zephly/logs/zephly-*.log (#2655), matching the CLI's
+ * currentLogsDir() in cli/src/lib/user-paths.ts. The old directory is NOT
+ * migrated or cleaned: these are diagnostics, safe to delete, and a server that
+ * reaches into a directory it no longer owns to tidy it is a server that can
+ * delete the wrong thing. Nothing is written under the old brand any more.
  * Daily rotation, 7-day auto-cleanup on init
  * Async fire-and-forget writes so logging never blocks tool execution
  */
@@ -11,14 +17,14 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 const RETENTION_DAYS = 7;
-const DATE_PATTERN = /^zephly-(\d{4}-\d{2}-\d{2})\.log$/;
+const DATE_PATTERN = /^ezmodo-(\d{4}-\d{2}-\d{2})\.log$/;
 
 function getDateString() {
   return new Date().toISOString().slice(0, 10);
 }
 
 function getLogFilePath(logsDir) {
-  return join(logsDir, `zephly-${getDateString()}.log`);
+  return join(logsDir, `ezmodo-${getDateString()}.log`);
 }
 
 /**
@@ -31,7 +37,7 @@ export function createLogger(options = {}) {
   const {
     source = 'mcp',
     verbose = false,
-    logsDir = join(homedir(), '.zephly', 'logs'),
+    logsDir = join(homedir(), '.ezmodo', 'logs'),
   } = options;
 
   // Ensure logs directory exists (fire-and-forget)

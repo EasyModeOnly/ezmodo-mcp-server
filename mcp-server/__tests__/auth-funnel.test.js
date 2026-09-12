@@ -18,6 +18,12 @@ jest.unstable_mockModule('../tools/index.js', () => ({
   ],
 }));
 
+const mockGetApiKey = jest.fn();
+jest.unstable_mockModule('../lib/env.js', () => ({
+  getApiKey: mockGetApiKey,
+  getApiUrl: jest.fn(),
+}));
+
 const { createServer } = await import('../lib/create-server.js');
 const { NOT_AUTHENTICATED, NO_ORGANIZATION, EMAIL_ALREADY_REGISTERED } =
   await import('../lib/auth-guidance.js');
@@ -33,30 +39,81 @@ function dispatcher(server) {
 
 const parse = (result) => JSON.parse(result.content[0].text);
 
-beforeEach(() => jest.clearAllMocks());
+const mockStartSignIn = jest.fn();
+const localServer = () => createServer({ startSignIn: mockStartSignIn });
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockGetApiKey.mockReturnValue(undefined);
+  mockStartSignIn.mockResolvedValue({
+    authenticated: false,
+    authUrl: 'https://auth.ezmodo.com/authorize?x=1',
+    action_required: 'Show this URL to the user.',
+  });
+});
 
 describe('local surface', () => {
-  it('turns a missing credential into sign-in guidance', async () => {
+  it('starts sign-in on the FIRST call and returns the URL itself (#2654)', async () => {
+    // It used to say "call `authenticate`", so the URL took a second round trip.
     const error = new Error('Not authenticated with EzModo.');
     error.code = NOT_AUTHENTICATED;
     mockHandler.mockRejectedValue(error);
 
-    const result = await dispatcher(createServer())('get_task');
+    const result = await dispatcher(localServer())('get_task');
     const payload = parse(result);
 
-    expect(result.isError).toBe(true);
+    expect(mockStartSignIn).toHaveBeenCalledTimes(1);
     expect(payload.authenticated).toBe(false);
-    expect(payload.action_required).toMatch(/authenticate/i);
+    expect(payload.authUrl).toMatch(/^https:\/\/auth\.ezmodo\.com\//);
+  });
+
+  it('returns it as a RESULT, not an error — nothing is broken, the user has a step (#2654)', async () => {
+    // Some clients drop an error result's text or report the call as failed,
+    // and this text is the one thing that must reach the user.
+    const error = new Error('Not authenticated with EzModo.');
+    error.code = NOT_AUTHENTICATED;
+    mockHandler.mockRejectedValue(error);
+
+    expect((await dispatcher(localServer())('get_task')).isError).toBeUndefined();
   });
 
   it('treats a 401 the same way — a credential can STOP being valid', async () => {
-    // A revoked key, or a refresh grant that expired while the editor sat open
-    // overnight. "Sign in" is the right answer to both.
+    // A refresh grant that expired while the editor sat open overnight, or a
+    // revoked CLI key. A fresh browser sign-in is the right answer to both.
     const error = new Error('Unauthorized');
     error.status = 401;
     mockHandler.mockRejectedValue(error);
 
-    expect(parse(await dispatcher(createServer())('get_task')).authenticated).toBe(false);
+    expect(parse(await dispatcher(localServer())('get_task')).authUrl).toBeDefined();
+    expect(mockStartSignIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT open a browser when the rejected credential is EZMODO_API_KEY', async () => {
+    // An explicit key outranks OAuth, so a browser sign-in could not take
+    // effect. Say what to fix instead of sending the user on that errand.
+    mockGetApiKey.mockReturnValue('ezm_sk_revoked');
+    const error = new Error('Unauthorized');
+    error.status = 401;
+    mockHandler.mockRejectedValue(error);
+
+    const result = await dispatcher(localServer())('get_task');
+
+    expect(mockStartSignIn).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    expect(parse(result).reason).toMatch(/EZMODO_API_KEY was rejected/);
+  });
+
+  it('falls back to plain guidance if sign-in cannot even start', async () => {
+    // e.g. no loopback port available. The call must still say something useful.
+    mockStartSignIn.mockRejectedValue(new Error('listen EADDRINUSE'));
+    const error = new Error('Not authenticated with EzModo.');
+    error.code = NOT_AUTHENTICATED;
+    mockHandler.mockRejectedValue(error);
+
+    const payload = parse(await dispatcher(localServer())('get_task'));
+
+    expect(payload.authenticated).toBe(false);
+    expect(payload.action_required).toMatch(/authenticate/i);
   });
 
   it('does NOT hijack a 403 — signed in but not permitted', async () => {
@@ -129,10 +186,13 @@ describe('remote surface', () => {
     error.status = 401;
     mockHandler.mockRejectedValue(error);
 
-    const payload = parse(await dispatcher(createServer({ surface: 'remote' }))('get_task'));
+    const payload = parse(
+      await dispatcher(createServer({ surface: 'remote', startSignIn: mockStartSignIn }))('get_task')
+    );
 
     expect(payload.authenticated).toBeUndefined();
     expect(payload.error).toBe('Unauthorized');
+    expect(mockStartSignIn).not.toHaveBeenCalled();
   });
 
   it('DOES answer the no-organization 403 — a missing workspace is ours on every surface', async () => {

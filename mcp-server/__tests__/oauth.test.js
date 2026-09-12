@@ -183,3 +183,64 @@ describe('beginLogin', () => {
     second.cancel();
   });
 });
+
+describe('the loopback page (#2654)', () => {
+  /** Drive the browser half: hit the redirect URI the way Keycloak would. */
+  async function redirect(authUrl, params) {
+    const { get } = await import('http');
+    const target = new URL(new URL(authUrl).searchParams.get('redirect_uri'));
+    for (const [k, v] of Object.entries(params)) target.searchParams.set(k, v);
+    return new Promise((resolve, reject) => {
+      get(target, (res) => {
+        let body = '';
+        res.on('data', (chunk) => (body += chunk));
+        res.on('end', () => resolve({ status: res.statusCode, body }));
+      }).on('error', reject);
+    });
+  }
+
+  it('names the signed-in account — an SSO session skips every screen before it', async () => {
+    mockFetch.mockResolvedValue(tokenResponse());
+    const { authUrl, complete } = await beginLogin();
+    const state = new URL(authUrl).searchParams.get('state');
+
+    const finished = complete();
+    const page = await redirect(authUrl, { code: 'abc', state });
+    await finished;
+
+    expect(page.status).toBe(200);
+    expect(page.body).toContain('someone@example.com');
+    expect(page.body).toMatch(/sign_out/);
+  });
+
+  it('waits for the token exchange, so a failed exchange is not shown as success', async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => 'invalid_grant' });
+    const { authUrl, complete } = await beginLogin();
+    const state = new URL(authUrl).searchParams.get('state');
+
+    const finished = complete().catch((e) => e);
+    const page = await redirect(authUrl, { code: 'abc', state });
+
+    expect(page.status).toBe(400);
+    expect(page.body).toMatch(/Sign-in failed/);
+    expect(page.body).not.toMatch(/Signed in to EzModo/);
+    expect(await finished).toBeInstanceOf(Error);
+  });
+
+  it('escapes what it interpolates', async () => {
+    const claims = Buffer.from(JSON.stringify({ sub: 'u', email: '<img src=x onerror=alert(1)>' })).toString('base64url');
+    mockFetch.mockResolvedValue({
+      ok: true, status: 200,
+      text: async () => JSON.stringify({ access_token: `h.${claims}.s`, refresh_token: 'r', expires_in: 60 }),
+    });
+    const { authUrl, complete } = await beginLogin();
+    const state = new URL(authUrl).searchParams.get('state');
+
+    const finished = complete();
+    const page = await redirect(authUrl, { code: 'abc', state });
+    await finished;
+
+    expect(page.body).not.toContain('<img');
+    expect(page.body).toContain('&lt;img');
+  });
+});

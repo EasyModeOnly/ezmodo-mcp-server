@@ -52,7 +52,7 @@ if (credential) {
   // happens to be logged in as, with no way to tell, is worse than one that fails.
   console.error(`   Credential: ${credential.detail ?? ''} (from ${credential.source})`);
 } else {
-  console.error('   Credential: none yet — sign in with the `authenticate` tool');
+  console.error('   Credential: none yet — the first tool call starts a browser sign-in');
   console.error(`   Or set EZMODO_API_KEY. Generate a key at: ${CONFIG.settingsUrl}`);
 }
 console.error('');

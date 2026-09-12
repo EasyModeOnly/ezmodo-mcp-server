@@ -54,7 +54,7 @@ const CAVEATS = [
   'A brand-new EzModo account belongs to no organization yet, so tools will ' +
     'return 403 until it does. That is an access problem, not a sign-in ' +
     'problem — signing in again will not change it. The call that hits it ' +
-    'says how to fix it; see `organizationRequired` below.',
+    'returns an `onboardingUrl` to finish setting up a workspace.',
 ];
 
 /**
@@ -70,8 +70,15 @@ export function signInRequired({ authUrl, reason } = {}) {
     reason: reason || 'No EzModo credential is available.',
     ...(authUrl
       ? {
-        action_required: 'Open this URL in a browser, approve the access, then retry the call.',
+        action_required: 'Show this URL to the user. Once they have approved it in the browser, retry the call.',
         authUrl,
+        // The tab can vanish without the user doing anything (#2654): with an
+        // existing EzModo browser session there is no login or consent screen,
+        // so it goes straight to "Signed in". Someone who closes it thinking
+        // nothing happened is usually already signed in.
+        if_unsure: 'If the browser tab closed, or showed "Signed in" without asking anything, ' +
+          'sign-in has probably already completed — retry the call, or run `authenticate` ' +
+          'with action "status" to see which account.',
       }
       : {
         action_required:

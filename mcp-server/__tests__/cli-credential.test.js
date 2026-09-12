@@ -133,6 +133,21 @@ describe('readCliCredential — macOS Keychain', () => {
     expect(mockExecFileSync.mock.calls[1][1]).toContain('zephly-cli');
   });
 
+  it('labels a pre-rebrand key as legacy, so it cannot pass for a current one (#2655)', () => {
+    // A zephly-cli key reported as "ezmodo CLI" is how a developer machine
+    // silently skipped the OAuth path customers get.
+    setPlatform('darwin');
+    mockExecFileSync
+      .mockImplementationOnce(() => {
+        throw new Error('not found');
+      })
+      .mockReturnValueOnce('ezm_sk_legacy_keychain');
+
+    const found = readCliCredential();
+    expect(found.legacy).toBe(true);
+    expect(found.source).toMatch(/legacy zephly-cli/);
+  });
+
   it('returns null when the Keychain read fails or times out', () => {
     setPlatform('darwin');
     expect(readCliCredential()).toBeNull();

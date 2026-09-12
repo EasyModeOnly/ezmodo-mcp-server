@@ -9,7 +9,7 @@ let createLogger, initLogger, getLogger;
 let testDir;
 
 beforeEach(async () => {
-  testDir = join(tmpdir(), `zephly-mcp-logger-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  testDir = join(tmpdir(), `ezmodo-mcp-logger-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   mkdirSync(testDir, { recursive: true });
 
   // Fresh import (singleton state reset)
@@ -40,7 +40,7 @@ describe('createLogger', () => {
 
     const files = readdirSync(testDir);
     expect(files.length).toBe(1);
-    expect(files[0]).toMatch(/^zephly-\d{4}-\d{2}-\d{2}\.log$/);
+    expect(files[0]).toMatch(/^ezmodo-\d{4}-\d{2}-\d{2}\.log$/);
 
     const content = readFileSync(join(testDir, files[0]), 'utf-8');
     const lines = content.trim().split('\n');
@@ -109,13 +109,13 @@ describe('createLogger', () => {
     // Create an "old" log file
     const oldDate = new Date();
     oldDate.setDate(oldDate.getDate() - 10);
-    const oldFile = `zephly-${oldDate.toISOString().slice(0, 10)}.log`;
+    const oldFile = `ezmodo-${oldDate.toISOString().slice(0, 10)}.log`;
     writeFileSync(join(testDir, oldFile), '{"ts":"old"}\n');
 
     // Create a "recent" log file
     const recentDate = new Date();
     recentDate.setDate(recentDate.getDate() - 2);
-    const recentFile = `zephly-${recentDate.toISOString().slice(0, 10)}.log`;
+    const recentFile = `ezmodo-${recentDate.toISOString().slice(0, 10)}.log`;
     writeFileSync(join(testDir, recentFile), '{"ts":"recent"}\n');
 
     const logger = createLogger({ source: 'mcp', logsDir: testDir });

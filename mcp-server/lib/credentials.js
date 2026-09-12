@@ -100,6 +100,26 @@ export function describeCredentialSync() {
   return null;
 }
 
+/**
+ * The borrowed CLI credential, without the key, for `authenticate status`.
+ *
+ * Status used to look only at EZMODO_API_KEY and its own OAuth tokens, so with
+ * nothing but a CLI key present it said "not signed in" while every call
+ * succeeded as the CLI's user (#2655). A status that disagrees with what calls
+ * actually do is worse than none.
+ *
+ * @returns {{ source: string, legacy?: boolean, keyPrefix: string }|null}
+ */
+export function describeCliCredential() {
+  const fromCli = cliCredential();
+  if (!fromCli) return null;
+  return {
+    source: fromCli.source,
+    ...(fromCli.legacy ? { legacy: true } : {}),
+    keyPrefix: `${fromCli.key.substring(0, 12)}...`,
+  };
+}
+
 /** Test seam: forget the memoized CLI lookup. */
 export function resetCredentialCache() {
   cachedCliCredential = undefined;

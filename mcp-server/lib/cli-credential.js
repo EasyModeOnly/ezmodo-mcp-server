@@ -56,6 +56,12 @@ function fromCredentialsFile() {
  */
 function fromMacKeychain() {
   if (process.platform !== 'darwin') return null;
+  // `zephly-cli` is still read because the CLI still reads it
+  // (LEGACY_SERVICE_NAME in cli/src/lib/auth-store.ts): dropping it here alone
+  // would have the server report "not signed in" to someone `ezmodo auth
+  // status` calls signed in. But it is REPORTED as legacy (#2655) — a
+  // pre-rebrand key silently answering for a new install is how a developer
+  // machine went months without ever exercising the OAuth path customers get.
   for (const service of ['ezmodo-cli', 'zephly-cli']) {
     try {
       const key = execFileSync(
@@ -63,7 +69,7 @@ function fromMacKeychain() {
         ['find-generic-password', '-s', service, '-a', 'api-key', '-w'],
         { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 2000 }
       ).trim();
-      if (key) return key;
+      if (key) return { key, legacy: service === 'zephly-cli' };
     } catch {
       // Not stored under this name, no `security` binary, denied, or timed
       // out. All of them mean the same thing here: try the next, then stop.
@@ -84,8 +90,16 @@ export function readCliCredential() {
     const fileKey = fromCredentialsFile();
     if (fileKey) return { key: fileKey, source: 'ezmodo CLI credentials file' };
 
-    const keychainKey = fromMacKeychain();
-    if (keychainKey) return { key: keychainKey, source: 'macOS Keychain (ezmodo CLI)' };
+    const keychain = fromMacKeychain();
+    if (keychain) {
+      return keychain.legacy
+        ? {
+          key: keychain.key,
+          source: 'macOS Keychain (legacy zephly-cli entry)',
+          legacy: true,
+        }
+        : { key: keychain.key, source: 'macOS Keychain (ezmodo CLI)' };
+    }
   } catch {
     // Belt and braces. Nothing above should throw, and if something does, a
     // missing fallback must not take down the server.

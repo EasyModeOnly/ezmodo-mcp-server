@@ -20,7 +20,7 @@
 import { beginLogin, getSignedInIdentity, signOut } from '../lib/oauth.js';
 import { getApiKey } from '../lib/env.js';
 import { signInRequired } from '../lib/auth-guidance.js';
-import { resetCredentialCache } from '../lib/credentials.js';
+import { describeCliCredential, resetCredentialCache } from '../lib/credentials.js';
 import { getLogger } from '../lib/logger.js';
 
 /**
@@ -73,7 +73,23 @@ async function openBrowser(url) {
   return false;
 }
 
-async function login() {
+/**
+ * Start (or rejoin) a browser sign-in and return the payload that hands its URL
+ * to the agent.
+ *
+ * Exported because it has two callers: the `authenticate` tool, and the
+ * dispatch funnel in lib/create-server.js, which calls it on the FIRST call that
+ * finds no credential (#2654). Before that, the first call only said "call
+ * `authenticate`", and the URL took a second round trip to appear.
+ *
+ * @param {object} [options]
+ * @param {string} [options.reason] Why sign-in is needed, when it was not asked for.
+ */
+export async function startSignIn({ reason } = {}) {
+  return login(reason);
+}
+
+async function login(reason) {
   const log = getLogger();
 
   if (pending) {
@@ -104,7 +120,9 @@ async function login() {
   return {
     ...signInRequired({
       authUrl: flow.authUrl,
-      reason: 'Sign-in started. Waiting for you to approve it in a browser.',
+      reason: reason
+        ? `${reason} Sign-in started — waiting for approval in a browser.`
+        : 'Sign-in started. Waiting for you to approve it in a browser.',
     }),
     browserOpened,
     next_step: browserOpened
@@ -126,6 +144,23 @@ function status() {
   const identity = getSignedInIdentity();
   if (identity) {
     return { authenticated: true, source: 'OAuth', ...identity };
+  }
+
+  // Same order as lib/credentials.js resolveCredential(): the CLI's key is
+  // used when there is nothing else, so status must say so (#2655).
+  const cli = describeCliCredential();
+  if (cli) {
+    return {
+      authenticated: true,
+      source: cli.source,
+      keyPrefix: cli.keyPrefix,
+      note: cli.legacy
+        ? 'Calls are using an API key left in the Keychain by the pre-rebrand zephly CLI. ' +
+          'Run `authenticate` to sign in with a browser instead — that takes precedence — ' +
+          'or `ezmodo auth login` to replace the old entry.'
+        : 'Calls are using the API key the ezmodo CLI stored. A browser sign-in via ' +
+          '`authenticate` would take precedence over it.',
+    };
   }
 
   return signInRequired({ reason: 'This server is not signed in.' });

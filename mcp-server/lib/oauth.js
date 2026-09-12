@@ -77,6 +77,13 @@ function decodeJwtPayload(token) {
 // Loopback callback capture
 // ============================================================
 
+/** The loopback page is HTML built from strings, so anything interpolated is escaped. */
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;',
+  })[c]);
+}
+
 const DONE_PAGE = (heading, detail) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>EzModo</title>
 <style>
@@ -84,19 +91,22 @@ const DONE_PAGE = (heading, detail) => `<!doctype html>
       display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
  main{text-align:center;max-width:26rem;padding:2rem}
  h1{font-size:1.25rem;font-weight:600;margin:0 0 .5rem}
- p{color:#9aa0a6;line-height:1.5;margin:0}
+ p{color:#9aa0a6;line-height:1.5;margin:0 0 .75rem}
+ strong{color:#e8eaed;font-weight:600}
 </style></head>
-<body><main><h1>${heading}</h1><p>${detail}</p></main></body></html>`;
+<body><main><h1>${escapeHtml(heading)}</h1>${detail}</main></body></html>`;
 
 /**
  * Listen on an ephemeral loopback port for the authorization redirect.
  *
- * Resolves with the code once one arrives. The redirect URI is returned before
+ * Resolves with the code, and a `respond` to answer the browser with, once one
+ * arrives. The redirect URI is returned before
  * the code is, because the caller needs the port to build the authorize URL —
  * hence the two-stage shape rather than a single promise.
  *
  * @param {string} expectedState
- * @returns {Promise<{ redirectUri: string, code: Promise<string>, close: () => void }>}
+ * @typedef {{ code: string, respond: (status: number, page: string) => void }} Callback
+ * @returns {Promise<{ redirectUri: string, code: Promise<Callback>, close: () => void }>}
  */
 function startCallbackServer(expectedState) {
   return new Promise((resolveReady, rejectReady) => {
@@ -115,7 +125,7 @@ function startCallbackServer(expectedState) {
 
       const fail = (message) => {
         res.writeHead(400, { 'Content-Type': 'text/html' });
-        res.end(DONE_PAGE('Sign-in failed', message));
+        res.end(DONE_PAGE('Sign-in failed', `<p>${escapeHtml(message)}</p>`));
         if (!finished) {
           finished = true;
           settle.reject(new Error(message));
@@ -144,11 +154,20 @@ function startCallbackServer(expectedState) {
         return;
       }
 
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(DONE_PAGE('You are signed in', 'You can close this tab and return to your editor.'));
+      // The page is NOT written here. It waits for the token exchange, so it
+      // can say which account was signed in (#2654). With an existing Keycloak
+      // session the browser never shows a login or consent screen — the tab
+      // flashes straight here — and "you are signed in" with no name is how
+      // someone ends up connected as an identity they did not expect.
       if (!finished) {
         finished = true;
-        settle.resolve(received);
+        settle.resolve({ code: received, respond: (status, page) => {
+          res.writeHead(status, { 'Content-Type': 'text/html' });
+          res.end(page);
+        } });
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(DONE_PAGE('Already handled', '<p>This sign-in has already completed. You can close this tab.</p>'));
       }
     });
 
@@ -254,17 +273,32 @@ export async function beginLogin() {
   getLogger().debug('OAuth sign-in started', { redirectUri, environment: endpoints.environment });
 
   const complete = async () => {
-    const authorizationCode = await code;
-    const response = await postToken({
-      grant_type: 'authorization_code',
-      client_id: endpoints.clientId,
-      code: authorizationCode,
-      redirect_uri: redirectUri,
-      code_verifier: verifier,
-    });
-    const tokens = toStoredTokens(response);
-    writeTokens(tokens);
+    const { code: authorizationCode, respond } = await code;
+    let tokens;
+    try {
+      const response = await postToken({
+        grant_type: 'authorization_code',
+        client_id: endpoints.clientId,
+        code: authorizationCode,
+        redirect_uri: redirectUri,
+        code_verifier: verifier,
+      });
+      tokens = toStoredTokens(response);
+      writeTokens(tokens);
+    } catch (error) {
+      // The browser is still waiting on this response. Leaving it hanging
+      // would look exactly like the silent success this page exists to avoid.
+      respond(400, DONE_PAGE('Sign-in failed',
+        `<p>${escapeHtml(error.message)}</p><p>Return to your editor and try again.</p>`));
+      throw error;
+    }
+
     getLogger().info('OAuth sign-in complete', { email: tokens.email });
+    respond(200, DONE_PAGE('Signed in to EzModo',
+      (tokens.email ? `<p>as <strong>${escapeHtml(tokens.email)}</strong></p>` : '') +
+      '<p>You can close this tab and return to your editor.</p>' +
+      '<p>Not the account you meant? Ask your agent to run <code>authenticate</code> ' +
+      'with <code>sign_out</code>, then sign in again.</p>'));
     return tokens;
   };
 

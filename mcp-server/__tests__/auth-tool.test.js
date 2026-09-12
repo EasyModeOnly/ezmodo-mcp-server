@@ -25,6 +25,16 @@ jest.unstable_mockModule('child_process', () => ({
   execFileSync: jest.fn(),
 }));
 
+const mockDescribeCliCredential = jest.fn();
+jest.unstable_mockModule('../lib/credentials.js', () => ({
+  describeCliCredential: mockDescribeCliCredential,
+  resetCredentialCache: jest.fn(),
+  // Not used by these tests, but imported by modules that
+  // handlers/index.js and tools/index.js pull in.
+  resolveCredential: jest.fn(),
+  describeCredentialSync: jest.fn(),
+}));
+
 const { authenticate, cancelPendingLogin } = await import('../handlers/auth.js');
 const { AUTH_TOOLS } = await import('../tools/auth.js');
 const { LOCAL_ONLY_TOOLS, isRemoteSafe } = await import('../lib/remote-tools.js');
@@ -48,6 +58,7 @@ beforeEach(() => {
   cancelPendingLogin();
   mockGetApiKey.mockReturnValue(undefined);
   mockGetSignedInIdentity.mockReturnValue(null);
+  mockDescribeCliCredential.mockReturnValue(null);
   // Browser launch "succeeds" unless a test says otherwise.
   mockExecFile.mockImplementation((cmd, args, cb) => cb(null));
 });
@@ -174,6 +185,39 @@ describe('status', () => {
     const result = await authenticate({ action: 'status' });
     expect(result.authenticated).toBe(false);
     expect(mockBeginLogin).not.toHaveBeenCalled();
+  });
+});
+
+describe('status with only a CLI key (#2655)', () => {
+  it('says calls are using it, instead of "not signed in"', async () => {
+    // Every call succeeds with the borrowed key, so "not signed in" was false.
+    mockDescribeCliCredential.mockReturnValue({
+      source: 'macOS Keychain (ezmodo CLI)', keyPrefix: 'ezm_sk_abcde...',
+    });
+
+    const result = await authenticate({ action: 'status' });
+
+    expect(result.authenticated).toBe(true);
+    expect(result.source).toBe('macOS Keychain (ezmodo CLI)');
+    expect(JSON.stringify(result)).not.toMatch(/ezm_sk_abcdefghij/);
+  });
+
+  it('calls out a legacy zephly key and how to replace it', async () => {
+    mockDescribeCliCredential.mockReturnValue({
+      source: 'macOS Keychain (legacy zephly-cli entry)', legacy: true, keyPrefix: 'ezm_sk_r1l9b...',
+    });
+
+    const result = await authenticate({ action: 'status' });
+
+    expect(result.note).toMatch(/pre-rebrand/);
+    expect(result.note).toMatch(/authenticate/);
+  });
+
+  it('still prefers OAuth when both exist — same order as resolveCredential', async () => {
+    mockGetSignedInIdentity.mockReturnValue({ email: 'a@b.c', userId: 'u', scope: 's' });
+    mockDescribeCliCredential.mockReturnValue({ source: 'macOS Keychain (ezmodo CLI)', keyPrefix: 'x' });
+
+    expect((await authenticate({ action: 'status' })).source).toBe('OAuth');
   });
 });
 

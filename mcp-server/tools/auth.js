@@ -11,11 +11,13 @@ export const AUTH_TOOLS = [
   {
     name: 'authenticate',
     description:
-      'Sign this EzModo MCP server in, or report who it is signed in as. Call ' +
-      'it when a tool reports that no credential is available. `login` ' +
-      'returns a URL to open in a browser — SHOW THAT URL TO THE USER, then ' +
-      'retry the original call once they say they have approved it. Not ' +
-      'needed when EZMODO_API_KEY is set.',
+      'Sign this EzModo MCP server in, or report who it is signed in as. You ' +
+      'rarely need `login`: any tool called with no credential starts the ' +
+      'browser sign-in itself and returns its `authUrl` — SHOW THAT URL TO THE ' +
+      'USER, then retry the original call once they have approved it. Use ' +
+      '`status` to see which account calls run as (useful when the browser ' +
+      'signed in silently from an existing session), and `sign_out` to switch ' +
+      'accounts. Not needed when EZMODO_API_KEY is set.',
     inputSchema: {
       type: 'object',
       properties: {
