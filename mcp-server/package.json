@@ -1,0 +1,75 @@
+{
+  "name": "@ezmodo/mcp-server",
+  "version": "0.14.1",
+  "description": "MCP server for ezmodo - AI-first project management",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "mcp-server": "./index.js",
+    "ezmodo-mcp-server": "./index.js",
+    "zephly-mcp-server": "./index.js",
+    "ezmodo-mcp-server-http": "./http.js"
+  },
+  "scripts": {
+    "dev": "BUILD_ENV=development node index.js",
+    "start": "node index.js",
+    "start:http": "node http.js",
+    "dev:http": "BUILD_ENV=development node http.js",
+    "build:production": "BUILD_ENV=production node --input-type=module -e 'console.log(\"Production build configured\")'",
+    "build:staging": "BUILD_ENV=staging node --input-type=module -e 'console.log(\"Staging build configured\")'",
+    "build:development": "BUILD_ENV=development node --input-type=module -e 'console.log(\"Development build configured\")'",
+    "test": "BUILD_ENV=development NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "BUILD_ENV=development NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "BUILD_ENV=development NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:smoke": "BUILD_ENV=development node test.js",
+    "lint": "eslint . --fix",
+    "generate:instructions": "node scripts/build-instructions.mjs",
+    "generate:prompts": "node scripts/build-prompts.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ezmodo",
+    "ai",
+    "project-management"
+  ],
+  "author": "ezmodo Team",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "README.md",
+    "config/",
+    "handlers/",
+    "http.js",
+    "index.js",
+    "lib/",
+    "prompts/",
+    "scripts/",
+    "tools/"
+  ],
+  "homepage": "https://ezmodo.com/docs/emo/ezmodo/help/cli-mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EasyModeOnly/ezmodo-mcp-server.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://ezmodo.com/support",
+    "email": "help@ezmodo.com"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@jest/globals": "^30.3.0",
+    "eslint": "^10.8.0",
+    "jest": "^30.5.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
