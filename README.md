@@ -35,8 +35,9 @@ Docs: https://ezmodo.com/docs/emo/ezmodo/help/cli-mcp
 `@ezmodo/mcp-server` is published to npm **from this repository**, by
 `.github/workflows/publish.yml`, with [npm provenance](https://docs.npmjs.com/generating-provenance-statements):
 each version on npm links to the exact commit and workflow run here that built
-it. The tests and the release approval run upstream first; this repo's workflow
-only packs and publishes.
+it. The tests and a first approval run upstream; this repo's workflow only packs
+the release and **stages** it (`npm stage publish`). Nothing becomes installable
+until a maintainer approves the staged version on npm with 2FA.
 
 ## Not in this mirror
 

@@ -20,6 +20,13 @@ name: Publish to npm
 # mcp-server-publish.yml, which dispatches this workflow only once they pass.
 # The package has no build step, so publishing needs no install here.
 #
+# STAGED, NOT PUBLISHED. This runs `npm stage publish`: the version lands on
+# npm as a staged release that nobody can install until a maintainer approves
+# it with 2FA (`npm stage approve`). The npm Trusted Publisher for this package
+# allows staging only. That approval is the real release gate, deliberately
+# outside GitHub: a stolen GitHub token or a tampered workflow can stage a
+# version, but it cannot make one installable.
+#
 # Dispatch-only, never on push: a sync commit is not a release decision.
 
 on:
@@ -72,16 +79,29 @@ jobs:
           fi
           echo "Publishing $ACTUAL"
 
+      # Before the skip check: `npm stage` does not exist in the npm 10 that
+      # Node 22 ships, and Trusted Publishing needs >= 11.5.1 too.
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
       # Idempotent, same as the monorepo check (#2609): a re-run after a
-      # partial failure must not try to publish twice.
-      - name: Skip if already published
+      # partial failure must not stage twice. A version waiting for approval is
+      # not on npm yet, so both states have to be checked. `npm stage list` may
+      # need credentials this job does not have; if it cannot answer, staging
+      # again is refused by npm for a duplicate version anyway.
+      - name: Skip if already published or staged
         id: published
         env:
           VERSION: ${{ inputs.version }}
         run: |
           if [ -n "$(npm view "@ezmodo/mcp-server@$VERSION" version 2>/dev/null || true)" ]; then
             echo "already=true" >> "$GITHUB_OUTPUT"
-            echo "v$VERSION is already on npm."
+            echo "v$VERSION is already published."
+            exit 0
+          fi
+          if npm stage list @ezmodo/mcp-server --json 2>/dev/null | grep -q "\"$VERSION\""; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "v$VERSION is already staged and waiting for approval."
           fi
 
       - name: Verify tarball contents
@@ -97,26 +117,26 @@ jobs:
             fi
           done
 
-      # Trusted Publishing needs npm >= 11.5.1; Node 22 ships 10.x.
-      - name: Upgrade npm
+      - name: Stage with provenance
         if: steps.published.outputs.already != 'true'
-        run: npm install -g npm@latest
+        run: npm stage publish . --provenance --access public
 
-      - name: Publish with provenance
-        if: steps.published.outputs.already != 'true'
-        run: npm publish --provenance --access public
-
-      - name: Confirm the attestation is there
+      - name: What happens next
         if: steps.published.outputs.already != 'true'
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          for i in 1 2 3 4 5 6; do
-            if [ -n "$(npm view "@ezmodo/mcp-server@$VERSION" dist.attestations.url 2>/dev/null || true)" ]; then
-              echo "Provenance attached to v$VERSION"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::v$VERSION published but no attestation is visible on npm"
-          exit 1
+          {
+            echo "## @ezmodo/mcp-server v$VERSION is STAGED, not published"
+            echo
+            echo "Nobody can install it until a maintainer approves it with 2FA:"
+            echo
+            echo '```'
+            echo "npm stage list @ezmodo/mcp-server"
+            echo "npm stage approve <stage-id>"
+            echo '```'
+            echo
+            echo "Then re-run the monorepo's *Mirror to public repos* workflow. The plugin"
+            echo "mirror refuses to pin a version npm cannot serve, so plugin users keep"
+            echo "the previous version until this one is approved."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
