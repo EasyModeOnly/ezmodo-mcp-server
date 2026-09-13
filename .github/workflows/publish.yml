@@ -1,0 +1,122 @@
+name: Publish to npm
+
+# GENERATED. This file lives in the EzModo monorepo at
+# .github/mirror-files/mcp-server/.github/workflows/publish.yml and is copied
+# here by public-mirror.yml. An edit made in this repo is overwritten by the
+# next sync.
+#
+# WHY PUBLISHING HAPPENS HERE (#2656). npm provenance attests the repository
+# that RUNS the publish workflow, and refuses a private one:
+#
+#   422 ... Only public source repositories are supported when publishing
+#   with provenance.
+#
+# The monorepo is private, this mirror is public, and it holds byte-for-byte
+# the source that was synced. Publishing from here is what puts a provenance
+# badge on @ezmodo/mcp-server without making the monorepo public.
+#
+# WHAT THIS DOES NOT DO: test. Everything that needs dependencies (the test
+# suite, the plugin pin check) and the human approval stay in the monorepo's
+# mcp-server-publish.yml, which dispatches this workflow only once they pass.
+# The package has no build step, so publishing needs no install here.
+#
+# Dispatch-only, never on push: a sync commit is not a release decision.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version expected in mcp-server/package.json. Refuses to publish anything else."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write # npm Trusted Publishing, and the provenance it signs
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish @ezmodo/mcp-server
+    runs-on: ubuntu-latest
+    # Named in the npm Trusted Publisher configuration. A dispatch from any
+    # other environment, workflow or repository cannot publish.
+    environment: npm-publish
+    defaults:
+      run:
+        working-directory: mcp-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # The sync that carries a version and the dispatch that publishes it are
+      # separate events. Refusing a mismatch means a dispatch can never publish
+      # whatever happens to be on main under someone else's version number.
+      - name: Check the version is the one requested
+        env:
+          EXPECTED: ${{ inputs.version }}
+        run: |
+          ACTUAL=$(node -p "require('./package.json').version")
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::mcp-server/package.json is $ACTUAL, dispatch asked for $EXPECTED"
+            exit 1
+          fi
+          echo "Publishing $ACTUAL"
+
+      # Idempotent, same as the monorepo check (#2609): a re-run after a
+      # partial failure must not try to publish twice.
+      - name: Skip if already published
+        id: published
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$(npm view "@ezmodo/mcp-server@$VERSION" version 2>/dev/null || true)" ]; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "v$VERSION is already on npm."
+          fi
+
+      - name: Verify tarball contents
+        if: steps.published.outputs.already != 'true'
+        run: |
+          npm pack --dry-run 2>&1 | tee /tmp/pack.txt
+          for required in index.js tools/index.js handlers/index.js lib/version.js prompts/index.js; do
+            grep -q " $required$" /tmp/pack.txt || { echo "::error::missing from tarball: $required"; exit 1; }
+          done
+          for excluded in __tests__/ coverage/ jest.config.js; do
+            if grep -q " $excluded" /tmp/pack.txt; then
+              echo "::error::dev file present in tarball: $excluded"; exit 1
+            fi
+          done
+
+      # Trusted Publishing needs npm >= 11.5.1; Node 22 ships 10.x.
+      - name: Upgrade npm
+        if: steps.published.outputs.already != 'true'
+        run: npm install -g npm@latest
+
+      - name: Publish with provenance
+        if: steps.published.outputs.already != 'true'
+        run: npm publish --provenance --access public
+
+      - name: Confirm the attestation is there
+        if: steps.published.outputs.already != 'true'
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if [ -n "$(npm view "@ezmodo/mcp-server@$VERSION" dist.attestations.url 2>/dev/null || true)" ]; then
+              echo "Provenance attached to v$VERSION"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::v$VERSION published but no attestation is visible on npm"
+          exit 1

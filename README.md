@@ -30,6 +30,14 @@ https://ezmodo.com/settings/api-keys instead.
 
 Docs: https://ezmodo.com/docs/emo/ezmodo/help/cli-mcp
 
+## Releases are published from here
+
+`@ezmodo/mcp-server` is published to npm **from this repository**, by
+`.github/workflows/publish.yml`, with [npm provenance](https://docs.npmjs.com/generating-provenance-statements):
+each version on npm links to the exact commit and workflow run here that built
+it. The tests and the release approval run upstream first; this repo's workflow
+only packs and publishes.
+
 ## Not in this mirror
 
 The hosted connector's container build (`Dockerfile`, `cloudbuild.yaml`) is left
