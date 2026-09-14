@@ -129,14 +129,9 @@ jobs:
           {
             echo "## @ezmodo/mcp-server v$VERSION is STAGED, not published"
             echo
-            echo "Nobody can install it until a maintainer approves it with 2FA:"
+            echo "Nobody can install it until a maintainer approves it with 2FA, using the"
+            echo "monorepo's \`scripts/approve-mcp-release.sh\`. That also re-runs"
+            echo "*Mirror to public repos*, which moves the plugin pin to this version."
             echo
-            echo '```'
-            echo "npx -y npm@latest stage list @ezmodo/mcp-server"
-            echo "npx -y npm@latest stage approve <stage-id>"
-            echo '```'
-            echo
-            echo "Plugin users keep the previous version until then. The monorepo's"
-            echo "*Mirror to public repos* runs every 15 minutes and moves the plugin pin"
-            echo "once this version is installable."
+            echo "Plugin users keep the previous version until then."
           } | tee -a "$GITHUB_STEP_SUMMARY"
