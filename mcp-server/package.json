@@ -5,10 +5,10 @@
   "main": "index.js",
   "type": "module",
   "bin": {
-    "mcp-server": "./index.js",
-    "ezmodo-mcp-server": "./index.js",
-    "zephly-mcp-server": "./index.js",
-    "ezmodo-mcp-server-http": "./http.js"
+    "mcp-server": "index.js",
+    "ezmodo-mcp-server": "index.js",
+    "zephly-mcp-server": "index.js",
+    "ezmodo-mcp-server-http": "http.js"
   },
   "scripts": {
     "dev": "BUILD_ENV=development node index.js",

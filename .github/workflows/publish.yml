@@ -132,11 +132,11 @@ jobs:
             echo "Nobody can install it until a maintainer approves it with 2FA:"
             echo
             echo '```'
-            echo "npm stage list @ezmodo/mcp-server"
-            echo "npm stage approve <stage-id>"
+            echo "npx -y npm@latest stage list @ezmodo/mcp-server"
+            echo "npx -y npm@latest stage approve <stage-id>"
             echo '```'
             echo
-            echo "Then re-run the monorepo's *Mirror to public repos* workflow. The plugin"
-            echo "mirror refuses to pin a version npm cannot serve, so plugin users keep"
-            echo "the previous version until this one is approved."
+            echo "Plugin users keep the previous version until then. The monorepo's"
+            echo "*Mirror to public repos* runs every 15 minutes and moves the plugin pin"
+            echo "once this version is installable."
           } | tee -a "$GITHUB_STEP_SUMMARY"
