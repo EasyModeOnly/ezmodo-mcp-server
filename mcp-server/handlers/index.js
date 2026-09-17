@@ -14,6 +14,7 @@ import * as featureHandlers from './features.js';
 import * as decisionHandlers from './decisions.js';
 import * as designHandlers from './designs.js';
 import * as catalogHandlers from './catalogs.js';
+import * as unmappedPathHandlers from './unmapped-paths.js';
 import * as featureFlagHandlers from './feature-flags.js';
 import * as taskHandlers from './tasks.js';
 import * as documentHandlers from './documents.js';
@@ -86,6 +87,8 @@ export const HANDLERS = {
   manage_catalog: catalogHandlers.manageCatalog,
   get_catalog: catalogHandlers.getCatalog,
   list_catalogs: catalogHandlers.listCatalogs,
+  list_unmapped_paths: unmappedPathHandlers.listUnmappedPaths,
+  resolve_unmapped: unmappedPathHandlers.resolveUnmapped,
   list_catalog_items: catalogHandlers.listCatalogItems,
   get_catalog_diff: catalogHandlers.getCatalogDiff,
 

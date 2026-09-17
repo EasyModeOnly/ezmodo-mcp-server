@@ -16,6 +16,7 @@ import { FEATURE_TOOLS } from './features.js';
 import { DECISION_TOOLS } from './decisions.js';
 import { DESIGN_TOOLS } from './designs.js';
 import { CATALOG_TOOLS } from './catalogs.js';
+import { UNMAPPED_PATH_TOOLS } from './unmapped-paths.js';
 import { FEATURE_FLAG_TOOLS } from './feature-flags.js';
 import { TASK_TOOLS } from './tasks.js';
 import { DOCUMENT_TOOLS } from './documents.js';
@@ -53,6 +54,7 @@ export const TOOLS = [
   ...DECISION_TOOLS,
   ...DESIGN_TOOLS,
   ...CATALOG_TOOLS,
+  ...UNMAPPED_PATH_TOOLS,
   ...FEATURE_FLAG_TOOLS,
   ...TASK_TOOLS,
   ...RECURRING_TASK_TOOLS,
