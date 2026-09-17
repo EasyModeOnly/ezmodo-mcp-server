@@ -32,12 +32,6 @@ export const TASK_ITEM_PROPERTIES = {
     description: 'Initial status (defaults to todo)',
   },
   taskType: TASK_TYPE_PROPERTY,
-  componentId: { type: 'string', description: 'DEPRECATED single component; overrides the shared componentId. Prefer componentIds.' },
-  componentIds: {
-    type: 'array',
-    items: { type: 'string' },
-    description: 'Every component this task touches; overrides the shared componentId/componentIds.',
-  },
   parentTaskId: { type: 'string', description: 'Parent task link' },
   estimatedHours: { type: 'number' },
   assigneeType: { type: 'string', enum: ['human', 'ai'] },

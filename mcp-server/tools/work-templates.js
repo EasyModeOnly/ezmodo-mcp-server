@@ -20,7 +20,6 @@ const TASK_BLUEPRINT_SCHEMA = {
     steps: { type: 'array', items: { type: 'string' } },
     taskType: TASK_TYPE_PROPERTY,
     priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
-    componentId: { type: 'string' },
     tagIds: { type: 'array', items: { type: 'string' } },
   },
   required: ['title'],
@@ -79,7 +78,6 @@ export const WORK_TEMPLATE_TOOLS = [
         title: { type: 'string', description: 'Instantiate: override the blueprint title.' },
         epicId: { type: 'string', description: 'Instantiate (task kind): attach the new task to this epic.' },
         milestoneId: { type: 'string', description: 'Instantiate (epic kind): link the new epic to this milestone.' },
-        componentId: { type: 'string', description: 'Instantiate (task kind): override component.' },
         priority: {
           type: 'string',
           enum: ['low', 'medium', 'high', 'urgent'],

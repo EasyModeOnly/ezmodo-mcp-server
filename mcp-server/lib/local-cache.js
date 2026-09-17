@@ -1,6 +1,6 @@
 /**
  * Local Cache Utility
- * Reads and writes the project config.json cache for tags and components.
+ * Reads and writes the project config.json cache for tags.
  * Looks in `.ezmodo/` first, falls back to legacy `.zephly/`.
  * Used by MCP handlers to avoid unnecessary API calls for frequently-read data.
  */
@@ -95,22 +95,8 @@ export async function getCachedTags() {
 }
 
 /**
- * Get cached components for a specific project if the cache is fresh.
- * @param {string} projectId - Only return components if they match this project
- * @returns {Promise<Array|null>} Cached components array, or null if stale/missing/wrong project
- */
-export async function getCachedComponents(projectId) {
-  const config = await readConfig();
-  if (!config) return null;
-  if (!isCacheFresh(config.lastUpdatedAt)) return null;
-  // Only return if the cached config belongs to this project
-  if (config.projectId !== projectId) return null;
-  return config.components || null;
-}
-
-/**
  * Update specific sections in the config cache. Non-fatal on failure.
- * @param {object} updates - Key-value pairs to merge into config (e.g., { tags: [...], components: [...] })
+ * @param {object} updates - Key-value pairs to merge into config (e.g., { tags: [...] })
  */
 export async function updateCacheSections(updates) {
   try {
@@ -126,7 +112,7 @@ export async function updateCacheSections(updates) {
 /**
  * Invalidate a specific cache section by removing it from config.
  * The next read will return null, triggering a fresh API call.
- * @param {string} section - 'tags' or 'components'
+ * @param {string} section - e.g. 'tags'
  */
 export async function invalidateCacheSection(section) {
   try {

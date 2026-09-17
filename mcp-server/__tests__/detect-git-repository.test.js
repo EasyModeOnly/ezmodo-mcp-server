@@ -39,10 +39,6 @@ jest.unstable_mockModule('../handlers/organizations.js', () => ({
   getOrganization: jest.fn(),
 }));
 
-jest.unstable_mockModule('../handlers/components.js', () => ({
-  listComponents: jest.fn(),
-}));
-
 jest.unstable_mockModule('../handlers/tags.js', () => ({
   listTags: jest.fn(),
 }));

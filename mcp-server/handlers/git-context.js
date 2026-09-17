@@ -19,7 +19,6 @@ export { isCacheFresh };
 import { getProject } from './projects.js';
 import { listRepositories } from './github.js';
 import { getOrganization } from './organizations.js';
-import { listComponents } from './components.js';
 import { getLogger } from '../lib/logger.js';
 import { listTags } from './tags.js';
 import { CONFIG } from '../config/index.js';
@@ -69,28 +68,6 @@ function legacyConfigNotice(legacyConfigPath) {
       + `${LEGACY_REPO_CONFIG_DIR}/ directory at ${legacyConfigPath}, which is now unused. `
       + 'Run `ezmodo migrate-config` (or delete it) to finish moving off it.',
   };
-}
-
-/**
- * Fetch lightweight component summaries (id, name, description) for a project.
- * Filtered to kind='area' (E-168): this list is the coarse codebase-area set
- * agents use to pick a task's componentId, and it must match the web task
- * picker (which also filters to area). Without the filter, UI-inventory rows
- * (screen/page/component) would leak into task routing. Returns an empty array
- * on failure (non-fatal).
- */
-async function fetchComponentSummaries(projectId) {
-  try {
-    const result = await listComponents({ projectId, kind: 'area' });
-    if (!result?.components) return [];
-    return result.components.map((c) => ({
-      id: c.id,
-      name: c.name,
-      description: c.description || '',
-    }));
-  } catch {
-    return [];
-  }
 }
 
 /**
@@ -168,9 +145,9 @@ no exceptions unless the user explicitly says to work on an existing task.
 **Single-scope work** (bug fix, small feature, config change, docs update):
 - Create a **task** with \`manage_task action:"create"\`:
   - \`projectId\` from cached context
-  - \`componentId\` — pick the single most relevant component from the
-    project context. Each task belongs to exactly one component.
-    Get the list via \`get_current_project_context()\`.
+  - \`changedFiles\` — the paths you expect to touch; they resolve to the
+    features that own them
+  - \`links\` — the feature the work advances (find it with \`search_features\`)
   - Descriptive \`title\` and \`description\` (informed by \`get_context\`)
   - \`steps\` array with actionable steps referencing specific files
   - \`priority\` based on context (low / medium / high / urgent)
@@ -551,12 +528,11 @@ export async function getCurrentProjectContext(args) {
             workingDirectory: currentDir,
             configPath,
             allProjects: config.projects || null,
-            components: config.components || [],
             tags: config.tags || [],
             autoGenerateTestCases: config.settings?.aiConfig?.autoGenerateTestCases || false,
             organizeResponseMode: config.settings?.aiConfig?.organizeResponseMode || 'raw_snapshot',
             // The words this project's type uses (E-107). Cached alongside
-            // components and tags because it changes about as often, and an
+            // tags because it changes about as often, and an
             // agent needs it on every session, not on a second round trip.
             // Absent means plain English — a project type with no template.
             projectType: config.projectType || null,
@@ -614,18 +590,17 @@ export async function getCurrentProjectContext(args) {
           validation.warnings.push('Could not validate organization access');
         }
 
-        // Refresh components and tags lists
-        const [components, tags] = await Promise.all([
-          fetchComponentSummaries(activeProject.id),
-          fetchTagSummaries(config.organizationId),
-        ]);
+        // Refresh the tags list
+        const tags = await fetchTagSummaries(config.organizationId);
 
         // Update config on disk with fresh data (non-fatal)
         if (validation.projectExists && validation.organizationExists) {
           try {
             config.orgName = orgName;
             config.lastUpdatedAt = new Date().toISOString();
-            config.components = components;
+            // Components were retired (E-258); drop the list a config written
+            // by an older server still carries.
+            delete config.components;
             config.tags = tags;
             config.projectType = projectType;
             config.terminology = terminology;
@@ -650,7 +625,6 @@ export async function getCurrentProjectContext(args) {
           workingDirectory: currentDir,
           configPath,
           allProjects: config.projects || null,
-          components,
           tags,
           autoGenerateTestCases: projectSettings?.aiConfig?.autoGenerateTestCases || false,
           organizeResponseMode: projectSettings?.aiConfig?.organizeResponseMode || 'raw_snapshot',
@@ -836,11 +810,8 @@ export async function initializeProjectContext(args) {
       throw new Error(`Organization ${organizationId} not found or not accessible`);
     }
 
-    // Step 5: Fetch components and tags
-    const [components, tags] = await Promise.all([
-      fetchComponentSummaries(projectId),
-      fetchTagSummaries(organizationId),
-    ]);
+    // Step 5: Fetch tags
+    const tags = await fetchTagSummaries(organizationId);
 
     // Step 6: Build config
     const config = {
@@ -853,7 +824,6 @@ export async function initializeProjectContext(args) {
       projectName: projectContext.project?.name || projectContext.name || 'Unknown Project',
       environment: CONFIG.environment, // staging, production, or dev
       lastUpdatedAt: new Date().toISOString(),
-      components,
       tags,
       settings: {
         aiConfig: projectContext.settings?.aiConfig || projectContext.project?.settings?.aiConfig || null,

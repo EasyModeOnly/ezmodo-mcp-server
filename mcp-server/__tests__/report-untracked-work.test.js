@@ -89,19 +89,19 @@ describe('report_untracked_work', () => {
     ]);
   });
 
-  it('passes the discovery link and componentId through', async () => {
+  it('passes the discovery link through', async () => {
     await reportUntrackedWork({
       projectId: 'p1',
       title: 'Found a bug while doing #7',
       origin: 'discovered',
       discoveredDuringTaskId: 'task-7',
-      componentId: 'comp-api',
     });
 
     const args = lastCreateArgs();
     expect(args.origin).toBe('discovered');
     expect(args.discoveredDuringTaskId).toBe('task-7');
-    expect(args.componentId).toBe('comp-api');
+    expect(args.componentId).toBeUndefined();
+    expect(args.componentIds).toBeUndefined();
   });
 
   it('writes the active-session file so the desktop app picks it up', async () => {

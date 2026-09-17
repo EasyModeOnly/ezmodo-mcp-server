@@ -154,14 +154,14 @@ describe('manageTask create — link suggestions', () => {
     targetType: 'feature',
     targetId,
     linkType: 'relates_to',
-    rule: 'code.component_feature',
+    rule: 'code.path_to_feature',
     autoApplies: false,
   });
 
   it('gives each suggestion the id resolve_link_suggestions needs', async () => {
     mockCreateFlow({
       proposals: [proposal('feat-1')],
-      suggestions: [suggestionRow('sug-1', 'feat-1', 'code.component_feature')],
+      suggestions: [suggestionRow('sug-1', 'feat-1', 'code.path_to_feature')],
     });
 
     const result = await manageTask({
@@ -194,7 +194,7 @@ describe('manageTask create — link suggestions', () => {
   it('points at list_agent_suggestions when the inline list may be short', async () => {
     mockCreateFlow({
       proposals: [proposal('feat-1'), proposal('feat-9')],
-      suggestions: [suggestionRow('sug-1', 'feat-1', 'code.component_feature')],
+      suggestions: [suggestionRow('sug-1', 'feat-1', 'code.path_to_feature')],
     });
     mockGetContext.mockResolvedValue({ files: [] });
 
@@ -220,63 +220,25 @@ describe('manageTask create — link suggestions', () => {
 
 
 /**
- * #2429: the "no component" hint tested only the DEPRECATED singular field, so
- * a create that correctly used componentIds was told it had named none — while
- * the links had in fact been written. Agents acted on the wrong warning and
- * issued a redundant follow-up update.
+ * Components were retired (E-258): a create no longer hints at components or
+ * forwards a component set, whatever an older caller still sends.
  */
-describe('manage_task create — the missing-component hint', () => {
-  const AVAILABLE = [{ id: 'c-web', name: 'web' }, { id: 'c-api', name: 'api' }];
-
+describe('manage_task create — no component hint', () => {
   beforeEach(() => {
     mockCallZephlyAPI.mockImplementation(async (endpoint) => (
       endpoint === 'mcpCreateTask' ? { taskId: 'task-1', taskNumber: 7 } : {}
     ));
-    mockResolveTaskAutoAssign.mockResolvedValue({
-      organizationId: 'org-1',
-      matchedTags: [],
-      availableComponents: AVAILABLE,
-    });
+    mockResolveTaskAutoAssign.mockResolvedValue({ organizationId: 'org-1', matchedTags: [] });
     mockBuildTaskUrl.mockResolvedValue(null);
     mockGetContext.mockResolvedValue({ topResults: [] });
   });
 
   afterEach(() => jest.clearAllMocks());
 
-  const create = (extra) => manageTask({
-    action: 'create', projectId: 'p1', title: 'A task', autolink: false, ...extra,
-  });
-
-  it('stays silent when componentIds names a component', async () => {
-    const result = await create({ componentIds: ['c-web'] });
+  it('creates without a component warning', async () => {
+    const result = await manageTask({ action: 'create', projectId: 'p1', title: 'A task', autolink: false });
 
     expect(result.warning).toBeUndefined();
     expect(result.availableComponents).toBeUndefined();
-  });
-
-  it('stays silent when the deprecated componentId names one', async () => {
-    const result = await create({ componentId: 'c-web' });
-
-    expect(result.warning).toBeUndefined();
-  });
-
-  it('warns when no component is named at all', async () => {
-    const result = await create({});
-
-    expect(result.warning).toMatch(/without a component/i);
-    expect(result.warning).toContain('componentIds');
-    expect(result.availableComponents).toEqual(AVAILABLE);
-  });
-
-  it('warns on an empty or blank componentIds, which names nothing', async () => {
-    expect((await create({ componentIds: [] })).warning).toMatch(/without a component/i);
-    expect((await create({ componentIds: [''] })).warning).toMatch(/without a component/i);
-  });
-
-  it('forwards componentIds to the create call', async () => {
-    await create({ componentIds: ['c-web', 'c-api'] });
-
-    const payload = mockCallZephlyAPI.mock.calls.find((c) => c[0] === 'mcpCreateTask')[1];
-    expect(payload.componentIds).toEqual(['c-web', 'c-api']);
   });
 });

@@ -49,7 +49,6 @@ const INLINE_TASK_SCHEMA = {
     steps: { type: 'array', items: { type: 'string' } },
     priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'] },
     taskType: TASK_TYPE_PROPERTY,
-    componentId: { type: 'string' },
     epicId: { type: 'string' },
     tagIds: { type: 'array', items: { type: 'string' } },
     assigneeId: { type: 'string' },

@@ -10,7 +10,6 @@
 
 import { ORGANIZATION_TOOLS } from './organizations.js';
 import { PROJECT_TOOLS } from './projects.js';
-import { COMPONENT_TOOLS } from './components.js';
 import { EPIC_TOOLS } from './epics.js';
 import { MILESTONE_TOOLS } from './milestones.js';
 import { FEATURE_TOOLS } from './features.js';
@@ -48,7 +47,6 @@ export const TOOLS = [
   ...AUTH_TOOLS,
   ...ORGANIZATION_TOOLS,
   ...PROJECT_TOOLS,
-  ...COMPONENT_TOOLS,
   ...EPIC_TOOLS,
   ...MILESTONE_TOOLS,
   ...FEATURE_TOOLS,

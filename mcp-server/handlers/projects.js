@@ -46,7 +46,7 @@ async function createProject(args) {
 // Update an existing project. Only the fields present in `args` are changed —
 // the server leaves anything unmentioned alone. This is the path that lets an
 // agent set gitUrl/gitProvider after creation, which is what commit-to-task
-// linking and component link resolution key off.
+// linking and feature link resolution key off.
 async function updateProject(args) {
   return callZephlyAPI('mcpUpdateProject', args);
 }

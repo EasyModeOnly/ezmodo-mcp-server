@@ -9,7 +9,6 @@
 import * as organizationHandlers from './organizations.js';
 import * as projectHandlers from './projects.js';
 import * as epicHandlers from './epics.js';
-import * as componentHandlers from './components.js';
 import * as milestoneHandlers from './milestones.js';
 import * as featureHandlers from './features.js';
 import * as decisionHandlers from './decisions.js';
@@ -59,10 +58,6 @@ export const HANDLERS = {
   search_epics: epicHandlers.searchEpics,
   list_epics: epicHandlers.listEpics,
   get_epic: epicHandlers.getEpic,
-
-  // Components
-  manage_component: componentHandlers.manageComponent,
-  list_components: componentHandlers.listComponents,
 
   // Milestones
   manage_milestone: milestoneHandlers.manageMilestone,

@@ -20,7 +20,6 @@ export const LINKABLE_TYPES = [
   'epic',
   'project',
   'document',
-  'component',
   'feature',
   'decision',
   'design',

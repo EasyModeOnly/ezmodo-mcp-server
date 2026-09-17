@@ -125,7 +125,6 @@ describe('link parameter schemas', () => {
       'report_untracked_work',
       'manage_epic',
       'manage_document',
-      'manage_component',
       'manage_decision',
       'manage_design',
       'manage_feature_flag',
@@ -137,10 +136,5 @@ describe('link parameter schemas', () => {
       expect(tool).toBeDefined();
       expect(tool.inputSchema.properties.links).toBe(LINKS_ARRAY_SCHEMA);
     }
-  });
-
-  it('lets a bulk component import carry per-surface links', () => {
-    const tool = TOOLS.find((t) => t.name === 'manage_component');
-    expect(tool.inputSchema.properties.surfaces.items.properties.links).toBe(LINKS_ARRAY_SCHEMA);
   });
 });

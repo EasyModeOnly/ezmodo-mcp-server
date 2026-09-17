@@ -3,7 +3,7 @@ import { callZephlyAPI } from './http-client.js';
 /**
  * Auto-linking helpers (E-225).
  *
- * The API resolves file paths to the components that own them and previews what
+ * The API resolves file paths to the features that own them and previews what
  * the autolink engine would propose. Both are read-only, so an agent can ask
  * "what does this touch?" before it creates or commits anything.
  *
@@ -14,30 +14,31 @@ import { callZephlyAPI } from './http-client.js';
  */
 
 /**
- * Resolve repo-relative file paths to the components and features that own
- * them. `features` (E-258) comes from feature_paths; an API predating it simply
- * returns none.
+ * Resolve repo-relative file paths to the features that own them through their
+ * code paths (E-258).
+ *
+ * The API's response may still carry a component `matches` array (components
+ * were retired after this server shipped); it is ignored.
  *
  * @param {object} params
  * @param {string} params.projectId
  * @param {string[]} params.paths - repo-relative paths
- * @returns {Promise<{matches: object[], features: object[], unresolved: string[]}>}
+ * @returns {Promise<{features: object[], unresolved: string[]}>}
  */
-export async function resolvePathsToComponents({ projectId, paths }) {
+export async function resolvePathsToFeatures({ projectId, paths }) {
   if (!projectId || !Array.isArray(paths) || paths.length === 0) {
-    return { matches: [], features: [], unresolved: [] };
+    return { features: [], unresolved: [] };
   }
   try {
     const result = await callZephlyAPI('mcpResolvePaths', { projectId, paths });
     return {
-      matches: result?.matches || [],
       features: result?.features || [],
       unresolved: result?.unresolved || [],
     };
   } catch {
     // An API predating E-225 has no such route. Report nothing rather than
     // surfacing a 404 the agent can do nothing about.
-    return { matches: [], features: [], unresolved: paths };
+    return { features: [], unresolved: paths };
   }
 }
 
@@ -53,7 +54,6 @@ export async function resolvePathsToComponents({ projectId, paths }) {
  * @param {string} params.subjectId
  * @param {string[]} [params.paths]
  * @param {string} [params.trigger]
- * @param {string} [params.componentId]
  * @param {string} [params.epicId]
  * @returns {Promise<{proposals: object[]}>}
  */
@@ -63,7 +63,6 @@ export async function previewEntityLinks({
   subjectId,
   paths,
   trigger,
-  componentId,
   epicId,
 }) {
   if (!subjectType || !subjectId) return { proposals: [] };
@@ -74,7 +73,6 @@ export async function previewEntityLinks({
       subjectId,
       paths,
       trigger,
-      componentId,
       epicId,
     });
     return { proposals: result?.proposals || [] };

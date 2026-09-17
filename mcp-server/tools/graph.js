@@ -4,7 +4,7 @@
  * The living navigation graph (E-209): a browsable, cross-entity projection
  * over the entity_links link graph (relates_to / blocked_by). One read lets an
  * agent walk "what connects to this" from any node — features, epics, tasks,
- * goals, milestones, components, designs, decisions, documents, test suites,
+ * goals, milestones, catalogs, designs, decisions, documents, test suites,
  * feature flags — instead of issuing N separate list_links calls and stitching
  * the results together.
  *

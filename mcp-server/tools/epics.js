@@ -3,7 +3,7 @@
  * MCP tools for managing epics
  *
  * Project-First Hierarchy: Epics belong to projects (required),
- * with optional component grouping and milestone linking. *
+ * with optional milestone linking. *
  * NAMING (E-107): an epic is not called "Epic" everywhere. A project's type
  * decides its vocabulary — a marketing project calls this a Campaign, a sales
  * project a Deal, a research project a Study. Read the words from
@@ -126,11 +126,6 @@ export const EPIC_TOOLS = [
         },
         links: LINKS_ARRAY_SCHEMA,
         // --- Create-only: the epic's breakdown, created in the same request ---
-        componentId: {
-          type: 'string',
-          description: 'Component applied to every task in `tasks` that does not set its own ' +
-            '(create only). Get available components from get_current_project_context().',
-        },
         tasks: {
           type: 'array',
           description: 'Child tasks to create WITH the epic, in the same request (create only, 1-40). ' +

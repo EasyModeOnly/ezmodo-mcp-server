@@ -13,7 +13,7 @@ export const CONTEXT_MANIFEST_TOOLS = [
   {
     name: 'get_context',
     description:
-      'Get contextual information about any entity (project, task, epic, component, file, tag). ' +
+      'Get contextual information about any entity (project, task, epic, file, tag). ' +
       'Replaces search_project_context, get_related_files, get_project_overview, get_critical_files, ' +
       'query_project_graph, analyze_impact, get_graph_stats, analyze_project_organization. ' +
       'Use `query` for keyword search, or `entityType` + `entityId` for entity-specific context. ' +
@@ -27,7 +27,7 @@ export const CONTEXT_MANIFEST_TOOLS = [
         },
         entityType: {
           type: 'string',
-          enum: ['project', 'task', 'epic', 'component', 'file', 'tag'],
+          enum: ['project', 'task', 'epic', 'file', 'tag'],
           description: 'Type of entity to get context for',
         },
         entityId: {

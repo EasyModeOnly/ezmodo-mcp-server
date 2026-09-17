@@ -21,7 +21,7 @@ export const LINK_TOOLS = [
       'dependencies (blocked_by) and soft cross-entity links (relates_to) ' +
       'uniformly. blocked_by is only valid for task→task and epic→epic; ' +
       'relates_to works between any of: task, epic, project, document, ' +
-      'component, feature, decision, design, test_suite, feature_flag ' +
+      'feature, decision, design, test_suite, feature_flag, catalog, catalog_item ' +
       '(e.g. link a feature to the feature_flag that gates it). ' +
       'Idempotent — re-adding an existing link is a no-op, removing an ' +
       'absent link is a no-op. Use action "verify" to stamp a link\'s ' +
@@ -143,13 +143,13 @@ export const LINK_TOOLS = [
     name: 'resolve_links',
     description:
       'Given files you have touched (or are about to), return the entities you should link to: ' +
-      'the components — screens, pages, codebase areas — that own those paths, and the features ' +
-      '(product capabilities) whose owned code paths cover them, plus how confident each match is. ' +
-      'Read-only; nothing is written.\n\n' +
+      'the features (product capabilities) whose owned code paths cover them, plus how confident ' +
+      'each match is. Read-only; nothing is written.\n\n' +
       '`features.owned` are capabilities that solely own a path: link them. `features.shared` are ' +
-      'paths several features claim: pick the one your work actually advanced.\n\n' +
+      'paths several features claim: pick the one your work actually advanced. `unmatchedPaths` ' +
+      'are owned by no feature — a gap in the feature map, fixed with manage_feature action:"paths".\n\n' +
       'Call it BEFORE creating work to fill in the `links` param, or after a change set to check ' +
-      'you have not missed anything. If it returns a component you did not expect, that is a signal ' +
+      'you have not missed anything. If it returns a feature you did not expect, that is a signal ' +
       'your change is broader than you thought — worth reading before you continue.\n\n' +
       'Paths are repo-relative (e.g. "mobile/lib/features/auth/screens/login_screen.dart").',
     inputSchema: {
@@ -188,7 +188,6 @@ export const LINK_TOOLS = [
           items: { type: 'string' },
           description: 'Repo-relative file paths the work touches',
         },
-        componentId: { type: 'string', description: 'A component the work explicitly names' },
         epicId: { type: 'string', description: 'The epic the work belongs to' },
         trigger: {
           type: 'string',

@@ -51,7 +51,6 @@ describe('manage_epic action:"create" with nested tasks', () => {
       action: 'create',
       projectId: 'proj-1',
       title: 'Breakdown epic',
-      componentId: 'comp-1',
       tasks: [{ title: 'A' }, { title: 'B' }, { title: 'C' }],
     });
 
@@ -59,7 +58,6 @@ describe('manage_epic action:"create" with nested tasks', () => {
     const [endpoint, payload] = mockCallZephlyAPI.mock.calls[0];
     expect(endpoint).toBe('mcpCreateEpicWithTasks');
     expect(payload.projectId).toBe('proj-1');
-    expect(payload.componentId).toBe('comp-1');
     expect(payload.tasks).toHaveLength(3);
     expect(result.epicId).toBe('epic-1');
     expect(result.taskNumbers).toEqual([1, 2, 3]);

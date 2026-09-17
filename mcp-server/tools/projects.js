@@ -7,7 +7,7 @@
  * creative, research, implementation, custom.
  *
  * A project's type decides what its work is CALLED (E-107). A marketing project
- * calls an epic a "Campaign" and a component a "Channel"; a sales project calls
+ * calls an epic a "Campaign"; a sales project calls
  * a task an "Activity". `get_project` returns the resolved vocabulary as
  * `terminology`, and `get_current_project_context` caches it. Use those words
  * when writing anything a person reads — titles, descriptions, chat replies —
@@ -106,7 +106,7 @@ export const PROJECT_TOOLS = [
       'Responses include `descriptionDocumentId` — the id of the backing rich-description Document ' +
       'when the description has been promoted to one (E-189), otherwise omitted. ' +
       'By-ID responses also carry `type` and `terminology` — the words this project uses for ' +
-      'epics, tasks and components, and for their statuses (E-107). Write prose in those words; ' +
+      'epics and tasks, and for their statuses (E-107). Write prose in those words; ' +
       'a marketing project calls an epic a "Campaign". `terminology` is absent for a type with no ' +
       'template, which means plain English, not an error.',
     inputSchema: {

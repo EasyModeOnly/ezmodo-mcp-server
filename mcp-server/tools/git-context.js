@@ -33,13 +33,13 @@ export const GIT_CONTEXT_TOOLS = [
       'Returns project context if found, ' +
       'or null if not configured. Use this BEFORE other MCP tools to ' +
       'auto-detect which project you\'re working on. Project-First: ' +
-      'Returns projectId, components, and tags that can be used ' +
-      'directly with task/epic creation tools. Caches tags and ' +
-      'components locally with 1-day TTL for fast access. ' +
+      'Returns projectId and tags that can be used ' +
+      'directly with task/epic creation tools. Caches tags ' +
+      'locally with 1-day TTL for fast access. ' +
       'Also returns `projectType` and `terminology` — the words this project ' +
-      'uses for epics, tasks and components and for their statuses (E-107). ' +
+      'uses for epics and tasks and for their statuses (E-107). ' +
       'Write anything a person reads in those words: a marketing project calls ' +
-      'an epic a "Campaign" and a component a "Channel". Keep the API field ' +
+      'an epic a "Campaign". Keep the API field ' +
       'names (epicId, taskId) as they are. A null `terminology` means plain ' +
       'English, not an error.',
     inputSchema: {

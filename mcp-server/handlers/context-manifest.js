@@ -374,7 +374,6 @@ async function handleEntityContext(args) {
     };
     // Map entityType+entityId to the correct graph param
     if (entityType === 'task') graphParams.taskId = entityId;
-    else if (entityType === 'component') graphParams.componentId = entityId;
     else if (entityType === 'file') graphParams.filePath = entityId;
     else if (entityType === 'tag') graphParams.tagId = entityId;
 
@@ -389,7 +388,6 @@ async function handleEntityContext(args) {
   if (sections.includes('impact')) {
     const impactParams = { projectId, depth: args.depth };
     if (entityType === 'file') impactParams.filePath = entityId;
-    else if (entityType === 'component') impactParams.componentId = entityId;
 
     promises.push(
       callZephlyAPI('mcpAnalyzeImpact', impactParams)
@@ -566,8 +564,6 @@ function getDefaultIncludes(entityType) {
   case 'task':
   case 'epic':
     return ['graph'];
-  case 'component':
-    return ['graph', 'impact'];
   case 'file':
     return ['dependencies', 'impact'];
   case 'tag':

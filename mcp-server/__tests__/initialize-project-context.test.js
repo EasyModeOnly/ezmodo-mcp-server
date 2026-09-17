@@ -47,7 +47,6 @@ jest.unstable_mockModule('child_process', () => ({
 const mockListOrganizations = jest.fn();
 const mockGetProjectContext = jest.fn();
 const mockListProjects = jest.fn();
-const mockListComponents = jest.fn();
 const mockListTags = jest.fn();
 
 jest.unstable_mockModule('../handlers/organizations.js', () => ({
@@ -59,10 +58,6 @@ jest.unstable_mockModule('../handlers/projects.js', () => ({
     if (args?.projectId) return mockGetProjectContext(args);
     return mockListProjects(args);
   }),
-}));
-
-jest.unstable_mockModule('../handlers/components.js', () => ({
-  listComponents: mockListComponents,
 }));
 
 jest.unstable_mockModule('../handlers/tags.js', () => ({
@@ -138,19 +133,13 @@ describe('CLAUDE.md generation in initialize_project_context', () => {
     mockWriteFile.mockResolvedValue(undefined);
     mockMkdir.mockResolvedValue(undefined);
 
-    // Default org/project/components mocks
+    // Default org/project mocks
     mockListOrganizations.mockResolvedValue({
       organizations: [{ id: 'org-1', slug: 'test-org', name: 'Test Organization' }],
     });
     mockGetProjectContext.mockResolvedValue({
       project: { name: 'My Project', slug: 'my-project' },
       settings: { aiConfig: { enabled: true, autoGenerateTestCases: true } },
-    });
-    mockListComponents.mockResolvedValue({
-      components: [
-        { id: 'comp-1', name: 'api', description: 'Go API service', color: '#3B82F6' },
-        { id: 'comp-2', name: 'web', description: 'Next.js frontend', color: '#10B981' },
-      ],
     });
     mockListTags.mockResolvedValue({
       tags: [
@@ -293,7 +282,7 @@ describe('CLAUDE.md generation in initialize_project_context', () => {
       expect(content).toContain('Organization: test-org (ID: org-1)');
     });
 
-    it('should include orgName, lastUpdatedAt, components, and settings in config.json', async () => {
+    it('should include orgName, lastUpdatedAt and settings, and no components, in config.json', async () => {
       await initializeProjectContext({
         projectId: 'proj-123',
         organizationId: 'org-1',
@@ -313,10 +302,7 @@ describe('CLAUDE.md generation in initialize_project_context', () => {
       expect(new Date(config.lastUpdatedAt).getTime()).not.toBeNaN();
       expect(config.settings).toBeDefined();
       expect(config.settings.aiConfig).toEqual({ enabled: true, autoGenerateTestCases: true });
-      expect(config.components).toEqual([
-        { id: 'comp-1', name: 'api', description: 'Go API service' },
-        { id: 'comp-2', name: 'web', description: 'Next.js frontend' },
-      ]);
+      expect(config.components).toBeUndefined();
     });
 
     it('should append to existing CLAUDE.md without work tracking section', async () => {
@@ -488,7 +474,6 @@ describe('getCurrentProjectContext caching', () => {
     jest.clearAllMocks();
     mockWriteFile.mockResolvedValue(undefined);
     mockMkdir.mockResolvedValue(undefined);
-    mockListComponents.mockResolvedValue({ components: [] });
     mockListTags.mockResolvedValue({ tags: [] });
   });
 
@@ -522,15 +507,13 @@ describe('getCurrentProjectContext caching', () => {
     expect(result.projectId).toBe('proj-123');
     expect(result.projectName).toBe('My Project');
     expect(result.autoGenerateTestCases).toBe(true);
-    expect(result.components).toEqual([
-      { id: 'comp-1', name: 'api', description: 'Go API service' },
-    ]);
+    // Components were retired (E-258): a cached list is not surfaced.
+    expect(result.components).toBeUndefined();
     expect(result.validation.cached).toBe(true);
 
     // No API calls should have been made
     expect(mockGetProjectContext).not.toHaveBeenCalled();
     expect(mockListOrganizations).not.toHaveBeenCalled();
-    expect(mockListComponents).not.toHaveBeenCalled();
   });
 
   it('should refresh when lastUpdatedAt is stale (older than 1 day)', async () => {
@@ -541,6 +524,8 @@ describe('getCurrentProjectContext caching', () => {
       projectName: 'My Project',
       environment: 'production',
       lastUpdatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+      // Written by a server that predates E-258; the refresh must drop it.
+      components: [{ id: 'comp-1', name: 'api', description: 'Go API service' }],
     };
 
     mockReadFile.mockResolvedValue(JSON.stringify(staleConfig));
@@ -550,29 +535,19 @@ describe('getCurrentProjectContext caching', () => {
     mockListOrganizations.mockResolvedValue({
       organizations: [{ id: 'org-1', slug: 'test-org', name: 'Test Organization' }],
     });
-    mockListComponents.mockResolvedValue({
-      components: [
-        { id: 'comp-1', name: 'api', description: 'Go API service', color: '#3B82F6' },
-      ],
-    });
 
     const result = await getCurrentProjectContext({ workingDirectory: WORKING_DIR });
 
     expect(result.success).toBe(true);
     expect(result.validation.cached).toBe(false);
     expect(result.autoGenerateTestCases).toBe(false);
-    expect(result.components).toEqual([
-      { id: 'comp-1', name: 'api', description: 'Go API service' },
-    ]);
+    expect(result.components).toBeUndefined();
 
     // API calls should have been made
     expect(mockGetProjectContext).toHaveBeenCalledWith({ projectId: 'proj-123' });
     expect(mockListOrganizations).toHaveBeenCalled();
-    // E-168: the project-context component list is filtered to kind='area' so
-    // UI-inventory surfaces (screen/page/component) don't leak into task routing.
-    expect(mockListComponents).toHaveBeenCalledWith({ projectId: 'proj-123', kind: 'area' });
 
-    // Config should have been updated on disk with components
+    // Config should have been updated on disk, without the retired components list
     const configWrite = mockWriteFile.mock.calls.find(
       (call) => call[0] === CONFIG_PATH
     );
@@ -580,9 +555,7 @@ describe('getCurrentProjectContext caching', () => {
     const updatedConfig = JSON.parse(configWrite[1]);
     expect(updatedConfig.orgName).toBe('Test Organization');
     expect(updatedConfig.settings.aiConfig.autoGenerateTestCases).toBe(false);
-    expect(updatedConfig.components).toEqual([
-      { id: 'comp-1', name: 'api', description: 'Go API service' },
-    ]);
+    expect(updatedConfig.components).toBeUndefined();
     expect(new Date(updatedConfig.lastUpdatedAt).getTime()).toBeGreaterThan(
       new Date(staleConfig.lastUpdatedAt).getTime()
     );

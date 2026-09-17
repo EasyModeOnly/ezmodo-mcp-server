@@ -103,7 +103,7 @@ export const CATALOG_TOOLS = [
       '`go run ./cmd/dbschema-snapshot -upload -catalog-id <id>` from api/ introspects and uploads the ' +
       'whole schema without passing it through the model at all — cheaper still than a patch.\n\n' +
       'LINK, DON\'T CONTAIN: use action:"link"/"unlink" to relate a catalog to a feature, feature_flag, ' +
-      'epic, task, document, component, milestone, goal or project (e.g. link the notification catalog ' +
+      'epic, task, document, milestone, goal or project (e.g. link the notification catalog ' +
       'to its Notifications feature and the ezmodo doc that describes it).\n\n' +
       'ITEM-LEVEL LINKS (E-218): pass `itemKey` on action:"link"/"unlink" to attach the link to a SINGLE ' +
       'catalog entry instead of the whole catalog — this is how a task/epic that builds one entry records ' +

@@ -3,7 +3,8 @@
  * MCP tools for managing tasks
  *
  * Project-First Hierarchy: Tasks belong to projects (required), with optional
- * component and epic grouping.
+ * epic grouping. Code links are derived from the files a task touches, which
+ * resolve to the features that own them (E-258).
  *
  * NAMING (E-107): a project's type renames a task and its statuses — a sales
  * project calls a task an "Activity" and calls `in_review` "Awaiting Approval".
@@ -24,7 +25,8 @@ export const TASK_TOOLS = [
       'to discover relevant files, patterns, and dependencies. (2) Write descriptions that explain WHY ' +
       '(problem/goal), WHERE (specific files/endpoints from context), and HOW (approach using existing patterns). ' +
       '(3) Write steps that reference specific file paths, not vague instructions. ' +
-      '(4) Every task should name the components it touches via componentIds — use get_current_project_context() to get available components.',
+      '(4) Link the feature the work advances with links:[{targetType:"feature", targetId}] (find it with ' +
+      'search_features), and pass changedFiles — the files resolve to the features that own those paths.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -67,16 +69,6 @@ export const TASK_TOOLS = [
           type: 'string',
           description: 'Task description (supports markdown). Use real newlines, not literal \\n. Used by create and update. ' +
             'Writing this stays plain text; it does not create a backing document.',
-        },
-        componentId: {
-          type: 'string',
-          description: 'DEPRECATED single component. Still accepted \u2014 it is treated as a one-element componentIds \u2014 but prefer componentIds: a task touches every component its work spans, and this field can only name one of them.',
-        },
-        componentIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Every component this task touches. Get available components from get_current_project_context(). ' +
-            'On update this REPLACES the set: pass the full list, and an empty array clears it. Wins over componentId when both are given.',
         },
         epicId: {
           type: 'string',
@@ -212,8 +204,9 @@ export const TASK_TOOLS = [
           items: { type: 'string' },
           description:
             'Repo-relative paths you touched. Simpler alternative to linkedFiles — just the paths. ' +
-            'ezmodo resolves them to the components (screens/pages/areas) that own them and links ' +
-            'this task to them automatically; anything it is unsure about comes back as ' +
+            'ezmodo resolves them to the features that own those paths and links this task to them ' +
+            'automatically; a path several features share comes back as a suggestion, as does anything ' +
+            'else it is unsure about, in ' +
             'linkSuggestions for you to accept or reject. Used by create and update.',
         },
         autolink: {
@@ -458,7 +451,7 @@ export const TASK_TOOLS = [
       'the authentication, plan check, rate-limit accounting and database connection ' +
       'setup once instead of per task; a burst of individual creates is what made the ' +
       'app unresponsive for 45 minutes on 2026-07-28. ' +
-      'Put shared values (projectId, epicId, componentIds) at the TOP LEVEL and let the ' +
+      'Put shared values (projectId, epicId) at the TOP LEVEL and let the ' +
       'items inherit them — only override per item where a task genuinely differs. ' +
       'Each item accepts the same fields as manage_task action:"create". ' +
       'Returns a per-item result array: on partial failure retry ONLY the items marked ' +
@@ -479,18 +472,6 @@ export const TASK_TOOLS = [
           type: 'string',
           description: 'Epic applied to every item that does not set its own. The ' +
             'usual case for a breakdown: one epic for the whole batch.',
-        },
-        componentId: {
-          type: 'string',
-          description: 'DEPRECATED single component applied to every item that does ' +
-            'not name its own. Prefer componentIds.',
-        },
-        componentIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Components applied to every item that does not name its own. ' +
-            'An item naming either form keeps its own set. ' +
-            'Get available components from get_current_project_context().',
         },
         tasks: {
           type: 'array',
@@ -515,7 +496,7 @@ export const TASK_TOOLS = [
   {
     name: 'search_tasks',
     description: 'Search for tasks with filters or semantic search. ' +
-      'Use for filtered queries (by status, priority, component, etc). ' +
+      'Use for filtered queries (by status, priority, epic, etc). ' +
       'To get ALL tasks in an epic, prefer get_epic with includeTasks=true. ' +
       'Use search_tasks with epicId only when you need additional filtering ' +
       '(e.g., only in_progress tasks within an epic). ' +
@@ -527,10 +508,6 @@ export const TASK_TOOLS = [
         projectId: {
           type: 'string',
           description: 'Filter by project ID (primary scope)',
-        },
-        componentId: {
-          type: 'string',
-          description: 'Filter by component ID (codebase area)',
         },
         epicId: {
           type: 'string',
@@ -619,18 +596,6 @@ export const TASK_TOOLS = [
           items: { type: 'string' },
           description: 'Repo-relative paths of files that were changed. Recorded in the ' +
             'description and linked to the task for dependency inference.',
-        },
-        componentId: {
-          type: 'string',
-          description: 'DEPRECATED single component. Still accepted as a one-element ' +
-            'componentIds, but prefer componentIds \u2014 untracked work often spans ' +
-            'more than one area, which is part of why it was untracked.',
-        },
-        componentIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Every component this work touched. Get available components ' +
-            'from get_current_project_context().',
         },
         epicId: {
           type: 'string',

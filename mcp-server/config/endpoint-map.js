@@ -131,27 +131,6 @@ export const ENDPOINT_MAP = {
   'mcpRemoveAccessEntry': { route: 'mcp/v1/access/entries', method: 'DELETE' },
   'mcpCheckAccess': { route: 'mcp/v1/access/check', method: 'POST' },
 
-  // Components (project-scoped codebase areas)
-  'mcpCreateComponent': { route: 'mcp/v1/components', method: 'POST' },
-  'mcpListComponents': { route: 'mcp/v1/components', method: 'GET' },
-  'mcpUpdateComponent': { route: 'mcp/v1/components', method: 'PUT' },
-  'mcpDeleteComponent': { route: 'mcp/v1/components', method: 'DELETE' },
-  'mcpGetComponentStats': { route: 'mcp/v1/components/stats', method: 'GET' },
-  'mcpGetComponentDependencyGraph': { route: 'mcp/v1/components/dependency-graph', method: 'GET' },
-  // E-223: screen→screen navigation edges (the screen-flow map).
-  'mcpGetComponentNavigation': { route: 'mcp/v1/components/navigation', method: 'GET' },
-  'mcpAddComponentNavigation': { route: 'mcp/v1/components/navigation', method: 'POST' },
-  'mcpRemoveComponentNavigation': { route: 'mcp/v1/components/navigation', method: 'DELETE' },
-  // E-239 #2409: re-derive the flow map from code instead of hand-drawing it.
-  'mcpDeriveComponentNavigation': { route: 'mcp/v1/components/navigation/derive', method: 'POST' },
-  'mcpAddComponentDependency': { route: 'mcp/v1/components/dependencies', method: 'POST' },
-  'mcpRemoveComponentDependency': { route: 'mcp/v1/components/dependencies', method: 'DELETE' },
-  // E-168: unified UI inventory — Components span kinds area|screen|page|component.
-  // discover proposes page/component surfaces from the Context Manifest;
-  // import bulk-creates surfaces (optionally nested and/or feature-linked).
-  'mcpDiscoverComponents': { route: 'mcp/v1/components/discover', method: 'GET' },
-  'mcpImportComponents': { route: 'mcp/v1/components/import', method: 'POST' },
-
   // Polymorphic links — single CRUD surface for any entity_links row
   // (blocked_by, relates_to) across tasks, epics, projects, documents.
   'mcpAddLink':    { route: 'mcp/v1/links', method: 'POST' },

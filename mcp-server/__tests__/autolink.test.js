@@ -7,7 +7,7 @@ jest.unstable_mockModule('../lib/logger.js', () => ({
 }));
 
 const {
-  resolvePathsToComponents,
+  resolvePathsToFeatures,
   previewEntityLinks,
   partitionProposals,
   fetchPendingLinkSuggestions,
@@ -16,26 +16,28 @@ const {
 
 beforeEach(() => mockCall.mockReset());
 
-describe('resolvePathsToComponents', () => {
-  it('returns the API matches and misses', async () => {
+describe('resolvePathsToFeatures', () => {
+  it('returns the feature owners and misses', async () => {
     mockCall.mockResolvedValue({
-      matches: [{ path: 'a.dart', componentId: 'c1', score: 1 }],
+      features: [{ path: 'a.go', featureId: 'f1', score: 0.9, ambiguous: false }],
       unresolved: ['b.txt'],
     });
-    const got = await resolvePathsToComponents({ projectId: 'p1', paths: ['a.dart', 'b.txt'] });
-    expect(got.matches).toHaveLength(1);
+    const got = await resolvePathsToFeatures({ projectId: 'p1', paths: ['a.go', 'b.txt'] });
+    expect(got.features).toEqual([{ path: 'a.go', featureId: 'f1', score: 0.9, ambiguous: false }]);
     expect(got.unresolved).toEqual(['b.txt']);
-    expect(mockCall).toHaveBeenCalledWith('mcpResolvePaths', { projectId: 'p1', paths: ['a.dart', 'b.txt'] });
+    expect(mockCall).toHaveBeenCalledWith('mcpResolvePaths', { projectId: 'p1', paths: ['a.go', 'b.txt'] });
   });
 
-  it('passes feature owners through (E-258)', async () => {
+  // An API that still returns a component `matches` array (components were
+  // retired after this server shipped) must not leak it into the result.
+  it('ignores a legacy component matches array', async () => {
     mockCall.mockResolvedValue({
-      matches: [],
-      features: [{ path: 'a.go', featureId: 'f1', score: 0.9, ambiguous: false }],
+      matches: [{ path: 'a.dart', componentId: 'c1', score: 1 }],
+      features: [],
       unresolved: [],
     });
-    const got = await resolvePathsToComponents({ projectId: 'p1', paths: ['a.go'] });
-    expect(got.features).toEqual([{ path: 'a.go', featureId: 'f1', score: 0.9, ambiguous: false }]);
+    const got = await resolvePathsToFeatures({ projectId: 'p1', paths: ['a.dart'] });
+    expect(got).toEqual({ features: [], unresolved: [] });
   });
 
   // An API predating E-225 has no such route. Reporting every path as
@@ -43,15 +45,15 @@ describe('resolvePathsToComponents', () => {
   // caller carry on rather than surfacing a 404 it can do nothing about.
   it('degrades to all-unresolved when the endpoint is missing', async () => {
     mockCall.mockRejectedValue(new Error('Unknown endpoint'));
-    const got = await resolvePathsToComponents({ projectId: 'p1', paths: ['a.dart'] });
-    expect(got.matches).toEqual([]);
+    const got = await resolvePathsToFeatures({ projectId: 'p1', paths: ['a.dart'] });
+    expect(got.features).toEqual([]);
     expect(got.unresolved).toEqual(['a.dart']);
   });
 
   it('short-circuits without calling the API when there is nothing to resolve', async () => {
-    const empty = { matches: [], features: [], unresolved: [] };
-    expect(await resolvePathsToComponents({ projectId: 'p1', paths: [] })).toEqual(empty);
-    expect(await resolvePathsToComponents({ paths: ['a.dart'] })).toEqual(empty);
+    const empty = { features: [], unresolved: [] };
+    expect(await resolvePathsToFeatures({ projectId: 'p1', paths: [] })).toEqual(empty);
+    expect(await resolvePathsToFeatures({ paths: ['a.dart'] })).toEqual(empty);
     expect(mockCall).not.toHaveBeenCalled();
   });
 });
@@ -84,7 +86,7 @@ describe('previewEntityLinks', () => {
 describe('partitionProposals', () => {
   it('splits on autoApplies', () => {
     const { autoLinked, linkSuggestions } = partitionProposals([
-      { targetType: 'component', targetId: 'c1', autoApplies: true, rule: 'code.path_to_component' },
+      { targetType: 'feature', targetId: 'c1', autoApplies: true, rule: 'code.path_to_feature' },
       { targetType: 'feature', targetId: 'f1', autoApplies: false, rule: 'semantic.feature_match', confidence: 0.7 },
     ]);
     expect(autoLinked).toHaveLength(1);
@@ -112,7 +114,7 @@ describe('fetchPendingLinkSuggestions', () => {
   });
 
   it('normalises the Go-shaped rows the API returns', async () => {
-    mockCall.mockResolvedValue({ suggestions: [row('s1', 'f1', 'code.component_feature')] });
+    mockCall.mockResolvedValue({ suggestions: [row('s1', 'f1', 'code.path_to_feature')] });
 
     const got = await fetchPendingLinkSuggestions({ subjectType: 'task', subjectId: 't1' });
 
@@ -124,9 +126,9 @@ describe('fetchPendingLinkSuggestions', () => {
       targetType: 'feature',
       targetId: 'f1',
       linkType: 'relates_to',
-      rule: 'code.component_feature',
+      rule: 'code.path_to_feature',
       confidence: 0.88,
-      evidence: { link_type: 'relates_to', rule: 'code.component_feature' },
+      evidence: { link_type: 'relates_to', rule: 'code.path_to_feature' },
     }]);
   });
 
@@ -147,11 +149,11 @@ describe('fetchPendingLinkSuggestions', () => {
 
   describe('attachSuggestionIds', () => {
     const proposal = (targetId) => ({
-      targetType: 'feature', targetId, linkType: 'relates_to', rule: 'code.component_feature',
+      targetType: 'feature', targetId, linkType: 'relates_to', rule: 'code.path_to_feature',
     });
 
     it('gives a preview proposal the id of its persisted row', async () => {
-      mockCall.mockResolvedValue({ suggestions: [row('s1', 'f1', 'code.component_feature')] });
+      mockCall.mockResolvedValue({ suggestions: [row('s1', 'f1', 'code.path_to_feature')] });
 
       const got = await attachSuggestionIds({
         subjectType: 'task', subjectId: 't1', linkSuggestions: [proposal('f1')],
@@ -159,7 +161,7 @@ describe('fetchPendingLinkSuggestions', () => {
 
       expect(got.linkSuggestions).toHaveLength(1);
       expect(got.linkSuggestions[0].suggestionId).toBe('s1');
-      expect(got.linkSuggestions[0].rule).toBe('code.component_feature');
+      expect(got.linkSuggestions[0].rule).toBe('code.path_to_feature');
       expect(got.partial).toBe(false);
     });
 
@@ -167,7 +169,7 @@ describe('fetchPendingLinkSuggestions', () => {
     // preview is taken, so the inline list was not merely id-less but short.
     it('appends queued rows the preview never saw', async () => {
       mockCall.mockResolvedValue({
-        suggestions: [row('s1', 'f1', 'code.component_feature'), row('s2', 'f2', 'semantic.feature_match')],
+        suggestions: [row('s1', 'f1', 'code.path_to_feature'), row('s2', 'f2', 'semantic.feature_match')],
       });
 
       const got = await attachSuggestionIds({
@@ -180,7 +182,7 @@ describe('fetchPendingLinkSuggestions', () => {
     });
 
     it('flags partial when a proposal has no row yet', async () => {
-      mockCall.mockResolvedValue({ suggestions: [row('s1', 'f1', 'code.component_feature')] });
+      mockCall.mockResolvedValue({ suggestions: [row('s1', 'f1', 'code.path_to_feature')] });
 
       const got = await attachSuggestionIds({
         subjectType: 'task', subjectId: 't1', linkSuggestions: [proposal('f1'), proposal('f9')],

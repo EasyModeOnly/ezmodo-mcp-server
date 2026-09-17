@@ -4,8 +4,9 @@
  *
  * Project-First Hierarchy: Tasks belong to projects (required), with optional epic grouping
  *
- * Component assignment: Each task should belong to exactly one component.
- * AI agents must explicitly provide componentId (from get_current_project_context).
+ * Code links are derived: the files a task touches (changedFiles / linkedFiles)
+ * resolve to the features that own those paths (E-258). Agents name the feature
+ * the work advances through `links`.
  * Tags are auto-assigned based on content analysis against the local project cache.
  */
 
@@ -112,7 +113,7 @@ async function createTask(args) {
     }
   }
 
-  // Create the task (componentId should be explicitly provided by the agent)
+  // Create the task
   const result = await callZephlyAPI('mcpCreateTask', createArgs);
 
   // If the milestone is frozen and the operation was blocked, return guidance
@@ -159,7 +160,6 @@ async function createTask(args) {
       subjectType: 'task',
       subjectId: result.taskId,
       paths: (createArgs.linkedFiles || []).map((f) => f.path),
-      componentId: createArgs.componentId,
       epicId: createArgs.epicId,
     });
     const { autoLinked, linkSuggestions } = partitionProposals(proposals);
@@ -189,20 +189,6 @@ async function createTask(args) {
           + `action:"link" entityType:"task" entityId:"${result.taskId}" for the authoritative set.`
         : 'Resolve these with resolve_link_suggestions using each suggestionId.';
     }
-  }
-
-  // If no component was named, include available components as a hint.
-  //
-  // Tests the EFFECTIVE set, not just the deprecated singular. Checking only
-  // `componentId` meant a create that correctly used `componentIds` was told it
-  // had named no component — while the links had in fact been written — so
-  // agents kept issuing a redundant follow-up update to fix nothing (#2429).
-  const namedComponents = Boolean(args.componentId)
-    || (Array.isArray(args.componentIds) && args.componentIds.some(Boolean));
-  if (!namedComponents && autoAssign?.availableComponents?.length) {
-    result.warning = 'Task created without a component. Please provide componentIds '
-      + 'for better organization. Use get_current_project_context() to see available components.';
-    result.availableComponents = autoAssign.availableComponents;
   }
 
   // Attach create-time links (E-225) — best effort, never fails the create.
@@ -282,7 +268,7 @@ function buildUntrackedDescription({ description, branch, changedFiles }) {
  * that would duplicate everything already created.
  */
 export async function bulkCreateTasks(args) {
-  const { projectId, epicId, componentId, componentIds, tasks = [] } = args;
+  const { projectId, epicId, tasks = [] } = args;
 
   if (!projectId) throw new Error('projectId is required');
   if (!Array.isArray(tasks) || tasks.length === 0) {
@@ -300,8 +286,6 @@ export async function bulkCreateTasks(args) {
   const result = await callZephlyAPI('mcpBulkCreateTasks', {
     projectId,
     epicId,
-    componentId,
-    componentIds,
     tasks: tasks.map(({ changedFiles, linkedFiles, ...rest }) => ({
       ...rest,
       // Accept the same two spellings as manage_task so callers do not have to
@@ -344,8 +328,6 @@ export async function reportUntrackedWork(args) {
     projectId,
     title,
     description,
-    componentId,
-    componentIds,
     origin = 'untracked',
     discoveredDuringTaskId,
     branch,
@@ -372,8 +354,6 @@ export async function reportUntrackedWork(args) {
     status: 'in_progress',
     origin,
     ...(discoveredDuringTaskId ? { discoveredDuringTaskId } : {}),
-    ...(componentId ? { componentId } : {}),
-    ...(Array.isArray(componentIds) && componentIds.length > 0 ? { componentIds } : {}),
     ...(epicId ? { epicId } : {}),
     ...(allLinks.length > 0 ? { links: allLinks } : {}),
     ...(Array.isArray(changedFiles) && changedFiles.length > 0
@@ -508,8 +488,8 @@ export async function getTask(args) {
 //
 // `files` has always been optional and callers routinely omit it, which costs
 // more than it looks: without paths the task is invisible to auto-linking
-// forever, since the engine has nothing to resolve against the component
-// inventory. Measured on saltpig, 359 of 1224 tasks carrying a commit had no
+// forever, since the engine has nothing to resolve against the paths features
+// own. Measured on saltpig, 359 of 1224 tasks carrying a commit had no
 // linked files at all.
 //
 // The fix is derivation rather than discipline. The commit SHA is already

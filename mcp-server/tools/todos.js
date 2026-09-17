@@ -44,10 +44,6 @@ export const TODO_TOOLS = [
           type: 'string',
           description: 'Optional epic to assign the task to (move_to_project only)',
         },
-        componentId: {
-          type: 'string',
-          description: 'Optional component to assign the task to (move_to_project only)',
-        },
       },
       required: ['action'],
     },

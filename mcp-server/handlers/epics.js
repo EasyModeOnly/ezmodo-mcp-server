@@ -3,7 +3,7 @@
  * Handler functions for epic-related MCP tools
  *
  * Project-First Hierarchy: Epics belong to projects (required),
- * with optional component grouping and milestone linking.
+ * with optional milestone linking.
  *
  * Auto-assignment: When creating epics, automatically applies matching tags
  * based on content analysis against the local project cache.
