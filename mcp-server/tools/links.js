@@ -143,8 +143,11 @@ export const LINK_TOOLS = [
     name: 'resolve_links',
     description:
       'Given files you have touched (or are about to), return the entities you should link to: ' +
-      'the components — screens, pages, codebase areas — that own those paths, plus how confident ' +
-      'the match is. Read-only; nothing is written.\n\n' +
+      'the components — screens, pages, codebase areas — that own those paths, and the features ' +
+      '(product capabilities) whose owned code paths cover them, plus how confident each match is. ' +
+      'Read-only; nothing is written.\n\n' +
+      '`features.owned` are capabilities that solely own a path: link them. `features.shared` are ' +
+      'paths several features claim: pick the one your work actually advanced.\n\n' +
       'Call it BEFORE creating work to fill in the `links` param, or after a change set to check ' +
       'you have not missed anything. If it returns a component you did not expect, that is a signal ' +
       'your change is broader than you thought — worth reading before you continue.\n\n' +

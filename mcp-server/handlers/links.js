@@ -107,20 +107,29 @@ export async function listLinks({
 }
 
 /**
- * resolve_links — which components own these files?
+ * resolve_links — which components and features own these files?
  *
  * The read that makes linking cheap: an agent asks once, before creating work,
  * and gets back the entities it should attach rather than having to know the
  * component inventory. Returns `unresolved` too, because a path nothing covers
  * is itself information — it usually means the inventory has a gap.
+ *
+ * Features (E-258) are split by what the engine would do with them: a feature
+ * that solely owns the path links on its own; a path several features share is
+ * a choice for the caller to make.
  */
 export async function resolveLinks({ projectId, paths }) {
-  const { matches, unresolved } = await resolvePathsToComponents({ projectId, paths });
+  const { matches, features, unresolved } = await resolvePathsToComponents({ projectId, paths });
+  const featureMatches = features || [];
   return {
     deterministic: matches.filter((m) => m.score >= 1),
     probable: matches.filter((m) => m.score < 1),
+    features: {
+      owned: featureMatches.filter((f) => !f.ambiguous),
+      shared: featureMatches.filter((f) => f.ambiguous),
+    },
     unmatchedPaths: unresolved,
-    count: matches.length,
+    count: matches.length + featureMatches.length,
   };
 }
 

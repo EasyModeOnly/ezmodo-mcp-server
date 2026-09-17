@@ -28,6 +28,16 @@ describe('resolvePathsToComponents', () => {
     expect(mockCall).toHaveBeenCalledWith('mcpResolvePaths', { projectId: 'p1', paths: ['a.dart', 'b.txt'] });
   });
 
+  it('passes feature owners through (E-258)', async () => {
+    mockCall.mockResolvedValue({
+      matches: [],
+      features: [{ path: 'a.go', featureId: 'f1', score: 0.9, ambiguous: false }],
+      unresolved: [],
+    });
+    const got = await resolvePathsToComponents({ projectId: 'p1', paths: ['a.go'] });
+    expect(got.features).toEqual([{ path: 'a.go', featureId: 'f1', score: 0.9, ambiguous: false }]);
+  });
+
   // An API predating E-225 has no such route. Reporting every path as
   // unresolved is honest — we genuinely could not resolve them — and lets the
   // caller carry on rather than surfacing a 404 it can do nothing about.
@@ -39,8 +49,9 @@ describe('resolvePathsToComponents', () => {
   });
 
   it('short-circuits without calling the API when there is nothing to resolve', async () => {
-    expect(await resolvePathsToComponents({ projectId: 'p1', paths: [] })).toEqual({ matches: [], unresolved: [] });
-    expect(await resolvePathsToComponents({ paths: ['a.dart'] })).toEqual({ matches: [], unresolved: [] });
+    const empty = { matches: [], features: [], unresolved: [] };
+    expect(await resolvePathsToComponents({ projectId: 'p1', paths: [] })).toEqual(empty);
+    expect(await resolvePathsToComponents({ paths: ['a.dart'] })).toEqual(empty);
     expect(mockCall).not.toHaveBeenCalled();
   });
 });

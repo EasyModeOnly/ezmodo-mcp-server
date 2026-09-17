@@ -211,6 +211,8 @@ export const ENDPOINT_MAP = {
   'mcpSearchFeatures': { route: 'mcp/v1/features/search', method: 'GET' },
   'mcpLinkFeatureArtifact': { route: 'mcp/v1/features/link', method: 'POST' },
   'mcpUnlinkFeatureArtifact': { route: 'mcp/v1/features/link', method: 'DELETE' },
+  'mcpListFeaturePaths': { route: 'mcp/v1/features/paths', method: 'GET' },
+  'mcpSetFeaturePaths': { route: 'mcp/v1/features/paths', method: 'PUT' },
   'mcpPromoteEpicToFeature': { route: 'mcp/v1/features/promote-epic', method: 'POST' },
   'mcpGenerateHowItWorks': { route: 'mcp/v1/features/generate-how-it-works', method: 'POST' },
   'mcpApplyHowItWorks': { route: 'mcp/v1/features/apply-how-it-works', method: 'POST' },

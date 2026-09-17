@@ -43,8 +43,43 @@ describe('Feature Operations', () => {
       expect(result.feature.howItWorks).toBe('## How it works');
     });
 
+    it('should add feature paths, defaulting the mode to add', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({ paths: [{ projectId: 'p1', sourcePath: 'api/x' }] });
+
+      const paths = [{ projectId: 'p1', sourcePath: 'api/x' }];
+      const result = await manageFeature({ action: 'paths', featureId: 'feat-1', paths });
+
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSetFeaturePaths', {
+        featureId: 'feat-1', mode: 'add', paths,
+      });
+      expect(result.paths).toHaveLength(1);
+    });
+
+    it('should pass an explicit paths mode through', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({ paths: [] });
+
+      await manageFeature({ action: 'paths', featureId: 'feat-1', pathsMode: 'replace', paths: [] });
+
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSetFeaturePaths', {
+        featureId: 'feat-1', mode: 'replace', paths: [],
+      });
+    });
+
     it('should reject an unknown action', async () => {
       await expect(manageFeature({ action: 'frobnicate' })).rejects.toThrow(/Unknown action/);
+    });
+  });
+
+  describe('getFeature includePaths', () => {
+    it('should attach the feature paths to a single lookup', async () => {
+      mockCallZephlyAPI
+        .mockResolvedValueOnce({ feature: { id: 'feat-1' } })
+        .mockResolvedValueOnce({ paths: [{ projectId: 'p1', sourcePath: 'web/src/app/x' }] });
+
+      const result = await getFeature({ featureId: 'feat-1', includePaths: true });
+
+      expect(mockCallZephlyAPI).toHaveBeenNthCalledWith(2, 'mcpListFeaturePaths', { featureId: 'feat-1' });
+      expect(result.paths).toEqual([{ projectId: 'p1', sourcePath: 'web/src/app/x' }]);
     });
   });
 

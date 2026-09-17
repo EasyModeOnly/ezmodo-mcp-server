@@ -14,27 +14,30 @@ import { callZephlyAPI } from './http-client.js';
  */
 
 /**
- * Resolve repo-relative file paths to the components that own them.
+ * Resolve repo-relative file paths to the components and features that own
+ * them. `features` (E-258) comes from feature_paths; an API predating it simply
+ * returns none.
  *
  * @param {object} params
  * @param {string} params.projectId
  * @param {string[]} params.paths - repo-relative paths
- * @returns {Promise<{matches: object[], unresolved: string[]}>}
+ * @returns {Promise<{matches: object[], features: object[], unresolved: string[]}>}
  */
 export async function resolvePathsToComponents({ projectId, paths }) {
   if (!projectId || !Array.isArray(paths) || paths.length === 0) {
-    return { matches: [], unresolved: [] };
+    return { matches: [], features: [], unresolved: [] };
   }
   try {
     const result = await callZephlyAPI('mcpResolvePaths', { projectId, paths });
     return {
       matches: result?.matches || [],
+      features: result?.features || [],
       unresolved: result?.unresolved || [],
     };
   } catch {
     // An API predating E-225 has no such route. Report nothing rather than
     // surfacing a 404 the agent can do nothing about.
-    return { matches: [], unresolved: paths };
+    return { matches: [], features: [], unresolved: paths };
   }
 }
 

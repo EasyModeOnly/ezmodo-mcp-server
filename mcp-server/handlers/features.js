@@ -20,12 +20,13 @@ export async function manageFeature(args) {
   case 'delete': return deleteFeature(params);
   case 'link': return linkFeatureArtifact(params);
   case 'unlink': return unlinkFeatureArtifact(params);
+  case 'paths': return setFeaturePaths(params);
   case 'promote_epic': return promoteEpic(params);
   case 'generate_how_it_works': return generateHowItWorks(params);
   case 'apply_how_it_works': return applyHowItWorks(params);
   case 'apply_init': return applyInit(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, promote_epic, generate_how_it_works, apply_how_it_works, or apply_init.`);
+    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, paths, promote_epic, generate_how_it_works, apply_how_it_works, or apply_init.`);
   }
 }
 
@@ -35,7 +36,7 @@ export async function manageFeature(args) {
  * - organizationId only → list (or tree when tree=true).
  */
 export async function getFeature(args) {
-  const { tree, includeLinks, includeDetail, featureId, featureSlug, organizationId, ...filters } = args;
+  const { tree, includeLinks, includeDetail, includePaths, featureId, featureSlug, organizationId, ...filters } = args;
   const isSingleLookup = featureId || (featureSlug && organizationId);
 
   if (isSingleLookup) {
@@ -49,6 +50,10 @@ export async function getFeature(args) {
     } else if (includeLinks && lookupId) {
       const links = await callZephlyAPI('mcpListFeatureLinks', { featureId: lookupId });
       result.links = links?.links ?? links;
+    }
+    if (includePaths && lookupId) {
+      const paths = await callZephlyAPI('mcpListFeaturePaths', { featureId: lookupId });
+      result.paths = paths?.paths ?? paths;
     }
     return result;
   }
@@ -108,6 +113,12 @@ async function linkFeatureArtifact({ featureId, targetType, targetId }) {
 
 async function unlinkFeatureArtifact({ featureId, targetType, targetId }) {
   return callZephlyAPI('mcpUnlinkFeatureArtifact', { featureId, targetType, targetId });
+}
+
+// Add, remove or replace the code paths a feature owns (E-258). Paths are what
+// auto-link work to the feature when it touches those files.
+async function setFeaturePaths({ featureId, pathsMode, paths }) {
+  return callZephlyAPI('mcpSetFeaturePaths', { featureId, mode: pathsMode || 'add', paths });
 }
 
 async function promoteEpic({ epicId }) {

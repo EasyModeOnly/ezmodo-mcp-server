@@ -33,8 +33,13 @@ export const FEATURE_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'link', 'unlink', 'promote_epic', 'generate_how_it_works', 'apply_how_it_works', 'apply_init'],
-          description: 'Action to perform. "promote_epic" creates a feature from an existing epic ' +
+          enum: [
+            'create', 'update', 'delete', 'link', 'unlink', 'paths',
+            'promote_epic', 'generate_how_it_works', 'apply_how_it_works', 'apply_init',
+          ],
+          description: 'Action to perform. "paths" adds, removes or replaces the code paths the ' +
+            'feature OWNS (featureId + paths + pathsMode) — work touching a file under an owned path ' +
+            'auto-links to the feature. "promote_epic" creates a feature from an existing epic ' +
             '(inheriting its title/description/scope) and links the epic to it. ' +
             '"generate_how_it_works" (re)generates the feature\'s grounded, source-attributed ' +
             '"how it works" living description from its linked work + code (requires featureId; ' +
@@ -116,6 +121,36 @@ export const FEATURE_TOOLS = [
           type: 'string',
           description: 'ID of the artifact to link/unlink (required for link, unlink)',
         },
+        // --- paths fields (E-258) ---
+        paths: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              projectId: {
+                type: 'string',
+                description: 'Project the path lives in. Must be one the feature spans ' +
+                  '(any project in the org for an org-wide feature).',
+              },
+              sourcePath: {
+                type: 'string',
+                description: 'Repo-relative file or folder, e.g. "api/internal/core/features" or ' +
+                  '"web/src/app/checkout/page.tsx". Matched by exact prefix, NOT glob.',
+              },
+            },
+            required: ['projectId', 'sourcePath'],
+          },
+          description: 'Code paths for the "paths" action. A file resolves to the feature owning its ' +
+            'LONGEST matching folder or the exact file. Own what is characteristic of the capability; ' +
+            'leave shared plumbing (e.g. web/src/components/ui, api/internal/api/router.go) owned by no ' +
+            'feature — a path owned by several features only ever produces suggestions.',
+        },
+        pathsMode: {
+          type: 'string',
+          enum: ['add', 'remove', 'replace'],
+          description: 'How "paths" applies (default "add"). "replace" makes the list the feature\'s ' +
+            'entire path set; an empty list clears it.',
+        },
         // --- apply_init fields (E-167) ---
         nodes: {
           type: 'array',
@@ -163,6 +198,10 @@ export const FEATURE_TOOLS = [
         includeLinks: {
           type: 'boolean',
           description: 'If true (single lookup), also return the feature\'s linked artifacts',
+        },
+        includePaths: {
+          type: 'boolean',
+          description: 'If true (single lookup), also return the code paths the feature owns (E-258).',
         },
         includeDetail: {
           type: 'boolean',
