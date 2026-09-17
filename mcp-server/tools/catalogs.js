@@ -80,8 +80,14 @@ export const CATALOG_TOOLS = [
     name: 'manage_catalog',
     description: 'Create, update, or delete an org-level Catalog, link/unlink it to other artifacts, ' +
       'or push a new versioned snapshot of its contents. A Catalog is a generalized, code-derived ' +
-      'catalog (kind = notifications | analytics_events | db_schema | custom); its versions are ' +
+      'catalog (kind = notifications | analytics_events | db_schema | screens | custom); its versions are ' +
       'immutable { columns, items } snapshots.\n\n' +
+      'SCREENS (E-258): each project has one kind:"screens" catalog, its UI inventory (screens and pages, ' +
+      'keyed by source path). Do not snapshot it by hand: action:"discover_screens" (projectId) lists what ' +
+      'the Context Manifest shows that the catalog lacks, and action:"import_screens" (projectId, screens, ' +
+      'optional featureId) adds them and links each to the feature. action:"sync_screens" (projectId) ' +
+      'reconciles the catalog with the manifest and re-derives the screen flow map (navigates_to edges ' +
+      'between screens); it cannot remove a hand-added screen or a human-confirmed edge.\n\n' +
       'CAPTURE-AT-BUILD (important): whenever you change the catalog\'s source of truth in code, call ' +
       'action:"snapshot" and put the source path/commit in `source`. The server is checksum-gated — ' +
       're-snapshotting unchanged content creates no new version and is a cheap no-op — so it is safe ' +
@@ -109,7 +115,8 @@ export const CATALOG_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'link', 'unlink', 'snapshot'],
+          enum: ['create', 'update', 'delete', 'link', 'unlink', 'snapshot', 'discover_screens', 'import_screens',
+            'sync_screens'],
           description: 'Action to perform. "snapshot" pushes a new version (checksum-gated) — send a ' +
             'delta with mode:"patch" unless this is the catalog\'s first snapshot. "link"/"unlink" ' +
             'manage relates_to edges to other artifacts.',
@@ -127,10 +134,30 @@ export const CATALOG_TOOLS = [
           type: 'string',
           description: 'Catalog ID (required for update, delete, link, unlink, snapshot)',
         },
+        // --- Screens (E-258) ---
+        screens: {
+          type: 'array',
+          description: 'Screens to add for import_screens, usually taken from discover_screens.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Display name, e.g. "CookSessionDetailScreen"' },
+              sourcePath: { type: 'string', description: 'Repo-relative file; becomes the item key' },
+              kind: { type: 'string', enum: ['screen', 'page'], description: 'Default "screen"' },
+              route: { type: 'string', description: 'Route, for web pages' },
+              framework: { type: 'string', description: 'e.g. "nextjs", "flutter"' },
+            },
+            required: ['name', 'sourcePath'],
+          },
+        },
+        featureId: {
+          type: 'string',
+          description: 'Feature to link every imported screen to (import_screens)',
+        },
         // --- Create / update fields ---
         kind: {
           type: 'string',
-          enum: ['db_schema', 'notifications', 'analytics_events', 'custom'],
+          enum: ['db_schema', 'notifications', 'analytics_events', 'screens', 'custom'],
           description: 'What the catalog catalogs (default "custom") (create, update)',
         },
         name: {
@@ -276,7 +303,7 @@ export const CATALOG_TOOLS = [
         },
         kind: {
           type: 'string',
-          enum: ['db_schema', 'notifications', 'analytics_events', 'custom'],
+          enum: ['db_schema', 'notifications', 'analytics_events', 'screens', 'custom'],
           description: 'Filter to a single kind',
         },
         linkedType: {

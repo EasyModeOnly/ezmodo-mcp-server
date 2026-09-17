@@ -48,7 +48,9 @@ export const COMPONENT_TOOLS = [
             '(E-223) \u2014 a DIFFERENT relation from add_dependency: navigation is "you can get ' +
             'there from here" and only valid between screens/pages, whereas a dependency is a code ' +
             'relationship. Read the current flow with list_components include:["navigation"]. ' +
-            '"derive_navigation" (pass projectId) RE-DERIVES the whole flow map from the synced ' +
+            '"derive_navigation" (pass projectId) syncs the project\'s screens catalog with the synced ' +
+            'manifest and RE-DERIVES the whole flow map, which now lives on the screens catalog ' +
+            '(E-258; the response has screens, navigation and the legacy components result), from the synced ' +
             'Context Manifest \u2014 prefer it to drawing edges by hand, because a derived map stays ' +
             'true for free while an asserted one decays from the moment it is written (E-239). It is ' +
             'idempotent and cannot delete a human\u2019s edge: it reconciles only edges still at ' +

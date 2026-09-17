@@ -242,6 +242,16 @@ describe('component links at create time (E-225)', () => {
     return mockCallZephlyAPI.mock.calls.filter((c) => c[0] === endpoint);
   }
 
+  it('derive_navigation syncs the screens catalog, where the flow map now lives (E-258)', async () => {
+    mockCallZephlyAPI.mockResolvedValue({ screens: {}, navigation: { derived: 4 }, components: null });
+
+    const result = await manageComponent({ action: 'derive_navigation', projectId: 'proj-1' });
+
+    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSyncScreens', { projectId: 'proj-1' });
+    expect(callsTo('mcpDeriveComponentNavigation')).toHaveLength(0);
+    expect(result.navigation.derived).toBe(4);
+  });
+
   it('links a newly created component', async () => {
     mockCallZephlyAPI.mockImplementation(async (endpoint) => {
       if (endpoint === 'mcpCreateComponent') return { componentId: 'comp-1', slug: 'task-card' };

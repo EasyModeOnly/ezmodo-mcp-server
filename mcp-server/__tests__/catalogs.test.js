@@ -24,6 +24,42 @@ describe('Catalog Operations', () => {
       expect(result.catalog.id).toBe('cat-1');
     });
 
+    it('should discover screens for a project (E-258)', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({ screens: [{ name: 'HomeScreen', sourcePath: 'mobile/lib/home.dart' }] });
+
+      const result = await manageCatalog({ action: 'discover_screens', projectId: 'p1' });
+
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDiscoverScreens', { projectId: 'p1' });
+      expect(result.screens).toHaveLength(1);
+    });
+
+    it('should import screens, passing the feature only when given', async () => {
+      mockCallZephlyAPI.mockResolvedValue({ screens: [] });
+      const screens = [{ name: 'HomeScreen', sourcePath: 'mobile/lib/home.dart' }];
+
+      await manageCatalog({ action: 'import_screens', projectId: 'p1', screens, featureId: 'f1' });
+      expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpImportScreens', { projectId: 'p1', screens, featureId: 'f1' });
+
+      await manageCatalog({ action: 'import_screens', projectId: 'p1', screens });
+      expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpImportScreens', { projectId: 'p1', screens });
+    });
+
+    it('should sync screens for a project', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({ screens: {}, navigation: { derived: 2 } });
+
+      const result = await manageCatalog({ action: 'sync_screens', projectId: 'p1' });
+
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSyncScreens', { projectId: 'p1' });
+      expect(result.navigation.derived).toBe(2);
+      await expect(manageCatalog({ action: 'sync_screens' })).rejects.toThrow(/projectId/);
+    });
+
+    it('should validate screens arguments before calling the API', async () => {
+      await expect(manageCatalog({ action: 'discover_screens' })).rejects.toThrow(/projectId/);
+      await expect(manageCatalog({ action: 'import_screens', projectId: 'p1', screens: [] })).rejects.toThrow(/screens/);
+      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    });
+
     it('should update a catalog', async () => {
       mockCallZephlyAPI.mockResolvedValueOnce({ catalog: { id: 'cat-1' } });
 

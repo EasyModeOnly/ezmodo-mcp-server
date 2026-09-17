@@ -217,7 +217,10 @@ async function removeComponentNavigation(args) {
  * stale inventory shows itself instead of the map silently shrinking.
  */
 async function deriveComponentNavigation({ projectId }) {
-  return callZephlyAPI('mcpDeriveComponentNavigation', { projectId });
+  // E-258: the flow map now lives on the project's screens catalog. The sync
+  // route reconciles the catalog with the manifest, re-derives its navigation,
+  // and still re-derives the component flow map until components are retired.
+  return callZephlyAPI('mcpSyncScreens', { projectId });
 }
 
 /**

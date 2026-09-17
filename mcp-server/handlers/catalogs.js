@@ -24,8 +24,12 @@ export async function manageCatalog(args) {
   case 'link': return params.itemKey ? linkCatalogItem(params) : linkCatalogArtifact(params);
   case 'unlink': return params.itemKey ? unlinkCatalogItem(params) : unlinkCatalogArtifact(params);
   case 'snapshot': return snapshotCatalog(params);
+  case 'discover_screens': return discoverScreens(params);
+  case 'import_screens': return importScreens(params);
+  case 'sync_screens': return syncScreens(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, or snapshot.`);
+    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, snapshot, ` +
+      'discover_screens, import_screens, or sync_screens.');
   }
 }
 
@@ -166,4 +170,38 @@ async function snapshotCatalog({ catalogId, mode, snapshot, upsertItems, removeK
   if (removeKeys) params.removeKeys = removeKeys;
   if (source) params.source = source;
   return callZephlyAPI('mcpSnapshotCatalog', params);
+}
+
+// --- Screens catalog (E-258) ---
+
+// Screens and pages the project's manifest shows that its screens catalog does
+// not hold yet. Read-only.
+async function discoverScreens({ projectId }) {
+  if (!projectId) {
+    throw new Error('projectId is required for discover_screens');
+  }
+  return callZephlyAPI('mcpDiscoverScreens', { projectId });
+}
+
+// Add screens to the project's screens catalog (created on first use),
+// optionally linking every one to a feature.
+async function importScreens({ projectId, screens, featureId }) {
+  if (!projectId) {
+    throw new Error('projectId is required for import_screens');
+  }
+  if (!Array.isArray(screens) || screens.length === 0) {
+    throw new Error('screens must be a non-empty array for import_screens');
+  }
+  const params = { projectId, screens };
+  if (featureId) params.featureId = featureId;
+  return callZephlyAPI('mcpImportScreens', params);
+}
+
+// Reconcile the project's screens catalog with its synced manifest and
+// re-derive the screen flow map (navigates_to between catalog items).
+async function syncScreens({ projectId }) {
+  if (!projectId) {
+    throw new Error('projectId is required for sync_screens');
+  }
+  return callZephlyAPI('mcpSyncScreens', { projectId });
 }

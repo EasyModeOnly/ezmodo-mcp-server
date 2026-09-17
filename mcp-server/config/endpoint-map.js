@@ -272,6 +272,9 @@ export const ENDPOINT_MAP = {
   'mcpUpdateCatalog': { route: 'mcp/v1/catalogs', method: 'PUT' },
   'mcpDeleteCatalog': { route: 'mcp/v1/catalogs', method: 'DELETE' },
   'mcpSnapshotCatalog': { route: 'mcp/v1/catalogs/snapshot', method: 'POST' },
+  'mcpDiscoverScreens': { route: 'mcp/v1/screens/discover', method: 'GET' },
+  'mcpImportScreens': { route: 'mcp/v1/screens/import', method: 'POST' },
+  'mcpSyncScreens': { route: 'mcp/v1/screens/sync', method: 'POST' },
   'mcpLinkCatalog': { route: 'mcp/v1/catalogs/link', method: 'POST' },
   'mcpUnlinkCatalog': { route: 'mcp/v1/catalogs/link', method: 'DELETE' },
   // Item-level links (E-218) — attach work or an external URL to one catalog entry
