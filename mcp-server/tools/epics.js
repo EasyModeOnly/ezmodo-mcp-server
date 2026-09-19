@@ -15,6 +15,28 @@
 import { LINKS_ARRAY_SCHEMA, RELATED_ITEM_SCHEMA } from './link-params.js';
 import { TASK_ITEM_PROPERTIES } from './task-item-schema.js';
 
+// A link staged on a plan or planned task before it exists (#2199, #2752).
+// Mirrors the desktop LinkDraft shape so a plan an AI saves back keeps the
+// links the desktop staged.
+const PLAN_LINKS_SCHEMA = {
+  type: 'array',
+  items: {
+    type: 'object',
+    properties: {
+      targetType: { type: 'string' },
+      targetId: { type: 'string' },
+      title: { type: 'string' },
+      source: { type: 'string', enum: ['deterministic', 'suggested', 'manual'] },
+      accepted: { type: 'boolean', description: 'false only for a suggestion that was turned down' },
+      rule: { type: 'string' },
+      confidence: { type: 'number' },
+      suggestionId: { type: 'string' },
+      matchedPaths: { type: 'array', items: { type: 'string' } },
+    },
+    required: ['targetType', 'targetId'],
+  },
+};
+
 export const EPIC_TOOLS = [
   {
     name: 'manage_epic',
@@ -261,7 +283,8 @@ export const EPIC_TOOLS = [
   },
   {
     name: 'get_epic_plan',
-    description: 'Read an epic\'s plan (E-259): the planned tasks, notes and status, with ' +
+    description: 'Read an epic\'s plan (E-259): the planned tasks, notes, status, staged links and any ' +
+      'open planner questions, with ' +
       '`currentRevision`, the version number you must send back to `update_epic_plan`. ' +
       'Several people and their AIs can work on one plan, so read it right before you change it. ' +
       'Pass `includeHistory` to see who changed what, in plain sentences, and `revision` to read an older version.',
@@ -316,8 +339,42 @@ export const EPIC_TOOLS = [
                   rationale: { type: 'string', description: 'One line on why this task exists' },
                   dependsOnIndices: { type: 'array', items: { type: 'number' } },
                   needsHumanGate: { type: 'boolean' },
+                  links: {
+                    ...PLAN_LINKS_SCHEMA,
+                    description: 'Links to create with this task when the plan is approved. Send back ' +
+                      'what get_epic_plan returned',
+                  },
                 },
                 required: ['title'],
+              },
+            },
+            links: {
+              ...PLAN_LINKS_SCHEMA,
+              description: 'Links for the epic, applied when the plan is approved. Send back what ' +
+                'get_epic_plan returned',
+            },
+            questions: {
+              type: 'array',
+              description: 'The planner\'s open clarifying questions, kept as returned by get_epic_plan. ' +
+                'A choice that needs several people\'s view belongs on the epic as a decision to make ' +
+                '(manage_decision with epicId) instead.',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  question: { type: 'string' },
+                  header: { type: 'string' },
+                  options: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: { label: { type: 'string' }, description: { type: 'string' } },
+                      required: ['label'],
+                    },
+                  },
+                  multiSelect: { type: 'boolean' },
+                },
+                required: ['question'],
               },
             },
           },
