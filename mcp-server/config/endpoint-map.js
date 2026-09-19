@@ -29,6 +29,11 @@ export const ENDPOINT_MAP = {
   'mcpSearchEpics': { route: 'mcp/v1/epics/search', method: 'POST' },
   'mcpListEpics': { route: 'mcp/v1/epics', method: 'GET' },
   'mcpGetEpic': { route: 'mcp/v1/epics/by-id', method: 'GET' },
+  // E-259: epic plan with revisions.
+  'mcpGetEpicPlan': { route: 'mcp/v1/epics/plan', method: 'GET' },
+  'mcpUpdateEpicPlan': { route: 'mcp/v1/epics/plan', method: 'PUT' },
+  'mcpListEpicComments': { route: 'mcp/v1/epics/comments', method: 'GET' },
+  'mcpAddEpicComment': { route: 'mcp/v1/epics/comments', method: 'POST' },
   // E-237 #2382: the epic is the fifth consumer of the grounding engine.
   'mcpGenerateEpicHowItWorks': { route: 'mcp/v1/epics/generate-how-it-works', method: 'POST' },
   'mcpApplyEpicHowItWorks': { route: 'mcp/v1/epics/apply-how-it-works', method: 'POST' },

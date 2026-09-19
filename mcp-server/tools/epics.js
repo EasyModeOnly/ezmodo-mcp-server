@@ -259,4 +259,102 @@ export const EPIC_TOOLS = [
       },
     },
   },
+  {
+    name: 'get_epic_plan',
+    description: 'Read an epic\'s plan (E-259): the planned tasks, notes and status, with ' +
+      '`currentRevision`, the version number you must send back to `update_epic_plan`. ' +
+      'Several people and their AIs can work on one plan, so read it right before you change it. ' +
+      'Pass `includeHistory` to see who changed what, in plain sentences, and `revision` to read an older version.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        epicId: { type: 'string', description: 'The epic ID (required)' },
+        revision: { type: 'number', description: 'Read this saved version instead of the current one' },
+        includeHistory: {
+          type: 'boolean',
+          description: 'Also return recent versions: who saved each, which AI, and what changed',
+        },
+        historyLimit: { type: 'number', description: 'How many versions of history to return (default 20)' },
+      },
+      required: ['epicId'],
+    },
+  },
+  {
+    name: 'update_epic_plan',
+    description: 'Save an epic\'s plan as a new version (E-259). Send the WHOLE plan, changed where you ' +
+      'mean to change it, plus `baseRevision`: the `currentRevision` you read with `get_epic_plan` ' +
+      '(0 when the epic has no plan). Keep each planned task\'s `id` so the change is matched to the right task. ' +
+      'If someone else saved since you read it, nothing is written and you get `PLAN_CONFLICT` with the ' +
+      'current plan and what changed — apply your change to THAT plan and save again with its revision. ' +
+      'Never resend your old copy: that erases their work. ' +
+      'Keep plans simple and readable by anyone: a plain title and one line on why for each task.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        epicId: { type: 'string', description: 'The epic ID (required)' },
+        baseRevision: {
+          type: 'number',
+          description: 'The currentRevision you started from (required; 0 for a new plan)',
+        },
+        plan: {
+          type: 'object',
+          description: 'The full plan. Fields not listed here (conversation, targetFeatureId, …) ' +
+            'are kept only if you send them back.',
+          properties: {
+            notes: { type: 'string', description: 'Assumptions, risks and scope notes' },
+            status: { type: 'string', enum: ['draft', 'approved'], description: 'draft (default) or approved' },
+            proposedTasks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', description: 'Keep the id from get_epic_plan; omit for a new task' },
+                  title: { type: 'string' },
+                  workType: { type: 'string' },
+                  description: { type: 'string' },
+                  steps: { type: 'array', items: { type: 'string' } },
+                  rationale: { type: 'string', description: 'One line on why this task exists' },
+                  dependsOnIndices: { type: 'array', items: { type: 'number' } },
+                  needsHumanGate: { type: 'boolean' },
+                },
+                required: ['title'],
+              },
+            },
+          },
+        },
+      },
+      required: ['epicId', 'baseRevision', 'plan'],
+    },
+  },
+  {
+    name: 'list_epic_comments',
+    description: 'Read an epic\'s discussion (E-259), oldest first. Each comment says who wrote it and, ' +
+      'when an AI wrote it for them, which AI (`agentName`). Replies carry `parentId`. ' +
+      'Read this before planning or changing a shared epic: other people\'s questions and objections live here.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        epicId: { type: 'string', description: 'The epic ID (required)' },
+        limit: { type: 'number', description: 'Maximum comments to return (default 100, max 500)' },
+      },
+      required: ['epicId'],
+    },
+  },
+  {
+    name: 'add_epic_comment',
+    description: 'Post to an epic\'s discussion (E-259), or reply to a comment with `parentId`. ' +
+      'Posted as the person whose key you use, marked as written by you. ' +
+      'Mentioned people, the author you reply to and everyone following the epic are notified, ' +
+      'and posting makes that person follow it. Write plainly: one point per comment, readable by anyone.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        epicId: { type: 'string', description: 'The epic ID (required)' },
+        content: { type: 'string', description: 'The comment (markdown)' },
+        parentId: { type: 'string', description: 'Reply to this comment' },
+        mentions: { type: 'array', items: { type: 'string' }, description: 'User IDs to notify' },
+      },
+      required: ['epicId', 'content'],
+    },
+  },
 ];

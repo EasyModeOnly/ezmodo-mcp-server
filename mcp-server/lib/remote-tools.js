@@ -58,6 +58,7 @@ export const LOCAL_ONLY_TOOLS = Object.freeze([
 /** Tools safe to serve over the remote transport. */
 export const REMOTE_SAFE_TOOLS = Object.freeze([
   'accept_agent_suggestion',
+  'add_epic_comment',
   'configure_agent',
   'create_tasks',
   'delete_attachment',
@@ -75,6 +76,7 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'get_document',
   'get_document_template',
   'get_epic',
+  'get_epic_plan',
   'get_feature',
   'get_feature_flag',
   'get_goal',
@@ -95,6 +97,7 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'list_catalogs',
   'list_unmapped_paths',
   'list_designs',
+  'list_epic_comments',
   'list_epics',
   'list_facts',
   'list_feature_flags',
@@ -145,6 +148,7 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'search_epics',
   'search_features',
   'search_tasks',
+  'update_epic_plan',
   'update_manifest_entries',
   'validate_manifest',
 ]);

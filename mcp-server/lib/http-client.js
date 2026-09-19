@@ -172,6 +172,12 @@ export async function callZephlyAPI(endpoint, data) {
     if (typeof error.retryable === 'boolean') {
       thrown.retryable = error.retryable;
     }
+    // Structured details, when the API sent an object rather than a sentence —
+    // a plan conflict (E-259) carries the current plan and what changed, which
+    // is exactly what the agent needs to redo its edit.
+    if (error.details && typeof error.details === 'object') {
+      thrown.details = error.details;
+    }
     throw thrown;
   }
 

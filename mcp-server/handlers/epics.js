@@ -188,3 +188,51 @@ export async function getEpic(args) {
   if (webUrl && result?.epic) result.epic.webUrl = webUrl;
   return result;
 }
+
+/**
+ * Read an epic's plan with its current revision (E-259).
+ */
+export async function getEpicPlan(args) {
+  return callZephlyAPI('mcpGetEpicPlan', args);
+}
+
+/**
+ * Save an epic's plan against the revision it was read at (E-259). A conflict
+ * is returned as a result, not thrown: it is an expected outcome when several
+ * people's AIs share a plan, and the agent needs the current plan and what
+ * changed to redo its edit.
+ */
+export async function updateEpicPlan(args) {
+  try {
+    return await callZephlyAPI('mcpUpdateEpicPlan', args);
+  } catch (err) {
+    if (err?.code === 'PLAN_CONFLICT') {
+      const details = err.details || {};
+      return {
+        saved: false,
+        conflict: true,
+        message: `Someone else changed this plan since revision ${details.baseRevision}. ` +
+          'Nothing was saved. Apply your change to the current plan below and save again with ' +
+          `baseRevision ${details.currentRevision}. Do not resend your old copy.`,
+        currentRevision: details.currentRevision,
+        changesSince: details.changesSince || [],
+        currentPlan: details.current || null,
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Read an epic's discussion (E-259).
+ */
+export async function listEpicComments(args) {
+  return callZephlyAPI('mcpListEpicComments', args);
+}
+
+/**
+ * Post to an epic's discussion, or reply in a thread (E-259).
+ */
+export async function addEpicComment(args) {
+  return callZephlyAPI('mcpAddEpicComment', args);
+}

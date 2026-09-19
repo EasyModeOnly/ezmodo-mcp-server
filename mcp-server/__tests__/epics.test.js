@@ -12,7 +12,9 @@ jest.unstable_mockModule('../lib/auto-assign.js', () => ({
   resolveEpicAutoAssign: jest.fn().mockResolvedValue(null),
 }));
 
-const { manageEpic, searchEpics, listEpics, getEpic } = await import('../handlers/epics.js');
+const {
+  manageEpic, searchEpics, listEpics, getEpic, getEpicPlan, updateEpicPlan,
+} = await import('../handlers/epics.js');
 
 describe('Epic Operations', () => {
   afterEach(() => {
@@ -281,5 +283,62 @@ describe('manage_epic link params (E-225)', () => {
     expect(props.removeRelatedItem.description).toMatch(/DEPRECATED/);
     expect(props.addLinks.type).toBe('array');
     expect(props.removeLinks.type).toBe('array');
+  });
+});
+
+// E-259: an epic plan shared by several people's AIs.
+describe('epic plan (E-259)', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('reads the plan through the plan endpoint', async () => {
+    mockCallZephlyAPI.mockResolvedValueOnce({ epicId: 'e1', currentRevision: 3, plan: { proposedTasks: [] } });
+    const result = await getEpicPlan({ epicId: 'e1', includeHistory: true });
+    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetEpicPlan', { epicId: 'e1', includeHistory: true });
+    expect(result.currentRevision).toBe(3);
+  });
+
+  it('turns a plan conflict into a result the agent can act on', async () => {
+    const err = new Error('the plan changed');
+    err.code = 'PLAN_CONFLICT';
+    err.status = 409;
+    err.details = {
+      baseRevision: 1,
+      currentRevision: 2,
+      changesSince: ['Added task: Export to CSV'],
+      current: { proposedTasks: [{ id: 't1', title: 'Export to CSV' }] },
+    };
+    mockCallZephlyAPI.mockRejectedValueOnce(err);
+
+    const result = await updateEpicPlan({ epicId: 'e1', baseRevision: 1, plan: { notes: 'mine' } });
+
+    expect(result.saved).toBe(false);
+    expect(result.conflict).toBe(true);
+    expect(result.currentRevision).toBe(2);
+    expect(result.changesSince).toEqual(['Added task: Export to CSV']);
+    expect(result.currentPlan.proposedTasks[0].title).toBe('Export to CSV');
+    expect(result.message).toMatch(/baseRevision 2/);
+  });
+
+  it('still throws other failures', async () => {
+    const err = new Error('forbidden');
+    err.status = 403;
+    mockCallZephlyAPI.mockRejectedValueOnce(err);
+    await expect(updateEpicPlan({ epicId: 'e1', baseRevision: 0, plan: {} })).rejects.toThrow('forbidden');
+  });
+});
+
+describe('epic discussion (E-259)', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('lists and posts epic comments through their endpoints', async () => {
+    const { listEpicComments, addEpicComment } = await import('../handlers/epics.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ comments: [] });
+    await listEpicComments({ epicId: 'e1' });
+    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListEpicComments', { epicId: 'e1' });
+
+    mockCallZephlyAPI.mockResolvedValueOnce({ commentId: 'c1' });
+    const result = await addEpicComment({ epicId: 'e1', content: 'Question', parentId: 'c0' });
+    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpAddEpicComment', { epicId: 'e1', content: 'Question', parentId: 'c0' });
+    expect(result.commentId).toBe('c1');
   });
 });

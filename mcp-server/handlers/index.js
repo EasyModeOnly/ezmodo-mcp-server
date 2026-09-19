@@ -59,6 +59,10 @@ export const HANDLERS = {
   search_epics: epicHandlers.searchEpics,
   list_epics: epicHandlers.listEpics,
   get_epic: epicHandlers.getEpic,
+  get_epic_plan: epicHandlers.getEpicPlan,
+  update_epic_plan: epicHandlers.updateEpicPlan,
+  list_epic_comments: epicHandlers.listEpicComments,
+  add_epic_comment: epicHandlers.addEpicComment,
 
   // Milestones
   manage_milestone: milestoneHandlers.manageMilestone,
