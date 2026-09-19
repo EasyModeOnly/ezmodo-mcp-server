@@ -214,6 +214,11 @@ export const ENDPOINT_MAP = {
   'mcpPromoteDecisionFromKnowledge': { route: 'mcp/v1/decisions/promote-from-knowledge', method: 'POST' },
   'mcpLinkDecisionArtifact': { route: 'mcp/v1/decisions/link', method: 'POST' },
   'mcpUnlinkDecisionArtifact': { route: 'mcp/v1/decisions/link', method: 'DELETE' },
+  // Decisions to make on an epic (E-259).
+  'mcpAddDecisionInput': { route: 'mcp/v1/decisions/inputs', method: 'POST' },
+  'mcpDecideDecision': { route: 'mcp/v1/decisions/decide', method: 'POST' },
+  'mcpHoldTaskForDecision': { route: 'mcp/v1/decisions/holds', method: 'POST' },
+  'mcpReleaseTaskFromDecision': { route: 'mcp/v1/decisions/holds', method: 'DELETE' },
 
   // Recurring task schedules (E-211) — "what task to create, on what cadence".
   'mcpCreateRecurringTask': { route: 'mcp/v1/recurring-tasks', method: 'POST' },

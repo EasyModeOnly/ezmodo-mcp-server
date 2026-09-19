@@ -25,8 +25,13 @@ export async function manageDecision(args) {
   case 'unlink': return unlinkDecisionArtifact(params);
   case 'supersede': return supersedeDecision(params);
   case 'promote_from_knowledge': return promoteFromKnowledge(params);
+  case 'add_input': return addDecisionInput(params);
+  case 'decide': return decideDecision(params);
+  case 'hold_task': return holdTask(params);
+  case 'release_task': return releaseTask(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, supersede, or promote_from_knowledge.`);
+    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, ` +
+      'supersede, promote_from_knowledge, add_input, decide, hold_task, or release_task.');
   }
 }
 
@@ -48,6 +53,13 @@ export async function getDecision(args) {
     return result;
   }
 
+  // Decisions to make on an epic (E-259).
+  if (filters.epicId) {
+    const params = { epicId: filters.epicId };
+    if (filters.status) params.status = filters.status;
+    return callZephlyAPI('mcpListDecisions', params);
+  }
+
   // List mode
   const params = {};
   if (organizationId) params.organizationId = organizationId;
@@ -66,6 +78,10 @@ export async function getDecision(args) {
 async function createDecision(args) {
   // `links` is applied by the MCP layer after the decision exists (E-225).
   const { links, ...createArgs } = args;
+  // On create the server takes option labels; accept {label} objects too.
+  if (Array.isArray(createArgs.choices)) {
+    createArgs.choices = createArgs.choices.map((c) => (typeof c === 'string' ? c : c?.label));
+  }
   const result = await callZephlyAPI('mcpCreateDecision', createArgs);
 
   // Attach create-time links (E-225) — best effort, never fails the create.
@@ -79,6 +95,11 @@ async function createDecision(args) {
 }
 
 async function updateDecision(args) {
+  // On update the server takes the full list as {id, label}; a bare string is
+  // a new option.
+  if (Array.isArray(args.choices)) {
+    args = { ...args, choices: args.choices.map((c) => (typeof c === 'string' ? { label: c } : c)) };
+  }
   return callZephlyAPI('mcpUpdateDecision', args);
 }
 
@@ -111,4 +132,25 @@ async function promoteFromKnowledge({ organizationId, taskId, knowledgeId, title
     linkToType,
     linkToId,
   });
+}
+
+// --- Decisions to make on an epic (E-259) ---
+
+// Record a pick. It counts for the person whose key is used, and replaces
+// their earlier pick; the server records which AI made it.
+async function addDecisionInput({ decisionId, choiceId, reason }) {
+  return callZephlyAPI('mcpAddDecisionInput', { decisionId, choiceId, reason });
+}
+
+// Decide. The server refuses anyone but the epic's owner or an editor.
+async function decideDecision({ decisionId, status, choiceId, decision, rejectedReasons }) {
+  return callZephlyAPI('mcpDecideDecision', { decisionId, status, choiceId, decision, rejectedReasons });
+}
+
+async function holdTask({ decisionId, taskId }) {
+  return callZephlyAPI('mcpHoldTaskForDecision', { decisionId, taskId });
+}
+
+async function releaseTask({ decisionId, taskId }) {
+  return callZephlyAPI('mcpReleaseTaskFromDecision', { decisionId, taskId });
 }
