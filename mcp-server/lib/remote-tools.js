@@ -76,6 +76,7 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'get_document',
   'get_document_template',
   'get_epic',
+  'get_epic_activity',
   'get_epic_plan',
   'get_feature',
   'get_feature_flag',

@@ -224,7 +224,18 @@ export async function updateEpicPlan(args) {
 }
 
 /**
- * Read an epic's discussion (E-259).
+ * Catch me up (E-259 #2746): what changed on an epic since the caller last
+ * looked. Marks it caught up unless markSeen is false.
+ */
+export async function getEpicActivity(args) {
+  const params = { epicId: args.epicId };
+  if (args.since) params.since = args.since;
+  if (args.markSeen === false) params.markSeen = 'false';
+  return callZephlyAPI('mcpGetEpicActivity', params);
+}
+
+/**
+ * An epic's discussion, oldest first (E-259).
  */
 export async function listEpicComments(args) {
   return callZephlyAPI('mcpListEpicComments', args);

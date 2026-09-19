@@ -386,6 +386,33 @@ export const EPIC_TOOLS = [
     },
   },
   {
+    name: 'get_epic_activity',
+    description: 'Catch me up on an epic (E-259): what changed since YOU last looked. Returns `summary`, ' +
+      'plain sentences you can relay to your person as-is, most important first: decisions waiting on ' +
+      'their view, comments that mention or reply to them, decisions made, new plan versions (who ' +
+      'changed what, and which AI did it for them), and tasks added, started, finished or blocked. ' +
+      'The details are alongside. Their own changes are left out. Call it when you start or resume ' +
+      'work on an epic other people also work on, and before changing its plan. By default this also ' +
+      'marks the epic as caught up, so the next call shows only newer changes; pass markSeen:false to ' +
+      'look without that.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        epicId: { type: 'string', description: 'The epic ID (required)' },
+        since: {
+          type: 'string',
+          description: 'Show changes since this time (RFC 3339, e.g. 2026-09-19T14:00:00Z) instead of ' +
+            'since the last catch-up. The first catch-up on an epic covers the last 7 days.',
+        },
+        markSeen: {
+          type: 'boolean',
+          description: 'Mark the epic as caught up after answering (default true)',
+        },
+      },
+      required: ['epicId'],
+    },
+  },
+  {
     name: 'list_epic_comments',
     description: 'Read an epic\'s discussion (E-259), oldest first. Each comment says who wrote it and, ' +
       'when an AI wrote it for them, which AI (`agentName`). Replies carry `parentId`. ' +

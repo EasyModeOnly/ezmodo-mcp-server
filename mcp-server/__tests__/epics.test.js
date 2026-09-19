@@ -342,3 +342,21 @@ describe('epic discussion (E-259)', () => {
     expect(result.commentId).toBe('c1');
   });
 });
+
+describe('getEpicActivity (E-259 #2746)', () => {
+  it('asks for what changed since the last look, and marks it seen by default', async () => {
+    const { getEpicActivity } = await import('../handlers/epics.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ activity: { summary: ['Nothing has changed since you last looked.'] } });
+    await getEpicActivity({ epicId: 'e1' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1' });
+  });
+
+  it('passes since and markSeen:false through', async () => {
+    const { getEpicActivity } = await import('../handlers/epics.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ activity: {} });
+    await getEpicActivity({ epicId: 'e1', since: '2026-09-19T14:00:00Z', markSeen: false });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', {
+      epicId: 'e1', since: '2026-09-19T14:00:00Z', markSeen: 'false',
+    });
+  });
+});

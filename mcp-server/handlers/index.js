@@ -62,6 +62,7 @@ export const HANDLERS = {
   get_epic_plan: epicHandlers.getEpicPlan,
   update_epic_plan: epicHandlers.updateEpicPlan,
   list_epic_comments: epicHandlers.listEpicComments,
+  get_epic_activity: epicHandlers.getEpicActivity,
   add_epic_comment: epicHandlers.addEpicComment,
 
   // Milestones
