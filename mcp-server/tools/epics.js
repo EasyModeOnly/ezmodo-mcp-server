@@ -310,7 +310,9 @@ export const EPIC_TOOLS = [
       'If someone else saved since you read it, nothing is written and you get `PLAN_CONFLICT` with the ' +
       'current plan and what changed — apply your change to THAT plan and save again with its revision. ' +
       'Never resend your old copy: that erases their work. ' +
-      'Keep plans simple and readable by anyone: a plain title and one line on why for each task.',
+      'Keep plans simple and readable by anyone: a plain title and one line on why for each task. ' +
+      'Only the epic\'s owner, its creator or an organization admin can save the plan; anyone else ' +
+      'suggests the change with add_epic_comment or asks it as a decision to make (manage_decision).',
     inputSchema: {
       type: 'object',
       properties: {
