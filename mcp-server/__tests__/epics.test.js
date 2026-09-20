@@ -14,6 +14,7 @@ jest.unstable_mockModule('../lib/auto-assign.js', () => ({
 
 const {
   manageEpic, searchEpics, listEpics, getEpic, getEpicPlan, updateEpicPlan,
+  managePlanProposal,
 } = await import('../handlers/epics.js');
 
 describe('Epic Operations', () => {
@@ -359,4 +360,83 @@ describe('getEpicActivity (E-259 #2746)', () => {
       epicId: 'e1', since: '2026-09-19T14:00:00Z', markSeen: 'false',
     });
   });
+});
+
+// Proposals (E-259 #2745): how someone who cannot save a plan asks for a
+// change, and how the owner answers it change by change.
+describe('plan proposals (E-259 #2745)', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  {
+    it('sends the plan you want, and the server works out the changes', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({
+        proposal: { id: 'prop-1', status: 'open', ops: [{ id: 'o1', sentence: 'Add task: Export to CSV' }] },
+        summary: 'Add task: Export to CSV',
+      });
+
+      const result = await managePlanProposal({
+        action: 'propose',
+        epicId: 'epic-1',
+        plan: { notes: 'Ship it', proposedTasks: [{ id: 't1', title: 'Export to CSV' }] },
+        rationale: 'People asked to read the plan elsewhere',
+      });
+
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpProposePlanChange', expect.objectContaining({
+        epicId: 'epic-1',
+        rationale: 'People asked to read the plan elsewhere',
+      }));
+      expect(result.proposal.status).toBe('open');
+      expect(result.summary).toBe('Add task: Export to CSV');
+    });
+
+    it('refuses to propose nothing', async () => {
+      await expect(managePlanProposal({ action: 'propose', epicId: 'epic-1' }))
+        .rejects.toThrow(/plan you want/);
+      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    });
+
+    it('accepts and rejects individual changes by their op id', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({ proposal: { status: 'partly_accepted' }, revision: 5 });
+
+      const result = await managePlanProposal({
+        action: 'review',
+        proposalId: 'prop-1',
+        accept: ['o1'],
+        reject: ['o2'],
+        note: 'Good idea, but the goal stays',
+      });
+
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpReviewPlanProposal', {
+        proposalId: 'prop-1',
+        accept: ['o1'],
+        reject: ['o2'],
+        note: 'Good idea, but the goal stays',
+      });
+      expect(result.proposal.status).toBe('partly_accepted');
+    });
+
+    it('will not review without saying what you are taking', async () => {
+      await expect(managePlanProposal({ action: 'review', proposalId: 'prop-1' }))
+        .rejects.toThrow(/which changes/);
+      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    });
+
+    it('takes a proposal back', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({ proposal: { status: 'withdrawn' } });
+
+      await managePlanProposal({ action: 'withdraw', proposalId: 'prop-1' });
+
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpReviewPlanProposal', {
+        proposalId: 'prop-1',
+        withdraw: true,
+      });
+    });
+
+    it('names the actions it knows when given one it does not', async () => {
+      await expect(managePlanProposal({ action: 'merge', proposalId: 'prop-1' }))
+        .rejects.toThrow(/propose, list, get, review or withdraw/);
+    });
+  }
 });

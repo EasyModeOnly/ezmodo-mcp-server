@@ -311,8 +311,9 @@ export const EPIC_TOOLS = [
       'current plan and what changed — apply your change to THAT plan and save again with its revision. ' +
       'Never resend your old copy: that erases their work. ' +
       'Keep plans simple and readable by anyone: a plain title and one line on why for each task. ' +
-      'Only the epic\'s owner, its creator or an organization admin can save the plan; anyone else ' +
-      'suggests the change with add_epic_comment or asks it as a decision to make (manage_decision).',
+      'Only the epic\'s owner, its creator or an organization admin can save the plan. If you are ' +
+      'refused, do not give up: send the SAME plan to manage_plan_proposal action "propose" and the ' +
+      'owner can accept your changes one at a time.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -441,6 +442,52 @@ export const EPIC_TOOLS = [
         mentions: { type: 'array', items: { type: 'string' }, description: 'User IDs to notify' },
       },
       required: ['epicId', 'content'],
+    },
+  },
+  {
+    name: 'manage_plan_proposal',
+    description: 'Suggest a change to an epic\'s plan when you cannot save it yourself, and answer ' +
+      'suggestions on plans you own (E-259).\n\n' +
+      'propose: send the plan you WANT, exactly as you would to update_epic_plan. The server works out ' +
+      'what you changed and lists it as separate changes, each with a plain sentence, so the owner can ' +
+      'take some and leave others. Nothing changes until they do.\n' +
+      'list: what is waiting on an epic. Open ones come first, and each change that no longer fits the ' +
+      'current plan is flagged with the reason.\n' +
+      'review (owner, creator or org admin only): `accept` and `reject` name changes by their op id. ' +
+      'A change you name in neither is left for later and the proposal stays open. A change whose task ' +
+      'someone has since removed is reported back as stale rather than quietly reapplied.\n' +
+      'withdraw: take back a proposal you made.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['propose', 'list', 'get', 'review', 'withdraw'],
+          description: 'What to do',
+        },
+        epicId: { type: 'string', description: 'The epic (required for propose and list)' },
+        proposalId: { type: 'string', description: 'The proposal (required for get, review and withdraw)' },
+        plan: {
+          type: 'object',
+          description: 'propose: the whole plan you want, same shape as update_epic_plan. Keep each ' +
+            'planned task\'s id so your change is matched to the right task.',
+        },
+        title: { type: 'string', description: 'propose: a short name for the proposal' },
+        rationale: { type: 'string', description: 'propose: why, in a sentence or two, in plain language' },
+        accept: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'review: op ids of the changes you are taking',
+        },
+        reject: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'review: op ids of the changes you are turning down',
+        },
+        note: { type: 'string', description: 'review: what you want to say back, in your own words' },
+        status: { type: 'string', description: 'list: only proposals in this state (default: all)' },
+      },
+      required: ['action'],
     },
   },
 ];

@@ -247,3 +247,64 @@ export async function listEpicComments(args) {
 export async function addEpicComment(args) {
   return callZephlyAPI('mcpAddEpicComment', args);
 }
+
+/**
+ * Suggest a change to an epic's plan, and answer suggestions (E-259 #2745).
+ *
+ * One tool with actions rather than five tool names: the tool list is read by
+ * every agent on every call, so each new name costs everyone.
+ */
+export async function managePlanProposal(args = {}) {
+  const { action } = args;
+
+  switch (action) {
+    case 'propose': {
+      if (!args.epicId) throw new Error('epicId is required to suggest a change');
+      if (!args.plan && !args.ops) {
+        throw new Error('Send the plan you want (or the individual changes) to suggest a change');
+      }
+      return callZephlyAPI('mcpProposePlanChange', {
+        epicId: args.epicId,
+        plan: args.plan,
+        ops: args.ops,
+        title: args.title,
+        rationale: args.rationale,
+      });
+    }
+
+    case 'list': {
+      if (!args.epicId) throw new Error('epicId is required to list proposals');
+      const params = { epicId: args.epicId };
+      if (args.status) params.status = args.status;
+      return callZephlyAPI('mcpListPlanProposals', params);
+    }
+
+    case 'get': {
+      if (!args.proposalId) throw new Error('proposalId is required');
+      return callZephlyAPI('mcpListPlanProposals', { proposalId: args.proposalId });
+    }
+
+    case 'review': {
+      if (!args.proposalId) throw new Error('proposalId is required to answer a proposal');
+      if (!args.accept?.length && !args.reject?.length) {
+        throw new Error('Say which changes you are taking (accept) and which you are not (reject)');
+      }
+      return callZephlyAPI('mcpReviewPlanProposal', {
+        proposalId: args.proposalId,
+        accept: args.accept || [],
+        reject: args.reject || [],
+        note: args.note,
+      });
+    }
+
+    case 'withdraw': {
+      if (!args.proposalId) throw new Error('proposalId is required to take back a proposal');
+      return callZephlyAPI('mcpReviewPlanProposal', { proposalId: args.proposalId, withdraw: true });
+    }
+
+    default:
+      throw new Error(
+        `Unknown action "${action}". Use propose, list, get, review or withdraw.`
+      );
+  }
+}
