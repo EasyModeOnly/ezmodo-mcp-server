@@ -27,14 +27,43 @@ jest.unstable_mockModule('../lib/env.js', () => ({
 const { createServer } = await import('../lib/create-server.js');
 const { NOT_AUTHENTICATED, NO_ORGANIZATION, EMAIL_ALREADY_REGISTERED } =
   await import('../lib/auth-guidance.js');
-const { CallToolRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
 
-/** Reach the tool-call handler the server registered. */
+const { InMemoryTransport } = await import('@modelcontextprotocol/server');
+
+/**
+ * Call a tool over a real in-process connection.
+ *
+ * This used to invoke the registered handler straight out of the server's
+ * private handler map, which broke on the SDK v2 upgrade: v2 wraps handlers
+ * and they now need the per-request context the protocol layer builds. Going
+ * through a transport tests what a client actually gets.
+ */
 function dispatcher(server) {
-  return (name, args = {}) =>
-    server._requestHandlers
-      .get(CallToolRequestSchema.shape.method.value)
-      .call(server, { method: 'tools/call', params: { name, arguments: args } });
+  let connecting;
+  let nextId = 0;
+  const pending = new Map();
+  const [client, serverSide] = InMemoryTransport.createLinkedPair();
+  client.onmessage = (message) => {
+    const settle = pending.get(message.id);
+    if (!settle) return;
+    pending.delete(message.id);
+    settle(message);
+  };
+  const connect = async () => {
+    await server.connect(serverSide);
+    await client.start();
+  };
+
+  return async (name, args = {}) => {
+    connecting ??= connect();
+    await connecting;
+    const id = ++nextId;
+    const reply = new Promise((resolve) => pending.set(id, resolve));
+    await client.send({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } });
+    const message = await reply;
+    if (message.error) throw Object.assign(new Error(message.error.message), message.error);
+    return message.result;
+  };
 }
 
 const parse = (result) => JSON.parse(result.content[0].text);

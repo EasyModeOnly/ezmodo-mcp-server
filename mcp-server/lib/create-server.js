@@ -12,13 +12,7 @@
  * credential in the request context.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
 
 import { TOOLS } from '../tools/index.js';
 import { HANDLERS } from '../handlers/index.js';
@@ -105,9 +99,9 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
     }
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+  server.setRequestHandler('tools/list', async () => ({ tools }));
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
 
     // Checked before the handler lookup: a tool excluded from this surface is
@@ -214,11 +208,11 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
 
   // Filtered by surface exactly as tools are, and for the same reason: `submit`
   // reads git SHAs and links commits, which a hosted server cannot do.
-  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+  server.setRequestHandler('prompts/list', async () => ({
     prompts: listPrompts(surface),
   }));
 
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  server.setRequestHandler('prompts/get', async (request) => {
     const content = getPromptContent(request.params.name, request.params.arguments, surface);
     if (!content) {
       throw new Error(`Unknown prompt: ${request.params.name}`);

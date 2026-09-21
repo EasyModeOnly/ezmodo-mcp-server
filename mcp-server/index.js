@@ -7,7 +7,7 @@
  * projects, tasks, and documentation via HTTP API.
  */
 
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 
 // Import configuration
 import { CONFIG } from './config/index.js';
@@ -65,11 +65,13 @@ console.error('');
 // build the same server through lib/create-server.js, so the tool surface
 // cannot differ between them.
 
-const server = createServer();
-
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  // serveStdio, not server.connect(new StdioServerTransport()): a Server wired
+  // straight to the transport speaks only the 2025-era protocol (SDK v2
+  // migration guide). serveStdio lets the client's opening message pick the
+  // era, 2026-07-28 or 2025, and pins one instance from the factory for the
+  // life of the connection.
+  serveStdio(() => createServer());
   log.info('MCP server running on stdio');
   console.error('✅ ezmodo MCP Server running on stdio');
 }

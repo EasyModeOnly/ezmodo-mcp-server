@@ -7,8 +7,10 @@
  * lib/create-server.js, so the tool surface cannot differ between them.
  *
  * ── Stateless, and why ────────────────────────────────────────────────────────
- * A fresh Server and transport are built per request, with
- * `sessionIdGenerator: undefined`. The alternative — stateful sessions held in
+ * A fresh Server is built per request: SDK v2's createMcpHandler calls the
+ * factory each time, and serves 2025-era clients through the same stateless
+ * idiom v1 used (`sessionIdGenerator: undefined`, a transport per request).
+ * 2026-07-28 is stateless by design. The alternative — stateful sessions held in
  * memory — cannot survive the deployment target: Cloud Run runs several
  * instances with no session affinity, so a client's second request routinely
  * lands on an instance that has never heard of its session and is rejected with
@@ -35,7 +37,9 @@
 
 import { createServer as createHttpServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { createMcpHandler } from '@modelcontextprotocol/server';
+import { toNodeHandler } from '@modelcontextprotocol/node';
 
 import { createServer } from './lib/create-server.js';
 import { withRequestContext } from './lib/request-context.js';
@@ -123,6 +127,43 @@ export function bearerToken(headerValue) {
   return token ? token : null;
 }
 
+// The request being served, for the handler-level onerror below. The SDK
+// reports why it refused a request only through that callback, which is set
+// once for the whole process; this is how a report finds its way back to the
+// request it is about. Same mechanism as the credential in request-context.js.
+const inFlight = new AsyncLocalStorage();
+
+// One handler for the process; the factory builds a fresh server for each
+// request. It serves protocol revision 2026-07-28 (the `server/discover`
+// Claude opens every connection with, which SDK v1 answered with a 400) and,
+// by default (legacy: 'stateless'), 2025-era clients the same stateless way
+// the v1 transport did. See the stateless note at the top.
+//
+// 'remote': excludes tools that operate on a local checkout, which do not
+// exist here and whose git helpers shell out with caller-supplied arguments
+// (#2614).
+const mcpHandler = createMcpHandler(() => createServer({ surface: 'remote' }), {
+  onerror: (error) => {
+    const current = inFlight.getStore();
+    log.warn('MCP transport rejected request', {
+      requestId: current?.requestId,
+      error: error?.message || String(error),
+      ...(current ? describeRejectedRequest(current.req, current.body) : {}),
+    });
+  },
+});
+
+const serveMcp = toNodeHandler(mcpHandler, {
+  // The adapter itself failed (converting the request, or the handler threw)
+  // and is about to answer 500.
+  onerror: (error) => {
+    log.error('MCP handler failed', {
+      requestId: inFlight.getStore()?.requestId,
+      error: error?.message || String(error),
+    });
+  },
+});
+
 function sendJson(res, status, body, extraHeaders = {}) {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
@@ -176,31 +217,8 @@ async function handleMcpPost(req, res, requestId) {
     return rpcError(res, status, -32700, `Could not parse request body: ${error.message}`);
   }
 
-  // One server and transport per request — see the stateless note at the top.
-  // 'remote': excludes tools that operate on a local checkout, which do not
-  // exist here and whose git helpers shell out with caller-supplied arguments
-  // (#2614).
-  const server = createServer({ surface: 'remote' });
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  // The SDK says why it refused a request only here; the 400 it sends carries
-  // no trace in our logs otherwise. See describeRejectedRequest.
-  transport.onerror = (error) => {
-    log.warn('MCP transport rejected request', {
-      requestId,
-      error: error?.message || String(error),
-      ...describeRejectedRequest(req, body),
-    });
-  };
-
-  // Closing on response end matters: without it every request leaks a transport
-  // and its server, and the leak only shows up under sustained load.
-  res.on('close', () => {
-    transport.close().catch(() => {});
-    server.close().catch(() => {});
-  });
-
-  await server.connect(transport);
-  await withRequestContext({ apiKey: token }, () => transport.handleRequest(req, res, body));
+  await withRequestContext({ apiKey: token }, () =>
+    inFlight.run({ requestId, req, body }, () => serveMcp(req, res, body)));
 }
 
 const httpServer = createHttpServer(async (req, res) => {
@@ -290,7 +308,7 @@ httpServer.listen(PORT, () => {
 for (const signal of ['SIGTERM', 'SIGINT']) {
   process.on(signal, () => {
     log.info('Shutting down', { signal });
-    httpServer.close(() => process.exit(0));
+    httpServer.close(() => mcpHandler.close().finally(() => process.exit(0)));
     setTimeout(() => process.exit(0), 10_000).unref();
   });
 }
