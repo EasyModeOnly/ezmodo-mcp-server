@@ -342,6 +342,33 @@ describe('epic discussion (E-259)', () => {
     expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpAddEpicComment', { epicId: 'e1', content: 'Question', parentId: 'c0' });
     expect(result.commentId).toBe('c1');
   });
+
+  // #2797: a comment says what it is, and a reply can settle what it answers.
+  it('passes kind, resolvesParent and the open filter through unchanged', async () => {
+    const { listEpicComments, addEpicComment } = await import('../handlers/epics.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ commentId: 'c2' });
+    await addEpicComment({ epicId: 'e1', content: 'Too noisy', kind: 'objection' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpAddEpicComment',
+      { epicId: 'e1', content: 'Too noisy', kind: 'objection' });
+
+    mockCallZephlyAPI.mockResolvedValueOnce({ commentId: 'c3', resolved: 'c2' });
+    await addEpicComment({ epicId: 'e1', content: 'Fair, dropped it', parentId: 'c2', resolvesParent: true });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpAddEpicComment',
+      { epicId: 'e1', content: 'Fair, dropped it', parentId: 'c2', resolvesParent: true });
+
+    mockCallZephlyAPI.mockResolvedValueOnce({ comments: [] });
+    await listEpicComments({ epicId: 'e1', open: true });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpListEpicComments', { epicId: 'e1', open: true });
+  });
+
+  it('describes the comment kinds on the tool itself', async () => {
+    const { EPIC_TOOLS } = await import('../tools/epics.js');
+    const add = EPIC_TOOLS.find((t) => t.name === 'add_epic_comment');
+    expect(add.inputSchema.properties.kind.enum).toEqual(['comment', 'question', 'objection', 'alternative']);
+    expect(add.inputSchema.properties.resolvesParent.type).toBe('boolean');
+    const list = EPIC_TOOLS.find((t) => t.name === 'list_epic_comments');
+    expect(list.inputSchema.properties.open.type).toBe('boolean');
+  });
 });
 
 describe('getEpicActivity (E-259 #2746)', () => {

@@ -390,7 +390,8 @@ export const EPIC_TOOLS = [
     name: 'get_epic_activity',
     description: 'Catch me up on an epic (E-259): what changed since YOU last looked. Returns `summary`, ' +
       'plain sentences you can relay to your person as-is, most important first: decisions waiting on ' +
-      'their view, comments that mention or reply to them, decisions made, new plan versions (who ' +
+      'their view, open questions put to them and open objections, comments that mention or reply to ' +
+      'them, decisions made, new plan versions (who ' +
       'changed what, and which AI did it for them), and tasks added, started, finished or blocked. ' +
       'The details are alongside. Their own changes are left out. Call it when you start or resume ' +
       'work on an epic other people also work on, and before changing its plan. By default this also ' +
@@ -417,12 +418,15 @@ export const EPIC_TOOLS = [
     name: 'list_epic_comments',
     description: 'Read an epic\'s discussion (E-259), oldest first. Each comment says who wrote it and, ' +
       'when an AI wrote it for them, which AI (`agentName`). Replies carry `parentId`. ' +
-      'Read this before planning or changing a shared epic: other people\'s questions and objections live here.',
+      'Read this before planning or changing a shared epic: other people\'s questions and objections live here. ' +
+      'Each comment has a `kind` (comment, question, objection, alternative); the last three stay open until ' +
+      '`resolvedAt` is set. Pass open:true for only the ones still waiting — check it before approving a plan.',
     inputSchema: {
       type: 'object',
       properties: {
         epicId: { type: 'string', description: 'The epic ID (required)' },
         limit: { type: 'number', description: 'Maximum comments to return (default 100, max 500)' },
+        open: { type: 'boolean', description: 'Only the questions, objections and alternatives not yet settled' },
       },
       required: ['epicId'],
     },
@@ -432,7 +436,11 @@ export const EPIC_TOOLS = [
     description: 'Post to an epic\'s discussion (E-259), or reply to a comment with `parentId`. ' +
       'Posted as the person whose key you use, marked as written by you. ' +
       'Mentioned people, the author you reply to and everyone following the epic are notified, ' +
-      'and posting makes that person follow it. Write plainly: one point per comment, readable by anyone.',
+      'and posting makes that person follow it. Write plainly: one point per comment, readable by anyone.\n\n' +
+      'Say what the comment is with `kind`: a `question` you need answered, an `objection` to the plan, or ' +
+      'an `alternative` approach. Those stay open until settled, show up in catch me up, and an open objection ' +
+      'warns whoever approves the plan. To answer one, reply with parentId and resolvesParent:true ' +
+      '(the person who raised it, or the epic\'s owner, may settle it; anyone may reply).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -440,6 +448,15 @@ export const EPIC_TOOLS = [
         content: { type: 'string', description: 'The comment (markdown)' },
         parentId: { type: 'string', description: 'Reply to this comment' },
         mentions: { type: 'array', items: { type: 'string' }, description: 'User IDs to notify' },
+        kind: {
+          type: 'string',
+          enum: ['comment', 'question', 'objection', 'alternative'],
+          description: 'What this is (default comment). Replies are always comments.',
+        },
+        resolvesParent: {
+          type: 'boolean',
+          description: 'With parentId: this reply settles the question, objection or alternative it answers',
+        },
       },
       required: ['epicId', 'content'],
     },
