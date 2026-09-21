@@ -20,6 +20,7 @@ import { listPrompts, getPromptContent } from '../prompts/index.js';
 import { MCP_VERSION } from './version.js';
 import { getLogger } from './logger.js';
 import { isRemoteSafe } from './remote-tools.js';
+import { annotate } from './tool-annotations.js';
 import {
   EMAIL_ALREADY_REGISTERED,
   NOT_AUTHENTICATED,
@@ -84,7 +85,7 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
   // cannot disagree. They must agree: filtering only tools/list would leave
   // every excluded handler dispatchable by a client that guesses the name,
   // which is the failure this whole module exists to prevent.
-  const tools = surface === 'remote' ? TOOLS.filter((tool) => isRemoteSafe(tool.name)) : TOOLS;
+  const tools = (surface === 'remote' ? TOOLS.filter((tool) => isRemoteSafe(tool.name)) : TOOLS).map(annotate);
   const available = new Set(tools.map((tool) => tool.name));
 
   const server = new Server(
