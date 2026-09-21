@@ -105,6 +105,41 @@ describe('createLogger', () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it('stderr keeps the plain one-line form by default, without the fields', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const logger = createLogger({ source: 'mcp', logsDir: testDir });
+    logger.warn('rejected', { requestId: 'r1' });
+
+    expect(spy.mock.calls[0][0]).toBe('[mcp] rejected');
+  });
+
+  it('structured stderr is one JSON object carrying severity and every field', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const logger = createLogger({ source: 'mcp', logsDir: testDir, structured: true });
+    logger.warn('MCP transport rejected request', { requestId: 'r1', error: 'Bad Request' });
+    logger.error('boom');
+
+    expect(JSON.parse(spy.mock.calls[0][0])).toEqual({
+      severity: 'WARNING',
+      message: 'MCP transport rejected request',
+      source: 'mcp',
+      requestId: 'r1',
+      error: 'Bad Request',
+    });
+    expect(JSON.parse(spy.mock.calls[1][0]).severity).toBe('ERROR');
+  });
+
+  it('structured mode still keeps info off stderr unless verbose', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const logger = createLogger({ source: 'mcp', logsDir: testDir, structured: true });
+    logger.info('http request', { status: 200 });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it('cleanup removes files older than 7 days', async () => {
     // Create an "old" log file
     const oldDate = new Date();

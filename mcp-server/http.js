@@ -43,12 +43,15 @@ import { initLogger, getLogger } from './lib/logger.js';
 import { MCP_VERSION } from './lib/version.js';
 import { CONFIG } from './config/index.js';
 import { getApiUrl } from './lib/env.js';
+import { healthPaths, describeRejectedRequest } from './lib/http-diagnostics.js';
 
-initLogger();
+// Structured: this process's stderr is read by Cloud Logging, not a person.
+initLogger(false, undefined, { structured: true });
 const log = getLogger();
 
 const PORT = Number(process.env.PORT || 8080);
 const MCP_PATH = process.env.MCP_HTTP_PATH || '/mcp';
+const HEALTH_PATHS = healthPaths(MCP_PATH);
 
 // OAuth discovery (#2601). MCP_PUBLIC_URL is this server's public identity —
 // the "resource" in RFC 9728 terms — and must be the URL a client actually
@@ -179,6 +182,15 @@ async function handleMcpPost(req, res, requestId) {
   // (#2614).
   const server = createServer({ surface: 'remote' });
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  // The SDK says why it refused a request only here; the 400 it sends carries
+  // no trace in our logs otherwise. See describeRejectedRequest.
+  transport.onerror = (error) => {
+    log.warn('MCP transport rejected request', {
+      requestId,
+      error: error?.message || String(error),
+      ...describeRejectedRequest(req, body),
+    });
+  };
 
   // Closing on response end matters: without it every request leaks a transport
   // and its server, and the leak only shows up under sustained load.
@@ -220,7 +232,7 @@ const httpServer = createHttpServer(async (req, res) => {
       });
     }
 
-    if (url.pathname === '/health' || url.pathname === '/healthz') {
+    if (HEALTH_PATHS.has(url.pathname)) {
       return sendJson(res, 200, { status: 'ok', version: MCP_VERSION, environment: CONFIG.environment });
     }
 

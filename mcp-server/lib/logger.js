@@ -19,6 +19,11 @@ import { homedir } from 'os';
 const RETENTION_DAYS = 7;
 const DATE_PATTERN = /^ezmodo-(\d{4}-\d{2}-\d{2})\.log$/;
 
+// Cloud Logging's LogSeverity names. `warn` must become WARNING: an
+// unrecognised severity is stored as DEFAULT, which a severity>=WARNING filter
+// never matches.
+const CLOUD_SEVERITY = { debug: 'DEBUG', info: 'INFO', warn: 'WARNING', error: 'ERROR' };
+
 function getDateString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -32,13 +37,27 @@ function getLogFilePath(logsDir) {
  * @param {string} [options.source='mcp']
  * @param {boolean} [options.verbose=false]
  * @param {string} [options.logsDir]
+ * @param {boolean} [options.structured=false] write stderr lines as one JSON
+ *   object each — see stderrLine
  */
 export function createLogger(options = {}) {
   const {
     source = 'mcp',
     verbose = false,
     logsDir = join(homedir(), '.ezmodo', 'logs'),
+    structured = false,
   } = options;
+
+  // Over stdio a person reads stderr in a terminal, so it stays a short line.
+  // Over HTTP it is read by Cloud Logging, which parses a JSON line into
+  // jsonPayload and maps `severity`; and the log FILE is on an ephemeral
+  // container disk nobody ever sees. Plain lines there meant the connector's
+  // warnings reached production as a bare message, with every field
+  // (requestId, error, what was rejected) lost.
+  function stderrLine(level, msg, data) {
+    if (!structured) return `[${source}] ${msg}`;
+    return JSON.stringify({ severity: CLOUD_SEVERITY[level], message: msg, source, ...data });
+  }
 
   // Ensure logs directory exists (fire-and-forget)
   let dirReady = mkdir(logsDir, { recursive: true }).catch(() => {});
@@ -59,10 +78,8 @@ export function createLogger(options = {}) {
     }).catch(() => {});
 
     // stderr routing: warn/error always go to stderr; debug/info only if verbose
-    if (level === 'warn' || level === 'error') {
-      console.error(`[${source}] ${msg}`);
-    } else if (verbose) {
-      console.error(`[${source}] ${msg}`);
+    if (level === 'warn' || level === 'error' || verbose) {
+      console.error(stderrLine(level, msg, data));
     }
   }
 
@@ -101,8 +118,8 @@ export function createLogger(options = {}) {
 // Singleton
 let _logger = null;
 
-export function initLogger(verbose = false, logsDir) {
-  _logger = createLogger({ source: 'mcp', verbose, logsDir });
+export function initLogger(verbose = false, logsDir, { structured = false } = {}) {
+  _logger = createLogger({ source: 'mcp', verbose, logsDir, structured });
   _logger.cleanup();
   return _logger;
 }
