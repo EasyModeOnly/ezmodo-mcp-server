@@ -79,10 +79,21 @@ export async function manageEpic(args) {
   case 'update': return updateEpic(params);
   case 'generate_how_it_works': return generateEpicHowItWorks(params);
   case 'apply_how_it_works': return applyEpicHowItWorks(params);
+  case 'add_editor': return manageEpicEditor('add', params);
+  case 'remove_editor': return manageEpicEditor('remove', params);
   default: throw new Error(
-    `Unknown action: ${action}. Expected create, update, generate_how_it_works, or apply_how_it_works.`,
+    `Unknown action: ${action}. Expected create, update, generate_how_it_works, apply_how_it_works, ` +
+    'add_editor or remove_editor.',
   );
   }
+}
+
+// Choose who else may change an epic's plan (E-259 #2802). The server decides
+// who may do this; the tool only checks it was asked something answerable.
+async function manageEpicEditor(action, { epicId, editorUserId }) {
+  if (!epicId) throw new Error(`epicId is required to ${action} an editor`);
+  if (!editorUserId) throw new Error(`editorUserId is required to ${action} an editor`);
+  return callZephlyAPI('mcpManageEpicEditors', { epicId, userId: editorUserId, action });
 }
 
 // (Re)generate the epic's grounded, source-attributed "how it works" living

@@ -361,6 +361,22 @@ describe('epic discussion (E-259)', () => {
     expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpListEpicComments', { epicId: 'e1', open: true });
   });
 
+  // #2802: the owner chooses who else may change the plan.
+  it('adds and removes an editor through manage_epic', async () => {
+    const { manageEpic } = await import('../handlers/epics.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ editors: [{ userId: 'maya' }] });
+    await manageEpic({ action: 'add_editor', epicId: 'e1', editorUserId: 'maya' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpManageEpicEditors',
+      { epicId: 'e1', userId: 'maya', action: 'add' });
+
+    mockCallZephlyAPI.mockResolvedValueOnce({ editors: [] });
+    await manageEpic({ action: 'remove_editor', epicId: 'e1', editorUserId: 'maya' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpManageEpicEditors',
+      { epicId: 'e1', userId: 'maya', action: 'remove' });
+
+    await expect(manageEpic({ action: 'add_editor', epicId: 'e1' })).rejects.toThrow('editorUserId is required');
+  });
+
   it('describes the comment kinds on the tool itself', async () => {
     const { EPIC_TOOLS } = await import('../tools/epics.js');
     const add = EPIC_TOOLS.find((t) => t.name === 'add_epic_comment');

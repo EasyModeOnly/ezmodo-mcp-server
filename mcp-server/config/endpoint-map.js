@@ -40,6 +40,8 @@ export const ENDPOINT_MAP = {
   'mcpProposePlanChange': { route: 'mcp/v1/epics/proposals', method: 'POST' },
   'mcpReviewPlanProposal': { route: 'mcp/v1/epics/proposals/review', method: 'POST' },
   'mcpAddEpicComment': { route: 'mcp/v1/epics/comments', method: 'POST' },
+  // Editors (E-259 #2802): who the owner lets change the plan.
+  'mcpManageEpicEditors': { route: 'mcp/v1/epics/editors', method: 'POST' },
   // E-237 #2382: the epic is the fifth consumer of the grounding engine.
   'mcpGenerateEpicHowItWorks': { route: 'mcp/v1/epics/generate-how-it-works', method: 'POST' },
   'mcpApplyEpicHowItWorks': { route: 'mcp/v1/epics/apply-how-it-works', method: 'POST' },

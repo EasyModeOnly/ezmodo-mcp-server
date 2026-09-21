@@ -56,8 +56,12 @@ export const EPIC_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'generate_how_it_works', 'apply_how_it_works'],
-          description: 'Action to perform. "generate_how_it_works" (re)generates the epic\'s grounded, ' +
+          enum: ['create', 'update', 'generate_how_it_works', 'apply_how_it_works', 'add_editor', 'remove_editor'],
+          description: 'Action to perform. "add_editor" / "remove_editor" (epicId + editorUserId) choose who ' +
+            'else may change the epic\'s plan, decide its questions and answer suggested changes (E-259). ' +
+            'Only the owner, the creator or an org admin may choose; an editor may remove themselves. ' +
+            'get_epic lists the current editors. ' +
+            '"generate_how_it_works" (re)generates the epic\'s grounded, ' +
             'source-attributed "how it works" living description from its reality — its tasks\' status ' +
             'rollup, their captured decisions and their linked commits (requires epicId; AI-quota gated). ' +
             'An epic is where intent and reality drift furthest apart: intent is a charter written once, ' +
@@ -68,7 +72,12 @@ export const EPIC_TOOLS = [
         // --- Identifiers ---
         epicId: {
           type: 'string',
-          description: 'Epic ID (required for update, generate_how_it_works, apply_how_it_works)',
+          description: 'Epic ID (required for update, generate_how_it_works, apply_how_it_works, ' +
+            'add_editor, remove_editor)',
+        },
+        editorUserId: {
+          type: 'string',
+          description: 'add_editor / remove_editor: the user to add or remove (must be in the organization)',
         },
         markdown: {
           type: 'string',
@@ -255,7 +264,8 @@ export const EPIC_TOOLS = [
       'Responses include `descriptionDocumentId` — the id of the backing rich-description Document ' +
       'when the description has been promoted to one (E-189), otherwise omitted. ' +
       'Responses also include `derivedGoalIds` — the organization goal(s) this epic aligns to, ' +
-      'derived via its milestone (epics have no direct goal field).',
+      'derived via its milestone (epics have no direct goal field). ' +
+      '`editors` lists the people besides the owner who may change its plan (E-259).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -470,7 +480,7 @@ export const EPIC_TOOLS = [
       'take some and leave others. Nothing changes until they do.\n' +
       'list: what is waiting on an epic. Open ones come first, and each change that no longer fits the ' +
       'current plan is flagged with the reason.\n' +
-      'review (owner, creator or org admin only): `accept` and `reject` name changes by their op id. ' +
+      'review (owner, editors, creator or org admin only): `accept` and `reject` name changes by their op id. ' +
       'A change you name in neither is left for later and the proposal stays open. A change whose task ' +
       'someone has since removed is reported back as stale rather than quietly reapplied.\n' +
       'withdraw: take back a proposal you made.',
