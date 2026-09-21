@@ -41,8 +41,9 @@ export const TASK_TOOLS = [
             'this task, so other people\'s AIs on the same epic pick different work (E-259). Claim ' +
             'BEFORE starting a task on a shared epic. It lasts 2 hours and renews while you update ' +
             'the task or link commits; claiming again renews it. If someone else holds it you are ' +
-            'told who — pick another task. The answer warns about other in-progress tasks on the ' +
-            'epic that touch the same files. "release" gives it back when you stop. ' +
+            'told who and which branch their work is on — pick another task. The answer warns about ' +
+            'other in-progress tasks on the epic that touch the same files, with the branch each is on, ' +
+            'so you can build on that work or keep clear of it. "release" gives it back when you stop. ' +
             'TASK RULES: on a task someone ELSE has claimed, changing its title, description, steps or ' +
             'epic, or deleting it, is sent to them as a suggested edit (the response says ' +
             '`suggested: true`; anything else in the same update still applies), and changing its ' +
