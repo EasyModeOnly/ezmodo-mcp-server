@@ -242,6 +242,8 @@ export async function getEpicActivity(args) {
   const params = { epicId: args.epicId };
   if (args.since) params.since = args.since;
   if (args.markSeen === false) params.markSeen = 'false';
+  // Live mode (#2748): the API waits for news, up to its own cap.
+  if (args.waitSeconds > 0) params.waitSeconds = Math.min(Math.floor(args.waitSeconds), 25);
   return callZephlyAPI('mcpGetEpicActivity', params);
 }
 

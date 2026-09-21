@@ -388,6 +388,17 @@ describe('epic discussion (E-259)', () => {
 });
 
 describe('getEpicActivity (E-259 #2746)', () => {
+  it('waits for news when asked, never longer than the API allows (#2748)', async () => {
+    const { getEpicActivity } = await import('../handlers/epics.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ activity: {} });
+    await getEpicActivity({ epicId: 'e1', waitSeconds: 90.7 });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1', waitSeconds: 25 });
+
+    mockCallZephlyAPI.mockResolvedValueOnce({ activity: {} });
+    await getEpicActivity({ epicId: 'e1', waitSeconds: 0 });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1' });
+  });
+
   it('asks for what changed since the last look, and marks it seen by default', async () => {
     const { getEpicActivity } = await import('../handlers/epics.js');
     mockCallZephlyAPI.mockResolvedValueOnce({ activity: { summary: ['Nothing has changed since you last looked.'] } });

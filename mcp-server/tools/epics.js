@@ -406,7 +406,12 @@ export const EPIC_TOOLS = [
       'The details are alongside. Their own changes are left out. Call it when you start or resume ' +
       'work on an epic other people also work on, and before changing its plan. By default this also ' +
       'marks the epic as caught up, so the next call shows only newer changes; pass markSeen:false to ' +
-      'look without that.',
+      'look without that.\n\n' +
+      'LIVE: pass waitSeconds (up to 25) to wait for something to happen instead of hearing ' +
+      '"nothing has changed" — the call returns as soon as someone changes the plan, comments, ' +
+      'decides, or picks up or moves a task. Call it again to keep following a shared session. ' +
+      '`hereNow` says who else is on the epic right now, people and their AIs; calling any epic tool ' +
+      'shows you there too.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -419,6 +424,10 @@ export const EPIC_TOOLS = [
         markSeen: {
           type: 'boolean',
           description: 'Mark the epic as caught up after answering (default true)',
+        },
+        waitSeconds: {
+          type: 'number',
+          description: 'Wait up to this many seconds (max 25) for something new before answering',
         },
       },
       required: ['epicId'],
