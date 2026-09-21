@@ -56,6 +56,8 @@ export async function manageTask(args) {
   case 'apply_how_it_works': return applyTaskHowItWorks(params);
   case 'claim': return claimTask(params, false);
   case 'release': return claimTask(params, true);
+  case 'list_suggested_edits': return suggestedEdits(params, false);
+  case 'answer_suggested_edit': return suggestedEdits(params, true);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -68,6 +70,17 @@ export async function manageTask(args) {
 async function claimTask({ taskId, claimNote }, release) {
   if (!taskId) throw new Error(`taskId is required to ${release ? 'release' : 'claim'} a task`);
   return callZephlyAPI('mcpClaimTask', release ? { taskId, release: true } : { taskId, note: claimNote });
+}
+
+/**
+ * Suggested edits on a claimed task (E-259 #2809): list what is waiting, or
+ * answer one. The server decides who may accept, reject or withdraw.
+ */
+async function suggestedEdits({ taskId, editId, answer, note }, answering) {
+  if (!taskId) throw new Error('taskId is required');
+  if (!answering) return callZephlyAPI('mcpTaskSuggestedEdits', { taskId });
+  if (!editId || !answer) throw new Error('editId and answer (accept, reject or withdraw) are required');
+  return callZephlyAPI('mcpTaskSuggestedEdits', { taskId, editId, answer, note });
 }
 
 /**

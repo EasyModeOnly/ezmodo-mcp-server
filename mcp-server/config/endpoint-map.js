@@ -50,6 +50,8 @@ export const ENDPOINT_MAP = {
   'mcpCreateTask': { route: 'mcp/v1/tasks', method: 'POST' },
   // Claims (E-259 #2747): manage_task action "claim" / "release".
   'mcpClaimTask': { route: 'mcp/v1/tasks/claim', method: 'POST' },
+  // Suggested edits on someone else's claimed task (E-259 #2809).
+  'mcpTaskSuggestedEdits': { route: 'mcp/v1/tasks/suggested-edits', method: 'POST' },
   'mcpBulkCreateTasks': { route: 'mcp/v1/tasks/bulk', method: 'POST' },
   'mcpUpdateTask': { route: 'mcp/v1/tasks', method: 'PUT' },
   'mcpCompleteTask': { route: 'mcp/v1/tasks/complete', method: 'POST' },

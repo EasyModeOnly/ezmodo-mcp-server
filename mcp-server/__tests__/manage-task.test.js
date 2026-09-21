@@ -264,3 +264,27 @@ describe('manage_task claim / release', () => {
     expect(mockCallZephlyAPI).not.toHaveBeenCalled();
   });
 });
+
+// E-259 #2809: suggested edits on someone else's claimed task.
+describe('manage_task suggested edits', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('lists and answers through one endpoint', async () => {
+    const { manageTask } = await import('../handlers/tasks.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ edits: [], canReview: true });
+    await manageTask({ action: 'list_suggested_edits', taskId: 't1' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpTaskSuggestedEdits', { taskId: 't1' });
+
+    mockCallZephlyAPI.mockResolvedValueOnce({ edit: { status: 'accepted' } });
+    await manageTask({ action: 'answer_suggested_edit', taskId: 't1', editId: 'e1', answer: 'accept', note: 'Good' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpTaskSuggestedEdits',
+      { taskId: 't1', editId: 'e1', answer: 'accept', note: 'Good' });
+  });
+
+  it('needs the edit and the answer before answering', async () => {
+    const { manageTask } = await import('../handlers/tasks.js');
+    await expect(manageTask({ action: 'answer_suggested_edit', taskId: 't1', editId: 'e1' }))
+      .rejects.toThrow('editId and answer');
+    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+  });
+});

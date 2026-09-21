@@ -32,19 +32,45 @@ export const TASK_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'complete', 'defer', 'link_commit', 'unlink_commit', 'get_commits', 'generate_how_it_works', 'apply_how_it_works', 'claim', 'release'],
+          enum: [
+            'create', 'update', 'complete', 'defer', 'link_commit', 'unlink_commit', 'get_commits',
+            'generate_how_it_works', 'apply_how_it_works', 'claim', 'release',
+            'list_suggested_edits', 'answer_suggested_edit',
+          ],
           description: 'Action to perform. "claim" (taskId, optional claimNote) says you are working on ' +
             'this task, so other people\'s AIs on the same epic pick different work (E-259). Claim ' +
             'BEFORE starting a task on a shared epic. It lasts 2 hours and renews while you update ' +
             'the task or link commits; claiming again renews it. If someone else holds it you are ' +
             'told who — pick another task. The answer warns about other in-progress tasks on the ' +
             'epic that touch the same files. "release" gives it back when you stop. ' +
+            'TASK RULES: on a task someone ELSE has claimed, changing its title, description, steps or ' +
+            'epic, or deleting it, is sent to them as a suggested edit (the response says ' +
+            '`suggested: true`; anything else in the same update still applies), and changing its ' +
+            'status, assignee or step progress is refused — leave a comment instead. The claimer and ' +
+            'whoever runs the epic are not limited. "list_suggested_edits" (taskId) shows what is ' +
+            'waiting on a task; "answer_suggested_edit" (taskId, editId, answer: accept|reject|withdraw, ' +
+            'optional note) answers one — the claimer or whoever runs the epic accepts or rejects, the ' +
+            'author withdraws. ' +
             '"generate_how_it_works" (re)generates the task\'s ' +
             'grounded, source-attributed "how it works" living description from its reality — ' +
             'subtasks, comments, status history, commits plus a manifest pass over linked files ' +
             '(requires taskId; AI-quota gated). "apply_how_it_works" (BYO-AI) persists a summary ' +
             'YOU authored: pass markdown + sources; the server validates your cited sources against ' +
             'the real grounded context (dropping fabricated ones) before saving — no server model call.',
+        },
+        editId: {
+          type: 'string',
+          description: 'answer_suggested_edit: the suggested edit to answer',
+        },
+        answer: {
+          type: 'string',
+          enum: ['accept', 'reject', 'withdraw'],
+          description: 'answer_suggested_edit: accept or reject it (the claimer or whoever runs the epic), ' +
+            'or withdraw your own',
+        },
+        note: {
+          type: 'string',
+          description: 'answer_suggested_edit: what you want to say back, optional',
         },
         claimNote: {
           type: 'string',
