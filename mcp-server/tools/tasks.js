@@ -32,13 +32,23 @@ export const TASK_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'complete', 'defer', 'link_commit', 'unlink_commit', 'get_commits', 'generate_how_it_works', 'apply_how_it_works'],
-          description: 'Action to perform. "generate_how_it_works" (re)generates the task\'s ' +
+          enum: ['create', 'update', 'complete', 'defer', 'link_commit', 'unlink_commit', 'get_commits', 'generate_how_it_works', 'apply_how_it_works', 'claim', 'release'],
+          description: 'Action to perform. "claim" (taskId, optional claimNote) says you are working on ' +
+            'this task, so other people\'s AIs on the same epic pick different work (E-259). Claim ' +
+            'BEFORE starting a task on a shared epic. It lasts 2 hours and renews while you update ' +
+            'the task or link commits; claiming again renews it. If someone else holds it you are ' +
+            'told who — pick another task. The answer warns about other in-progress tasks on the ' +
+            'epic that touch the same files. "release" gives it back when you stop. ' +
+            '"generate_how_it_works" (re)generates the task\'s ' +
             'grounded, source-attributed "how it works" living description from its reality — ' +
             'subtasks, comments, status history, commits plus a manifest pass over linked files ' +
             '(requires taskId; AI-quota gated). "apply_how_it_works" (BYO-AI) persists a summary ' +
             'YOU authored: pass markdown + sources; the server validates your cited sources against ' +
             'the real grounded context (dropping fabricated ones) before saving — no server model call.',
+        },
+        claimNote: {
+          type: 'string',
+          description: 'claim: what you are about to do, in a few words (shown to the others)',
         },
         // --- Identifiers (used by most actions) ---
         taskId: {

@@ -242,3 +242,25 @@ describe('manage_task create — no component hint', () => {
     expect(result.availableComponents).toBeUndefined();
   });
 });
+
+// E-259 #2747: claiming a task so other people's AIs pick different work.
+describe('manage_task claim / release', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('claims with a note and releases through one endpoint', async () => {
+    const { manageTask } = await import('../handlers/tasks.js');
+    mockCallZephlyAPI.mockResolvedValueOnce({ claim: { taskId: 't1' }, warnings: [] });
+    await manageTask({ action: 'claim', taskId: 't1', claimNote: 'Wiring the cursors' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpClaimTask', { taskId: 't1', note: 'Wiring the cursors' });
+
+    mockCallZephlyAPI.mockResolvedValueOnce({ summary: 'Released.' });
+    await manageTask({ action: 'release', taskId: 't1' });
+    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpClaimTask', { taskId: 't1', release: true });
+  });
+
+  it('asks for the task before calling anything', async () => {
+    const { manageTask } = await import('../handlers/tasks.js');
+    await expect(manageTask({ action: 'claim' })).rejects.toThrow('taskId is required to claim');
+    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+  });
+});

@@ -54,8 +54,20 @@ export async function manageTask(args) {
   case 'get_commits': return getTaskCommits(params);
   case 'generate_how_it_works': return generateTaskHowItWorks(params);
   case 'apply_how_it_works': return applyTaskHowItWorks(params);
+  case 'claim': return claimTask(params, false);
+  case 'release': return claimTask(params, true);
   default: throw new Error(`Unknown action: ${action}`);
   }
+}
+
+/**
+ * Claim a task, or give it back (E-259 #2747). The server decides who may and
+ * words the answer; a task someone else holds comes back as an error naming
+ * them, which is the agent's cue to pick other work rather than retry.
+ */
+async function claimTask({ taskId, claimNote }, release) {
+  if (!taskId) throw new Error(`taskId is required to ${release ? 'release' : 'claim'} a task`);
+  return callZephlyAPI('mcpClaimTask', release ? { taskId, release: true } : { taskId, note: claimNote });
 }
 
 /**
