@@ -7,12 +7,14 @@
  * Code links are derived: the files a task touches (changedFiles / linkedFiles)
  * resolve to the features that own those paths (E-258). Agents name the feature
  * the work advances through `links`.
- * Tags are auto-assigned based on content analysis against the local project cache.
+ * Tags: only the tagIds the caller passes are applied; keyword matches against
+ * the local project cache come back as `suggestedTags` (see lib/auto-assign.js).
  */
 
 import { previewEntityLinks, partitionProposals, attachSuggestionIds } from '../lib/autolink.js';
 import { callZephlyAPI } from '../lib/http-client.js';
 import { resolveTaskAutoAssign } from '../lib/auto-assign.js';
+import { suggestTags } from '../lib/suggested-tags.js';
 import { buildTaskUrl } from '../lib/web-url.js';
 import { getLogger } from '../lib/logger.js';
 import { writeActiveSession, clearActiveSession } from '../lib/active-session.js';
@@ -20,24 +22,6 @@ import { attachLinks } from '../lib/links-at-create.js';
 import { getContext } from './context-manifest.js';
 import { getCommitFiles, getRepositoryRoot } from '../lib/git-helpers.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
-
-/**
- * Apply tags to a newly created entity via bulkTagEntities.
- * Non-fatal — logs errors but doesn't throw.
- */
-async function applyAutoTags(organizationId, entityType, entityId, tagIds) {
-  if (!organizationId || !tagIds?.length || !entityId) return;
-  try {
-    await callZephlyAPI('mcpBulkTagEntities', {
-      organizationId,
-      tagIds,
-      entities: [{ entityType, entityId }],
-      operation: 'add',
-    });
-  } catch (err) {
-    getLogger().warn('Auto-tag failed', { entityType, entityId, error: err.message });
-  }
-}
 
 /**
  * Dispatch manage_task actions to the appropriate handler
@@ -154,18 +138,13 @@ async function createTask(args) {
     };
   }
 
-  // Auto-apply tags (non-fatal)
-  const autoAssign = await resolveTaskAutoAssign(projectId, title, description);
-  if (autoAssign?.matchedTags?.length && result?.taskId) {
-    await applyAutoTags(
-      autoAssign.organizationId,
-      'task',
-      result.taskId,
-      autoAssign.matchedTags.map((t) => t.id),
-    );
-    result.autoAssigned = {
-      tags: autoAssign.matchedTags.map((t) => t.name),
-    };
+  // Suggest, never apply, keyword-matched tags (#2830).
+  const suggestedTags = suggestTags(
+    await resolveTaskAutoAssign(projectId, title, description),
+    createArgs.tagIds,
+  );
+  if (suggestedTags.length && result?.taskId) {
+    result.suggestedTags = suggestedTags;
   }
 
   if (autoContext) {

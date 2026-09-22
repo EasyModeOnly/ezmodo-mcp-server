@@ -5,34 +5,17 @@
  * Project-First Hierarchy: Epics belong to projects (required),
  * with optional milestone linking.
  *
- * Auto-assignment: When creating epics, automatically applies matching tags
- * based on content analysis against the local project cache.
+ * Tags: only the tagIds the caller passes are applied, in the create request
+ * itself. Keyword matches against the local project cache come back as
+ * `suggestedTags` (see lib/auto-assign.js for why they are not applied).
  */
 
 import { callZephlyAPI } from '../lib/http-client.js';
 import { resolveEpicAutoAssign } from '../lib/auto-assign.js';
+import { suggestTags } from '../lib/suggested-tags.js';
 import { buildEpicUrl } from '../lib/web-url.js';
-import { getLogger } from '../lib/logger.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
-
-/**
- * Apply tags to a newly created entity via bulkTagEntities.
- * Non-fatal — logs errors but doesn't throw.
- */
-async function applyAutoTags(organizationId, entityType, entityId, tagIds) {
-  if (!organizationId || !tagIds?.length || !entityId) return;
-  try {
-    await callZephlyAPI('mcpBulkTagEntities', {
-      organizationId,
-      tagIds,
-      entities: [{ entityType, entityId }],
-      operation: 'add',
-    });
-  } catch (err) {
-    getLogger().warn('Auto-tag failed', { entityType, entityId, error: err.message });
-  }
-}
 
 /**
  * Flatten the nested-task result into the fields an agent acts on (#2247).
@@ -128,7 +111,7 @@ async function createEpic(args) {
 
   // An epic with its breakdown goes to the composing endpoint (#2247) so the
   // whole thing is one request; without tasks nothing changes. Everything below
-  // this line — auto-tags, links, web URL — acts on the EPIC and so is identical
+  // this line — suggested tags, links, web URL — acts on the EPIC and so is identical
   // either way.
   const result = tasks?.length
     ? await callZephlyAPI('mcpCreateEpicWithTasks', {
@@ -143,18 +126,10 @@ async function createEpic(args) {
 
   if (tasks?.length) summarizeNestedTasks(result);
 
-  // Auto-apply matching tags (non-fatal)
-  const autoAssign = await resolveEpicAutoAssign(title, description);
-  if (autoAssign?.matchedTags?.length && result?.epicId) {
-    await applyAutoTags(
-      autoAssign.organizationId,
-      'epic',
-      result.epicId,
-      autoAssign.matchedTags.map((t) => t.id),
-    );
-    result.autoAssigned = {
-      tags: autoAssign.matchedTags.map((t) => t.name),
-    };
+  // Suggest, never apply, keyword-matched tags (#2830).
+  const suggestedTags = suggestTags(await resolveEpicAutoAssign(title, description), createArgs.tagIds);
+  if (suggestedTags.length && result?.epicId) {
+    result.suggestedTags = suggestedTags;
   }
 
   // Attach create-time links (E-225) — best effort, never fails the create.

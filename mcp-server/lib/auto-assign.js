@@ -1,7 +1,13 @@
 /**
  * Auto-assign Utility
- * Matches task/epic content against cached tags for automatic assignment
- * during creation.
+ * Matches task/epic content against cached tags to SUGGEST tags at creation.
+ *
+ * Suggest-only, deliberately (#2830). The matcher fires on any word in the
+ * title or description, so it proposes tags like "notes" or "docs" on work
+ * that merely mentions them. It never actually applied anything before #2830
+ * (the API side was a stub), so applying its output would have switched on a
+ * noisy behaviour nobody had seen. The agent passes the tags it wants as
+ * `tagIds`; matches come back as `suggestedTags` for it to accept.
  */
 
 import { readConfig } from './local-cache.js';

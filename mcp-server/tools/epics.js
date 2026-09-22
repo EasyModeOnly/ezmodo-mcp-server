@@ -44,7 +44,8 @@ export const EPIC_TOOLS = [
       'IMPORTANT when creating: Call get_context first for each area the epic covers to discover relevant ' +
       'files and integration points. Include in the description which layers/services are affected and ' +
       'reference specific file paths. Create child tasks that each reference specific files from context queries. ' +
-      'Auto-applies matching tags from cached project context based on content analysis. ' +
+      'Tags: pass the tag IDs you want as tagIds; the response lists keyword-matched tags you did not pass as ' +
+      'suggestedTags, which are NOT applied — add any that fit with an update. ' +
       'To align an epic to an organization goal, link it to a milestone that is linked to that goal ' +
       '(set milestoneId) — epics have no direct goal field. ' +
       'BREAKING DOWN A FEATURE: pass the child tasks in the `tasks` array on create and the epic and its ' +
@@ -146,10 +147,11 @@ export const EPIC_TOOLS = [
             name: { type: 'string' },
           },
         },
-        labels: {
+        tagIds: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Array of label names',
+          description: 'Tag IDs for categorization (get them from get_current_project_context). ' +
+            'Used by create and update; on update this REPLACES the set.',
         },
         color: {
           type: 'string',
