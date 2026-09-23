@@ -1,6 +1,6 @@
 {
   "name": "@ezmodo/mcp-server",
-  "version": "0.20.1",
+  "version": "0.20.2",
   "description": "MCP server for ezmodo - AI-first project management",
   "main": "index.js",
   "type": "module",
