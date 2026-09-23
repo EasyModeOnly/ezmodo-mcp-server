@@ -126,6 +126,7 @@ async function promoteNote(params) {
     noteId: params.noteId,
     ...pick(params, [
       'kind', 'organizationId', 'projectId', 'title', 'description', 'priority', 'epicId',
+      'featureId',
     ]),
   });
 }

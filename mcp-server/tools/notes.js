@@ -16,6 +16,15 @@ const PRIVACY =
   'Notes are the user\'s PRIVATE scratch notes: personal (never shared with ' +
   'teammates) and cross-org (the same notes whichever organization is active).';
 
+const MARKDOWN_FORMAT =
+  'Checklists are GFM task items (`- [ ] todo`, `- [x] done`). References to ' +
+  'tasks, epics, projects or goals are links like ' +
+  '`[#Fix login bug](ezmodo://task/<entityId>?org=<orgId>&number=42)`; a promoted ' +
+  'reference uses `ezmodo://ref/<type>/<id>?org=<orgId>`. Keep these links ' +
+  'unchanged when rewriting a note — removing one removes the reference and its ' +
+  'backlink. To add a reference, write the same link with the entity\'s type, id ' +
+  'and organization id.';
+
 export const NOTE_TOOLS = [
   {
     name: 'list_notes',
@@ -42,7 +51,7 @@ export const NOTE_TOOLS = [
   },
   {
     name: 'get_note',
-    description: `Get one personal note with its full content as markdown. ${PRIVACY}`,
+    description: `Get one personal note with its full content as markdown. ${MARKDOWN_FORMAT} ${PRIVACY}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -78,7 +87,7 @@ export const NOTE_TOOLS = [
         },
         content: {
           type: 'string',
-          description: 'Markdown body. On update it REPLACES the whole note (create, update)',
+          description: `Markdown body. On update it REPLACES the whole note (create, update). ${MARKDOWN_FORMAT}`,
         },
         append: {
           type: 'string',
@@ -114,11 +123,17 @@ export const NOTE_TOOLS = [
         priority: {
           type: 'string',
           enum: ['low', 'medium', 'high', 'urgent'],
-          description: 'New item\'s priority (promote)',
+          description: 'New task/bug\'s priority (promote; ignored for kind epic, which has no priority)',
         },
         epicId: {
           type: 'string',
-          description: 'Epic to put the new task/bug in (promote, kind task|bug)',
+          description: 'Epic to put the new task/bug in (promote, kind task|bug; rejected for kind epic)',
+        },
+        featureId: {
+          type: 'string',
+          description: 'Feature to link the new item to (promote; same organization). Required for ' +
+            'kind epic when the project requires every epic to be linked to a Feature — find one ' +
+            'with search_features. For task/bug the created task is linked to it.',
         },
       },
       required: ['action'],

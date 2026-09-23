@@ -149,6 +149,22 @@ describe('note handlers', () => {
       expect(result).toEqual(created);
     });
 
+    it('passes featureId through when promoting to an epic', async () => {
+      mockCallZephlyAPI.mockResolvedValueOnce({ kind: 'epic', entityType: 'epic', id: 'e-1', number: 7 });
+      await manageNote({
+        action: 'promote', noteId: 'n-1', kind: 'epic', organizationId: 'o-1',
+        projectId: 'p-1', featureId: 'f-1',
+      });
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpPromoteNote', {
+        noteId: 'n-1', kind: 'epic', organizationId: 'o-1', projectId: 'p-1', featureId: 'f-1',
+      });
+    });
+
+    it('declares featureId on manage_note', () => {
+      const manage = NOTE_TOOLS.find((t) => t.name === 'manage_note');
+      expect(manage.inputSchema.properties.featureId).toBeDefined();
+    });
+
     it.each(['kind', 'organizationId', 'projectId'])('requires %s to promote', async (field) => {
       const args = { action: 'promote', noteId: 'n-1', kind: 'task', organizationId: 'o-1', projectId: 'p-1' };
       delete args[field];
