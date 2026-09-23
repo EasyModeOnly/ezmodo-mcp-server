@@ -25,6 +25,11 @@ const MARKDOWN_FORMAT =
   'backlink. To add a reference, write the same link with the entity\'s type, id ' +
   'and organization id.';
 
+const MARKDOWN_SAFETY =
+  'Some notes hold formatting markdown cannot represent (underline, @user ' +
+  'mentions, highlight, tables); for those get_note returns markdownLossless: ' +
+  'false and their content is an approximation.';
+
 export const NOTE_TOOLS = [
   {
     name: 'list_notes',
@@ -51,7 +56,9 @@ export const NOTE_TOOLS = [
   },
   {
     name: 'get_note',
-    description: `Get one personal note with its full content as markdown. ${MARKDOWN_FORMAT} ${PRIVACY}`,
+    description: `Get one personal note with its full content as markdown. ${MARKDOWN_FORMAT} ` +
+      `${MARKDOWN_SAFETY} Check markdownLossless before rewriting a note with manage_note ` +
+      `content: when it is false, use append instead. ${PRIVACY}`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -87,11 +94,15 @@ export const NOTE_TOOLS = [
         },
         content: {
           type: 'string',
-          description: `Markdown body. On update it REPLACES the whole note (create, update). ${MARKDOWN_FORMAT}`,
+          description: 'Markdown body. On update it REPLACES the whole note (create, update). ' +
+            'Refused (409 note_not_markdown_safe) on update when the note is not markdown-safe ' +
+            '(get_note markdownLossless: false), because replacing it would strip formatting ' +
+            `markdown cannot hold — use append instead. ${MARKDOWN_FORMAT}`,
         },
         append: {
           type: 'string',
-          description: 'Markdown appended to the end of the note, keeping what is there (update)',
+          description: 'Markdown appended to the end of the note, keeping what is there (update). ' +
+            'Safe on every note, including ones that are not markdown-safe.',
         },
         folderId: {
           type: 'string',

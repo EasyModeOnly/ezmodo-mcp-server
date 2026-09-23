@@ -33,6 +33,18 @@ describe('note tools registration', () => {
     expect(manage.description).toMatch(/markdown/i);
     expect(manage.description).toMatch(/promote/i);
   });
+
+  it('tells the agent when content replacement is refused and what to use instead', () => {
+    const get = NOTE_TOOLS.find((t) => t.name === 'get_note');
+    expect(get.description).toMatch(/markdownLossless/);
+    expect(get.description).toMatch(/append/);
+
+    const { content, append } = NOTE_TOOLS.find((t) => t.name === 'manage_note').inputSchema.properties;
+    expect(content.description).toMatch(/note_not_markdown_safe/);
+    expect(content.description).toMatch(/markdownLossless/);
+    expect(content.description).toMatch(/use append instead/);
+    expect(append.description).toMatch(/not markdown-safe/);
+  });
 });
 
 describe('note handlers', () => {
@@ -98,6 +110,22 @@ describe('note handlers', () => {
       await manageNote({ action: 'update', noteId: 'n-1', folderId: 'root' });
       expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNote', {
         noteId: 'n-1', folderId: '',
+      });
+    });
+
+    it('surfaces the markdown-safety refusal with its message and code', async () => {
+      const message = 'This note contains formatting markdown can\'t represent ' +
+        '(e.g. underline, @mentions). Use `append` to add content, or edit it in the web app.';
+      const refusal = createMockError(message, 409);
+      refusal.code = 'note_not_markdown_safe';
+      mockCallZephlyAPI.mockRejectedValueOnce(refusal);
+
+      const call = manageNote({ action: 'update', noteId: 'n-1', content: '# rewritten' });
+      await expect(call).rejects.toMatchObject({
+        message, status: 409, code: 'note_not_markdown_safe',
+      });
+      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNote', {
+        noteId: 'n-1', content: '# rewritten',
       });
     });
 
