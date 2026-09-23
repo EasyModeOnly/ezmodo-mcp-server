@@ -64,6 +64,26 @@ function encodeBodyForWAF(data) {
 }
 
 /**
+ * Substitute `{param}` placeholders in a route with URL-encoded values taken
+ * from the request data. Returns the filled route and the data without those
+ * keys. Throws when a placeholder has no value: calling `notes/undefined`
+ * would reach the API as a confusing 404 instead of a clear argument error.
+ */
+function fillRouteParams(endpoint, route, data) {
+  if (!route.includes('{')) return { route, rest: data };
+  const rest = { ...(data || {}) };
+  const filled = route.replace(/\{(\w+)\}/g, (_, name) => {
+    const value = rest[name];
+    if (value === undefined || value === null || value === '') {
+      throw new Error(`${name} is required for ${endpoint}`);
+    }
+    delete rest[name];
+    return encodeURIComponent(String(value));
+  });
+  return { route: filled, rest };
+}
+
+/**
  * Call Zephly API endpoint
  * @param {string} endpoint - Endpoint name (e.g., 'mcpCreateTask')
  * @param {object} data - Request data
@@ -77,7 +97,12 @@ export async function callZephlyAPI(endpoint, data) {
     throw new Error(`Unknown endpoint: ${endpoint}. Please update ENDPOINT_MAP.`);
   }
 
-  const { route, method } = mapping;
+  const { method } = mapping;
+  // Routes may carry `{param}` placeholders (e.g. 'mcp/v1/notes/{noteId}').
+  // Each is filled from — and removed from — the request data, so the id is not
+  // also sent as a query param or body field.
+  const { route, rest } = fillRouteParams(endpoint, mapping.route, data);
+  data = rest;
 
   // Build URL - for GET and DELETE requests with data, append as query params
   const apiUrl = getApiUrl() || CONFIG.apiUrl;
@@ -179,6 +204,12 @@ export async function callZephlyAPI(endpoint, data) {
       thrown.details = error.details;
     }
     throw thrown;
+  }
+
+  // 204 No Content (e.g. a DELETE) has no body to parse.
+  if (response.status === 204) {
+    log.debug('API success', { endpoint, status: 204 });
+    return { success: true };
   }
 
   const result = await response.json();

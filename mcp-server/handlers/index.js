@@ -30,6 +30,7 @@ import * as aiIntelligenceHandlers from './ai-intelligence.js';
 import * as gitContextHandlers from './git-context.js';
 import * as githubHandlers from './github.js';
 import * as todoHandlers from './todos.js';
+import * as noteHandlers from './notes.js';
 import * as testingHandlers from './testing.js';
 import * as contextManifestHandlers from './context-manifest.js';
 import * as activityHandlers from './activity.js';
@@ -186,6 +187,12 @@ export const HANDLERS = {
   // Todos
   manage_todo: todoHandlers.manageTodo,
   list_todos: todoHandlers.listTodos,
+
+  // Personal notes (E-204)
+  list_notes: noteHandlers.listNotes,
+  get_note: noteHandlers.getNote,
+  manage_note: noteHandlers.manageNote,
+  manage_note_folder: noteHandlers.manageNoteFolder,
 
   // Testing
   manage_test_case: testingHandlers.manageTestCase,

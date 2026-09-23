@@ -87,6 +87,53 @@ describe('callZephlyAPI body encoding', () => {
   });
 });
 
+// E-204: routes with `{param}` placeholders, and 204 No Content.
+describe('callZephlyAPI route params', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it('fills a path param and does not also send it as a query param', async () => {
+    mockFetch.mockResolvedValueOnce(okResponse({ id: 'n 1' }));
+
+    await callZephlyAPI('mcpGetNote', { noteId: 'n 1' });
+
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.test/mcp/v1/notes/n%201');
+  });
+
+  it('keeps the other fields in the body of a write', async () => {
+    mockFetch.mockResolvedValueOnce(okResponse({ id: 'n-1' }));
+
+    await callZephlyAPI('mcpUpdateNote', { noteId: 'n-1', title: 'T' });
+
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.test/mcp/v1/notes/n-1');
+    expect(opts.method).toBe('PUT');
+    const decoded = JSON.parse(Buffer.from(JSON.parse(opts.body).value, 'base64').toString('utf-8'));
+    expect(decoded).toEqual({ title: 'T' });
+  });
+
+  it('throws before any request when a path param is missing', async () => {
+    await expect(callZephlyAPI('mcpGetNote', {})).rejects.toThrow('noteId is required for mcpGetNote');
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('returns success for a 204 instead of parsing an empty body', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+      json: async () => { throw new Error('Unexpected end of JSON input'); },
+      text: async () => '',
+    });
+
+    const result = await callZephlyAPI('mcpDeleteNote', { noteId: 'n-1' });
+
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.test/mcp/v1/notes/n-1');
+    expect(opts.method).toBe('DELETE');
+    expect(result).toEqual({ success: true });
+  });
+});
+
 // The client half of #2282. The API now distinguishes "your key is bad" from
 // "the database is unreachable"; these assert the agent-visible consequence of
 // that distinction, and pin the regression that produced the phantom message.

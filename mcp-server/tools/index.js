@@ -33,6 +33,7 @@ import { GIT_CONTEXT_TOOLS } from './git-context.js';
 import { WORKTREE_TOOLS } from '../lib/worktree-tools.js';
 import { GITHUB_TOOLS } from './github.js';
 import { TODO_TOOLS } from './todos.js';
+import { NOTE_TOOLS } from './notes.js';
 import { TESTING_TOOLS } from './testing.js';
 import { CONTEXT_MANIFEST_TOOLS } from './context-manifest.js';
 import { ACTIVITY_TOOLS } from './activity.js';
@@ -73,6 +74,7 @@ export const TOOLS = [
   ...WORKTREE_TOOLS,
   ...GITHUB_TOOLS,
   ...TODO_TOOLS,
+  ...NOTE_TOOLS,
   ...TESTING_TOOLS,
   ...CONTEXT_MANIFEST_TOOLS,
   ...ACTIVITY_TOOLS,

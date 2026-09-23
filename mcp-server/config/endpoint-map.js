@@ -342,6 +342,19 @@ export const ENDPOINT_MAP = {
   'mcpCompleteTodo': { route: 'mcp/v1/todos/complete', method: 'POST' },
   'mcpMoveTodo': { route: 'mcp/v1/todos/move', method: 'POST' },
 
+  // Personal notes (E-204). Private to the calling user, cross-org; content is
+  // markdown over MCP. `{param}` placeholders are filled by the http client.
+  'mcpListNotes': { route: 'mcp/v1/notes', method: 'GET' },
+  'mcpGetNote': { route: 'mcp/v1/notes/{noteId}', method: 'GET' },
+  'mcpCreateNote': { route: 'mcp/v1/notes', method: 'POST' },
+  'mcpUpdateNote': { route: 'mcp/v1/notes/{noteId}', method: 'PUT' },
+  'mcpDeleteNote': { route: 'mcp/v1/notes/{noteId}', method: 'DELETE' },
+  'mcpPromoteNote': { route: 'mcp/v1/notes/{noteId}/promote', method: 'POST' },
+  'mcpListNoteFolders': { route: 'mcp/v1/notes/folders', method: 'GET' },
+  'mcpCreateNoteFolder': { route: 'mcp/v1/notes/folders', method: 'POST' },
+  'mcpUpdateNoteFolder': { route: 'mcp/v1/notes/folders/{folderId}', method: 'PATCH' },
+  'mcpDeleteNoteFolder': { route: 'mcp/v1/notes/folders/{folderId}', method: 'DELETE' },
+
   // Testing (project test cases)
   'mcpListTestCases': { route: 'mcp/v1/testing/cases', method: 'GET' },
   'mcpGetTestCase': { route: 'mcp/v1/testing/case', method: 'GET' },
