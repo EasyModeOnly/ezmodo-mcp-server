@@ -14,6 +14,8 @@ import { jest } from '@jest/globals';
 const mockCallZephlyAPI = jest.fn();
 const mockGetCommitFiles = jest.fn();
 const mockGetRepositoryRoot = jest.fn();
+const mockGetCommitNameStatus = jest.fn();
+const mockReadConfig = jest.fn();
 
 jest.unstable_mockModule('../lib/http-client.js', () => ({
   callZephlyAPI: mockCallZephlyAPI,
@@ -21,6 +23,10 @@ jest.unstable_mockModule('../lib/http-client.js', () => ({
 jest.unstable_mockModule('../lib/git-helpers.js', () => ({
   getCommitFiles: mockGetCommitFiles,
   getRepositoryRoot: mockGetRepositoryRoot,
+  getCommitNameStatus: mockGetCommitNameStatus,
+}));
+jest.unstable_mockModule('../lib/local-cache.js', () => ({
+  readConfig: mockReadConfig,
 }));
 jest.unstable_mockModule('../lib/active-session.js', () => ({
   writeActiveSession: jest.fn(),
@@ -58,6 +64,8 @@ describe('link_commit file derivation', () => {
   beforeEach(() => {
     mockCallZephlyAPI.mockResolvedValue({ commit: { sha: SHA } });
     mockGetRepositoryRoot.mockReturnValue('/repo');
+    mockGetCommitNameStatus.mockReturnValue([]);
+    mockReadConfig.mockResolvedValue({ projectId: 'proj-1' });
   });
 
   afterEach(() => {
@@ -124,5 +132,135 @@ describe('link_commit file derivation', () => {
     await linkCommit();
 
     expect(mockCallZephlyAPI.mock.calls[0][1].files).toBeUndefined();
+  });
+});
+
+/**
+ * The API holds the only copy of the context manifest, and nothing regenerates
+ * it on push. link_commit is the step every agent already takes after every
+ * commit, so it carries the commit's effect on the manifest too — and must
+ * never let that fail the link.
+ */
+describe('link_commit manifest update', () => {
+  const apply = () => mockCallZephlyAPI.mock.calls.find(([name]) => name === 'mcpApplyManifestChanges');
+
+  beforeEach(() => {
+    mockGetRepositoryRoot.mockReturnValue('/repo');
+    mockGetCommitFiles.mockReturnValue(['api/a.go']);
+    mockReadConfig.mockResolvedValue({ projectId: 'proj-1' });
+    mockGetCommitNameStatus.mockReturnValue([
+      { status: 'A', path: 'api/new.go' },
+      { status: 'M', path: 'api/old.go' },
+      { status: 'D', path: 'api/gone.go' },
+      { status: 'R', path: 'api/moved.go', from: 'api/was.go', similarity: 100 },
+      { status: 'M', path: 'package-lock.json' },
+    ]);
+    mockCallZephlyAPI.mockImplementation(async (name) => {
+      if (name === 'mcpApplyManifestChanges') {
+        return {
+          created: ['api/new.go'],
+          updated: ['api/old.go'],
+          deleted: ['api/gone.go'],
+          renamed: [{ from: 'api/was.go', to: 'api/moved.go' }],
+          notFound: [],
+          needsSummary: ['api/new.go'],
+          manifestMissing: false,
+        };
+      }
+      return { commit: { sha: SHA } };
+    });
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('links first, then sends the commit\'s delta to the manifest', async () => {
+    const result = await linkCommit();
+
+    expect(mockCallZephlyAPI.mock.calls[0][0]).toBe('mcpLinkCommitToTask');
+    expect(mockGetCommitNameStatus).toHaveBeenCalledWith('/repo', SHA);
+    expect(apply()[1]).toEqual({
+      projectId: 'proj-1',
+      commitSha: SHA,
+      upserts: [{ path: 'api/new.go' }, { path: 'api/old.go' }],
+      deletes: ['api/gone.go'],
+      renames: [{ from: 'api/was.go', to: 'api/moved.go' }],
+    });
+    expect(result.commit.sha).toBe(SHA);
+    expect(result.manifest).toEqual(expect.objectContaining({
+      created: ['api/new.go'],
+      deleted: ['api/gone.go'],
+      renamed: [{ from: 'api/was.go', to: 'api/moved.go' }],
+      needsSummary: ['api/new.go'],
+      reviewSummary: ['api/old.go'],
+      instruction: expect.stringContaining('update_manifest_entries'),
+    }));
+  });
+
+  it('prefers an explicit projectId over the repo config', async () => {
+    await linkCommit({ projectId: 'proj-explicit' });
+
+    expect(apply()[1].projectId).toBe('proj-explicit');
+  });
+
+  it('does not forward updateManifest to the link call', async () => {
+    await linkCommit({ updateManifest: true });
+
+    expect(mockCallZephlyAPI.mock.calls[0][1]).not.toHaveProperty('updateManifest');
+  });
+
+  it('skips the manifest entirely with updateManifest:false', async () => {
+    const result = await linkCommit({ updateManifest: false });
+
+    expect(apply()).toBeUndefined();
+    expect(result.manifest).toBeUndefined();
+  });
+
+  it('still derives the manifest delta from git when the caller passes files', async () => {
+    await linkCommit({ files: ['only/this.go'] });
+
+    expect(mockGetCommitNameStatus).toHaveBeenCalledWith('/repo', SHA);
+    expect(apply()).toBeDefined();
+  });
+
+  it('reports a missing manifest as skipped', async () => {
+    mockCallZephlyAPI.mockImplementation(async (name) => (
+      name === 'mcpApplyManifestChanges' ? { manifestMissing: true } : { commit: { sha: SHA } }
+    ));
+
+    const result = await linkCommit();
+
+    expect(result.manifest).toEqual({ skipped: expect.stringContaining('no manifest yet') });
+  });
+
+  it('reports a manifest error without failing the link', async () => {
+    mockCallZephlyAPI.mockImplementation(async (name) => {
+      if (name === 'mcpApplyManifestChanges') throw new Error('boom');
+      return { commit: { sha: SHA } };
+    });
+
+    const result = await linkCommit();
+
+    expect(result.commit.sha).toBe(SHA);
+    expect(result.manifest).toEqual({ error: 'boom' });
+  });
+
+  it('skips when no project can be resolved', async () => {
+    mockReadConfig.mockResolvedValue(null);
+
+    const result = await linkCommit();
+
+    expect(apply()).toBeUndefined();
+    expect(result.manifest.skipped).toBeDefined();
+  });
+
+  it('makes no manifest call when the commit touched nothing in scope', async () => {
+    mockGetCommitNameStatus.mockReturnValue([{ status: 'M', path: 'package-lock.json' }]);
+
+    const result = await linkCommit();
+
+    expect(apply()).toBeUndefined();
+    expect(result.manifest.skipped).toBeDefined();
   });
 });

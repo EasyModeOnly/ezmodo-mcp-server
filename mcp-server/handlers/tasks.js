@@ -22,6 +22,7 @@ import { attachLinks } from '../lib/links-at-create.js';
 import { getContext } from './context-manifest.js';
 import { getCommitFiles, getRepositoryRoot } from '../lib/git-helpers.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
+import { applyCommitToManifest } from '../lib/commit-manifest.js';
 
 /**
  * Dispatch manage_task actions to the appropriate handler
@@ -501,9 +502,30 @@ export async function getTask(args) {
 // made, so the file list is a fact one command away — the agent still just
 // passes a SHA. Best-effort throughout: a commit link must never fail because
 // the files could not be read.
+//
+// The same commit also updates the project's context manifest (the API holds
+// the only copy; nothing regenerates it on push). That runs after the link
+// succeeds, is skipped with `updateManifest: false`, and reports under the
+// response's `manifest` key — including `needsSummary`, the paths the agent
+// should now describe with update_manifest_entries. It never fails the link.
 async function linkCommitToTask(args) {
+  const { updateManifest = true, ...linkArgs } = args;
+  const result = await callZephlyAPI('mcpLinkCommitToTask', await withCommitFiles(linkArgs));
+  if (updateManifest === false) {
+    return result;
+  }
+  const manifest = await applyCommitToManifest({
+    sha: linkArgs.sha,
+    projectId: linkArgs.projectId,
+    workingDirectory: linkArgs.workingDirectory,
+  });
+  return result && typeof result === 'object' ? { ...result, manifest } : result;
+}
+
+// The link args with `files` derived from git when the caller supplied none.
+async function withCommitFiles(args) {
   if (Array.isArray(args.files) && args.files.length > 0) {
-    return callZephlyAPI('mcpLinkCommitToTask', args);
+    return args;
   }
 
   let files = [];
@@ -517,10 +539,10 @@ async function linkCommitToTask(args) {
   }
 
   if (files.length === 0) {
-    return callZephlyAPI('mcpLinkCommitToTask', args);
+    return args;
   }
   getLogger().info('Derived commit files for link_commit', { sha: args.sha, count: files.length });
-  return callZephlyAPI('mcpLinkCommitToTask', { ...args, files });
+  return { ...args, files };
 }
 
 async function unlinkCommitFromTask(args) {

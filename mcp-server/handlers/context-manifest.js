@@ -1,7 +1,8 @@
 /**
  * Context Manifest Handlers
  * Handler functions for context manifest MCP tools.
- * Supports both local .context/manifest.json and remote Go API fallback.
+ * Reads a local .ezmodo/manifest/manifest.json when present, else the Go API.
+ * Writes go to the API, the manifest's source of truth (see update_manifest_entries).
  *
  * `getContext` is the unified handler replacing searchProjectContext,
  * getRelatedFilesHandler, getProjectOverviewHandler, getCriticalFilesHandler,
@@ -10,7 +11,13 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { loadManifest, reloadManifest, saveManifest, getManifestSource } from '../lib/manifest-loader.js';
+import {
+  loadManifest,
+  reloadManifest,
+  saveManifest,
+  getManifestSource,
+  resolveManifestProjectId,
+} from '../lib/manifest-loader.js';
 import { callZephlyAPI } from '../lib/http-client.js';
 import {
   getContextForTags,
@@ -21,6 +28,7 @@ import {
   suggestSimilarPaths,
   getCriticalFiles,
   updateManifestEntries,
+  removeManifestEntries,
   createMeta,
 } from '../lib/manifest-query.js';
 
@@ -588,10 +596,10 @@ export async function rebuildManifest(args) {
     // No local filesystem — cannot rebuild remotely
     return {
       success: false,
-      error: 'Manifest rebuild requires local filesystem access. ' +
-        'This tool is not available in remote/cloud environments. ' +
-        'Use GitHub Actions to sync your manifest to the API, or run ' +
-        '"npm run manifest:regen" locally.',
+      error: 'Manifest rebuild requires a local manifest file, and there is none here. ' +
+        'The manifest lives in the API: the desktop app generates and uploads full manifests, ' +
+        'and manage_task action:"link_commit" plus update_manifest_entries keep it current ' +
+        'one commit at a time.',
       _source: 'local-only',
     };
   }
@@ -636,6 +644,8 @@ export async function rebuildManifest(args) {
       entriesAdded: Math.max(0, newCount - priorCount),
       entriesRemoved: Math.max(0, priorCount - newCount),
       generatedAt: newManifest?.metadata?.generatedAt,
+      note: 'The regenerated manifest is local only — it is not uploaded. The API copy is ' +
+        'kept current by link_commit and update_manifest_entries; the desktop app uploads full manifests.',
       output: stdout.trim(),
       ...(stderr.trim() && { warnings: stderr.trim() }),
       _source: 'local',
@@ -654,47 +664,69 @@ export async function rebuildManifest(args) {
 }
 
 // ============================================================================
-// update_manifest_entries (unchanged)
+// update_manifest_entries
 // ============================================================================
 
+/**
+ * Write summaries (and deletions) to the project's manifest.
+ *
+ * The API holds the manifest's only source of truth, so whenever a project can
+ * be resolved the write goes there — through apply-changes, which also CREATES
+ * entries that do not exist yet (a file a commit just added). A local manifest
+ * file, if this repo still has one, gets the same change best-effort so it does
+ * not drift from what the agent just wrote. Local-only happens only when no
+ * project can be resolved at all.
+ */
 export async function updateManifestEntriesHandler(args) {
   const startTime = process.hrtime.bigint();
 
-  const { updates, project_id: projectId } = args;
+  const { updates = [], deletes = [], project_id: projectIdArg } = args;
 
-  if (!updates || updates.length === 0) {
-    throw new Error('No updates provided. Pass an array of {path, summary} objects.');
+  if (updates.length === 0 && deletes.length === 0) {
+    throw new Error('No updates provided. Pass an array of {path, summary} objects, or paths in deletes.');
   }
 
-  const source = await getManifestSource(projectId);
+  const projectId = await resolveManifestProjectId(projectIdArg);
 
-  // Remote path
-  if (source.source === 'remote') {
-    const result = await callZephlyAPI('mcpUpdateManifestEntries', {
-      projectId: source.projectId,
-      updates,
+  if (projectId) {
+    const result = await callZephlyAPI('mcpApplyManifestChanges', {
+      projectId,
+      upserts: updates,
+      deletes,
     });
+    const created = result?.created || [];
+    const updated = result?.updated || [];
+    const deleted = result?.deleted || [];
+    const notFound = result?.notFound || [];
+    const localMirror = await mirrorToLocalManifest(projectId, updates, deletes);
     return {
-      success: true,
-      updated: updates.map(u => u.path),
-      updatedCount: result.updated || updates.length,
-      notFound: [],
-      notFoundCount: 0,
+      success: !result?.manifestMissing,
+      created,
+      updated,
+      deleted,
+      notFound,
+      needsSummary: result?.needsSummary || [],
+      updatedCount: created.length + updated.length,
+      notFoundCount: notFound.length,
+      ...(result?.manifestMissing && {
+        warning: 'This project has no manifest yet, so nothing was written. Generate one with the desktop app.',
+      }),
+      ...(localMirror && { localMirror }),
       _source: 'remote',
-      _meta: { projectId: source.projectId },
+      _meta: { projectId },
     };
   }
 
-  // Local path: existing logic
+  // No project to write to — the local file is all there is.
+  const source = await getManifestSource();
   const manifest = source.manifest;
-  const result = updateManifestEntries(manifest, updates);
-
-  // Save to disk
+  const result = applyToLocalManifest(manifest, updates, deletes);
   const saved = await saveManifest();
 
   return {
     success: saved,
     updated: result.updated,
+    deleted: result.deleted,
     notFound: result.notFound,
     updatedCount: result.updated.length,
     notFoundCount: result.notFound.length,
@@ -705,6 +737,39 @@ export async function updateManifestEntriesHandler(args) {
     _source: 'local',
     _meta: createMeta(manifest, result.updated.length, startTime),
   };
+}
+
+/**
+ * Apply summary updates and deletions to an in-memory local manifest. Updates
+ * without a summary are skipped: locally there is nothing to infer defaults
+ * from, and the API copy is the one that creates entries.
+ */
+function applyToLocalManifest(manifest, updates, deletes) {
+  const withSummary = updates.filter(update => typeof update.summary === 'string');
+  const updateResult = updateManifestEntries(manifest, withSummary);
+  const deleteResult = removeManifestEntries(manifest, deletes);
+  return {
+    updated: updateResult.updated,
+    deleted: deleteResult.deleted,
+    notFound: [...updateResult.notFound, ...deleteResult.notFound],
+    timestamp: updateResult.timestamp,
+  };
+}
+
+/**
+ * Best-effort: mirror a remote write into this repo's local manifest file when
+ * one exists for the same project. Returns null when there is no local file.
+ */
+async function mirrorToLocalManifest(projectId, updates, deletes) {
+  try {
+    const source = await getManifestSource(projectId);
+    if (source.source !== 'local') return null;
+    const result = applyToLocalManifest(source.manifest, updates, deletes);
+    const saved = await saveManifest();
+    return { updated: result.updated.length, deleted: result.deleted.length, saved };
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================================

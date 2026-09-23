@@ -88,12 +88,16 @@ jest.unstable_mockModule('../lib/manifest-loader.js', () => ({
   })),
   isLocalManifestAvailable: jest.fn(async () => true),
   getManifestSource: jest.fn(async () => ({ source: 'local', manifest: MOCK_MANIFEST })),
+  resolveManifestProjectId: jest.fn(async (override) => override || null),
 }));
 
 // Mock the http-client (not needed for local tests, but imported by handlers)
 jest.unstable_mockModule('../lib/http-client.js', () => ({
   callZephlyAPI: jest.fn(async () => ({})),
 }));
+
+const { callZephlyAPI } = await import('../lib/http-client.js');
+const { getManifestSource, saveManifest } = await import('../lib/manifest-loader.js');
 
 // Import handlers after mock setup
 const {
@@ -381,5 +385,96 @@ describe('updateManifestEntriesHandler', () => {
 
     expect(result._meta).toBeDefined();
     expect(result.timestamp).toBeDefined();
+  });
+});
+
+describe('updateManifestEntriesHandler — remote (API is the source of truth)', () => {
+  const serverResult = {
+    created: ['web/src/new.ts'],
+    updated: ['api/internal/api/handlers/tasks.go'],
+    deleted: ['old/gone.ts'],
+    renamed: [],
+    notFound: [],
+    needsSummary: [],
+    manifestMissing: false,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    callZephlyAPI.mockResolvedValue(serverResult);
+    getManifestSource.mockResolvedValue({ source: 'remote', projectId: 'proj-1' });
+  });
+
+  afterEach(() => {
+    getManifestSource.mockImplementation(async () => ({ source: 'local', manifest: MOCK_MANIFEST }));
+  });
+
+  it('writes through apply-changes, creating missing entries', async () => {
+    const updates = [
+      { path: 'web/src/new.ts', summary: 'New file' },
+      { path: 'api/internal/api/handlers/tasks.go', summary: 'Updated' },
+    ];
+    const result = await updateManifestEntriesHandler({
+      project_id: 'proj-1',
+      updates,
+      deletes: ['old/gone.ts'],
+    });
+
+    expect(callZephlyAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', {
+      projectId: 'proj-1',
+      upserts: updates,
+      deletes: ['old/gone.ts'],
+    });
+    expect(result).toEqual(expect.objectContaining({
+      success: true,
+      created: ['web/src/new.ts'],
+      updated: ['api/internal/api/handlers/tasks.go'],
+      deleted: ['old/gone.ts'],
+      notFound: [],
+      needsSummary: [],
+      updatedCount: 2,
+      _source: 'remote',
+    }));
+    expect(result.localMirror).toBeUndefined();
+  });
+
+  it('accepts deletes alone', async () => {
+    await updateManifestEntriesHandler({ project_id: 'proj-1', deletes: ['old/gone.ts'] });
+
+    expect(callZephlyAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', {
+      projectId: 'proj-1',
+      upserts: [],
+      deletes: ['old/gone.ts'],
+    });
+  });
+
+  it('writes to the API even when a local manifest exists, and mirrors it locally', async () => {
+    const manifest = createTestManifest();
+    getManifestSource.mockResolvedValue({ source: 'local', manifest });
+
+    const result = await updateManifestEntriesHandler({
+      project_id: 'proj-1',
+      updates: [{ path: 'api/internal/api/handlers/tasks.go', summary: 'Mirrored' }],
+      deletes: ['api/internal/core/tasks/service.go'],
+    });
+
+    expect(callZephlyAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', expect.anything());
+    expect(result._source).toBe('remote');
+    expect(result.localMirror).toEqual({ updated: 1, deleted: 1, saved: true });
+    expect(saveManifest).toHaveBeenCalled();
+    expect(manifest.entries.find(e => e.path === 'api/internal/api/handlers/tasks.go').summary).toBe('Mirrored');
+    expect(manifest.entries.some(e => e.path === 'api/internal/core/tasks/service.go')).toBe(false);
+  });
+
+  it('warns when the project has no manifest yet', async () => {
+    callZephlyAPI.mockResolvedValue({ manifestMissing: true });
+
+    const result = await updateManifestEntriesHandler({
+      project_id: 'proj-1',
+      updates: [{ path: 'a.ts', summary: 'x' }],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.warning).toMatch(/no manifest yet/);
   });
 });

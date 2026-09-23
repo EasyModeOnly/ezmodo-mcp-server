@@ -620,6 +620,25 @@ export function updateManifestEntries(manifest, updates) {
   return { updated, notFound, timestamp: now };
 }
 
+/**
+ * Remove entries from the manifest in place.
+ *
+ * @param {object} manifest - Parsed context manifest
+ * @param {string[]} paths - Paths to remove
+ * @returns {{deleted: string[], notFound: string[]}}
+ */
+export function removeManifestEntries(manifest, paths) {
+  const wanted = new Set(paths || []);
+  const deleted = [];
+  manifest.entries = manifest.entries.filter(entry => {
+    if (!wanted.has(entry.path)) return true;
+    deleted.push(entry.path);
+    return false;
+  });
+  const removed = new Set(deleted);
+  return { deleted, notFound: [...wanted].filter(path => !removed.has(path)) };
+}
+
 // ============================================================================
 // Utility: Suggest similar paths
 // ============================================================================

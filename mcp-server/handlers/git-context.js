@@ -217,6 +217,10 @@ After every git commit, call \`manage_task action:"link_commit"\` with:
 - \`author\` — the commit author
 - \`branch\` — the current branch name
 
+The response's \`manifest.needsSummary\` lists files the commit added to the
+project's context manifest without a summary: write one for each (≤200 words)
+with \`update_manifest_entries\`.
+
 ### 5. Completion
 
 After finishing work on a task:

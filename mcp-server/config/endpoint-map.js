@@ -317,6 +317,7 @@ export const ENDPOINT_MAP = {
   'mcpGetManifestOverview': { route: 'mcp/v1/manifest/overview', method: 'GET' },
   'mcpGetCriticalFiles': { route: 'mcp/v1/manifest/critical-files', method: 'GET' },
   'mcpUpdateManifestEntries': { route: 'mcp/v1/manifest/update-entries', method: 'POST' },
+  'mcpApplyManifestChanges': { route: 'mcp/v1/manifest/apply-changes', method: 'POST' },
   'mcpRebuildManifest': { route: 'mcp/v1/manifest/rebuild', method: 'POST' },
 
   // Knowledge Graph (graph query tools)

@@ -572,6 +572,88 @@ export function getCommitFiles(repoPath, sha) {
 }
 
 /**
+ * Get what a commit did to each path: added, modified, deleted or renamed.
+ *
+ * getCommitFiles answers "which paths", which is all linking needs. Keeping the
+ * context manifest current needs the verb too — a deleted file must leave the
+ * manifest and a renamed one must keep its summary under the new path — so this
+ * asks git for `--name-status` with rename detection.
+ *
+ * Unlike getCommitFiles, a merge commit is diffed against its FIRST parent: the
+ * manifest wants to know what the merge brought into this branch, and an empty
+ * answer would leave every merged-in file unrecorded. Root commits use `--root`
+ * so the initial commit reports its files as added.
+ *
+ * Output is read with `-z` so a path containing a tab, quote or non-ASCII byte
+ * arrives verbatim rather than C-quoted.
+ *
+ * @param {string} repoPath - Repository path
+ * @param {string} sha - Full or abbreviated commit hash
+ * @returns {Array<{status: 'A'|'M'|'D'|'R', path: string, from?: string}>}
+ *   One entry per path, or [] if anything at all went wrong
+ */
+export function getCommitNameStatus(repoPath, sha) {
+  if (!repoPath || !sha || !SHA_PATTERN.test(sha)) {
+    return [];
+  }
+  try {
+    const parents = execGit(['rev-list', '--parents', '-n', '1', sha], repoPath)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(1);
+    const output = parents.length > 1
+      ? execGit(['diff', '--name-status', '-M', '-z', `${sha}^1`, sha], repoPath)
+      : execGit(['diff-tree', '--no-commit-id', '--name-status', '-r', '-M', '-z', '--root', sha], repoPath);
+    return parseNameStatusZ(output);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Parse `git diff --name-status -z` output.
+ *
+ * Records are NUL-separated: a status token, then one path — or two for a
+ * rename/copy (`R100 old new`). Status letters beyond A/M/D/R collapse onto
+ * the closest of those four: a copy (C) creates a new path, a type change (T)
+ * modifies one. Unknown letters are skipped rather than guessed at.
+ *
+ * @param {string} output - Raw -z output
+ * @returns {Array<{status: 'A'|'M'|'D'|'R', path: string, from?: string, similarity?: number}>}
+ *   `similarity` (0-100) is set on renames; 100 means the content is unchanged
+ */
+export function parseNameStatusZ(output) {
+  if (!output) return [];
+  const tokens = output.split('\0').filter(token => token.length > 0);
+  const changes = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const letter = tokens[i].trim().charAt(0).toUpperCase();
+    if (letter === 'R' || letter === 'C') {
+      const from = tokens[i + 1];
+      const to = tokens[i + 2];
+      i += 2;
+      if (!from || !to) continue;
+      if (letter === 'R') {
+        const similarity = Number.parseInt(tokens[i - 2].trim().slice(1), 10);
+        changes.push({ status: 'R', path: to, from, ...(Number.isFinite(similarity) && { similarity }) });
+      } else {
+        changes.push({ status: 'A', path: to });
+      }
+      continue;
+    }
+    const path = tokens[i + 1];
+    i += 1;
+    if (!path) continue;
+    if (letter === 'A' || letter === 'M' || letter === 'D') {
+      changes.push({ status: letter, path });
+    } else if (letter === 'T') {
+      changes.push({ status: 'M', path });
+    }
+  }
+  return changes;
+}
+
+/**
  * Get the remote URL formatted for commit links
  * @param {string} repoPath - Repository path
  * @returns {string|null} Base URL for commit links (e.g., "https://github.com/org/repo")

@@ -26,7 +26,10 @@ export const TASK_TOOLS = [
       '(problem/goal), WHERE (specific files/endpoints from context), and HOW (approach using existing patterns). ' +
       '(3) Write steps that reference specific file paths, not vague instructions. ' +
       '(4) Link the feature the work advances with links:[{targetType:"feature", targetId}] (find it with ' +
-      'search_features), and pass changedFiles — the files resolve to the features that own those paths.',
+      'search_features), and pass changedFiles — the files resolve to the features that own those paths. ' +
+      '"link_commit" also applies the commit to the project\'s context manifest (added, modified, deleted ' +
+      'and renamed files) and returns `manifest.needsSummary`: write a summary for each of those paths ' +
+      'with update_manifest_entries. Pass updateManifest:false to skip the manifest.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -95,7 +98,8 @@ export const TASK_TOOLS = [
         },
         projectId: {
           type: 'string',
-          description: 'Project ID (required for create)',
+          description: 'Project ID (required for create; for link_commit, the project whose manifest ' +
+            'to update — defaults to this repo\'s configured project)',
         },
         // --- Create fields ---
         title: {
@@ -470,6 +474,10 @@ export const TASK_TOOLS = [
           type: 'array',
           items: { type: 'string' },
           description: 'File paths changed in commit (link_commit only). OPTIONAL — omit it and the server derives the list from the commit itself via git. Pass it only to override that, e.g. to record a subset.',
+        },
+        updateManifest: {
+          type: 'boolean',
+          description: 'link_commit only: also apply the commit to the context manifest. Default true.',
         },
         // --- Unlink commit fields ---
         commitId: {

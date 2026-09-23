@@ -144,6 +144,22 @@ export async function isLocalManifestAvailable() {
 }
 
 /**
+ * The project whose manifest a write should go to: the caller's explicit id,
+ * else the one in this repo's config.json. null when neither exists.
+ *
+ * Writes resolve the project independently of getManifestSource because the
+ * API is the manifest's source of truth: a local manifest file existing must
+ * not divert a write away from it.
+ *
+ * @param {string} [projectIdOverride]
+ * @returns {Promise<string|null>}
+ */
+export async function resolveManifestProjectId(projectIdOverride) {
+  if (projectIdOverride) return projectIdOverride;
+  return (await readConfig())?.projectId || null;
+}
+
+/**
  * Determine the manifest data source: local filesystem or remote API.
  * Returns { source: 'local', manifest } or { source: 'remote', projectId }.
  *
@@ -176,7 +192,8 @@ export async function getManifestSource(projectIdOverride) {
 
   throw new Error(
     'No local manifest found and no project configured for remote access. ' +
-    'Either run "npm run manifest:regen" to generate .context/manifest.json locally, ' +
-    'or run initialize_project_context to configure a project for remote API access.'
+    'Run initialize_project_context to configure this repo\'s project, or pass a projectId. ' +
+    'The manifest itself lives in the API: the desktop app generates it, and link_commit ' +
+    'keeps it current.'
   );
 }

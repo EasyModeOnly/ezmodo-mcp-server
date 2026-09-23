@@ -95,7 +95,8 @@ export const CONTEXT_MANIFEST_TOOLS = [
     description:
       'Trigger regeneration of the project context manifest. ' +
       '"incremental" re-analyzes only files changed since last generation (fast). ' +
-      '"full" regenerates everything with static analysis.',
+      '"full" regenerates everything with static analysis. Needs a local manifest; the result ' +
+      'is local only. The API copy is kept current by link_commit and update_manifest_entries.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -118,21 +119,24 @@ export const CONTEXT_MANIFEST_TOOLS = [
   {
     name: 'update_manifest_entries',
     description:
-      'Write AI-enriched summaries back to the context manifest. ' +
-      'After reading critical files and generating better summaries, ' +
-      'use this tool to persist them. Marks entries as LLM-enriched ' +
-      'and saves to disk.',
+      'Write AI-enriched summaries to the project\'s context manifest, which lives in the API. ' +
+      'This is the follow-up to manage_task action:"link_commit": its response lists ' +
+      '`manifest.needsSummary` — paths the commit added that have no summary yet — so read ' +
+      'each one and write a summary here. Entries that do not exist yet are created. Pass ' +
+      '`deletes` to remove paths. Marks entries as LLM-enriched; a local manifest file, if ' +
+      'the repo has one, gets the same change.',
     inputSchema: {
       type: 'object',
       properties: {
         project_id: {
           type: 'string',
           description:
-            'Project ID for remote manifest access. Required when no local manifest is available.',
+            'Project whose manifest to write. Defaults to this repo\'s configured project; ' +
+            'required when there is none (e.g. over the remote connector).',
         },
         updates: {
           type: 'array',
-          description: 'Array of entries to update with enriched summaries',
+          description: 'Entries to write. A path not yet in the manifest is created.',
           items: {
             type: 'object',
             properties: {
@@ -160,8 +164,12 @@ export const CONTEXT_MANIFEST_TOOLS = [
             required: ['path', 'summary'],
           },
         },
+        deletes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Paths to remove from the manifest (optional)',
+        },
       },
-      required: ['updates'],
     },
   },
   {
