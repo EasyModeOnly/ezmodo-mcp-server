@@ -7,7 +7,7 @@
  * only sends the optional bounding params when provided.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Walk the compendium navigation graph outward from a root node. projectId,
@@ -19,5 +19,5 @@ export async function getGraph({ projectId, rootType, rootId, scope, depth, maxN
   if (scope) params.scope = scope;
   if (depth !== undefined) params.depth = depth;
   if (maxNodes !== undefined) params.maxNodes = maxNodes;
-  return callZephlyAPI('mcpTraverseGraph', params);
+  return callEzmodoAPI('mcpTraverseGraph', params);
 }

@@ -13,12 +13,38 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync, realpathSync } from 'fs'
 import { homedir, tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { resolveCommitDir, splitCommands } from '../../plugins/ezmodo/hooks/lib.js';
+import {
+  findConfigDir,
+  resolveCommitDir,
+  splitCommands,
+} from '../../plugins/ezmodo/hooks/lib.js';
 
 const HOOK = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '../../plugins/ezmodo/hooks/link-commit-reminder.js'
 );
+
+// #2843: only .ezmodo/ marks a tracked repo; a pre-rebrand .zephly/ is ignored.
+describe('findConfigDir', () => {
+  let root;
+  beforeEach(() => {
+    root = realpathSync(mkdtempSync(join(tmpdir(), 'ezmodo-hooks-cfg-')));
+  });
+  afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+  it('finds .ezmodo/ walking up', () => {
+    mkdirSync(join(root, '.ezmodo'));
+    writeFileSync(join(root, '.ezmodo', 'config.json'), '{}');
+    mkdirSync(join(root, 'sub'));
+    expect(findConfigDir(join(root, 'sub'))).toBe(join(root, '.ezmodo'));
+  });
+
+  it('ignores a pre-rebrand .zephly/ directory', () => {
+    mkdirSync(join(root, '.zephly'));
+    writeFileSync(join(root, '.zephly', 'config.json'), '{}');
+    expect(findConfigDir(root)).toBeNull();
+  });
+});
 
 describe('splitCommands', () => {
   it('does not split on separators inside quotes', () => {

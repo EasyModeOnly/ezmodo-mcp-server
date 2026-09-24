@@ -7,7 +7,7 @@
  * in core/features.Service.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_feature actions.
@@ -41,18 +41,18 @@ export async function getFeature(args) {
 
   if (isSingleLookup) {
     const params = featureId ? { featureId } : { organizationId, featureSlug };
-    const result = await callZephlyAPI('mcpGetFeature', params);
+    const result = await callEzmodoAPI('mcpGetFeature', params);
     const lookupId = featureId || result?.feature?.id;
     if (includeDetail && lookupId) {
       // Aggregated view: linked artifacts grouped by type + rollup.
-      const detail = await callZephlyAPI('mcpGetFeatureDetail', { featureId: lookupId });
+      const detail = await callEzmodoAPI('mcpGetFeatureDetail', { featureId: lookupId });
       result.detail = detail?.detail ?? detail;
     } else if (includeLinks && lookupId) {
-      const links = await callZephlyAPI('mcpListFeatureLinks', { featureId: lookupId });
+      const links = await callEzmodoAPI('mcpListFeatureLinks', { featureId: lookupId });
       result.links = links?.links ?? links;
     }
     if (includePaths && lookupId) {
-      const paths = await callZephlyAPI('mcpListFeaturePaths', { featureId: lookupId });
+      const paths = await callEzmodoAPI('mcpListFeaturePaths', { featureId: lookupId });
       result.paths = paths?.paths ?? paths;
     }
     return result;
@@ -71,14 +71,14 @@ export async function getFeature(args) {
   if (tree) {
     // A forest is a whole structure; the API ignores paging for it.
     params.tree = 'true';
-    return callZephlyAPI('mcpListFeatures', params);
+    return callEzmodoAPI('mcpListFeatures', params);
   }
   if (filters.search) params.search = filters.search;
   if (filters.sortBy) params.sortBy = filters.sortBy;
   if (filters.sortDir) params.sortDir = filters.sortDir;
   if (filters.limit != null) params.limit = filters.limit;
   if (filters.offset != null) params.offset = filters.offset;
-  return callZephlyAPI('mcpListFeatures', params);
+  return callEzmodoAPI('mcpListFeatures', params);
 }
 
 /**
@@ -90,52 +90,52 @@ export async function searchFeatures(args) {
   const { organizationId, query, limit } = args;
   const params = { organizationId, query };
   if (limit != null) params.limit = limit;
-  return callZephlyAPI('mcpSearchFeatures', params);
+  return callEzmodoAPI('mcpSearchFeatures', params);
 }
 
 // --- Private helpers ---
 
 async function createFeature(args) {
-  return callZephlyAPI('mcpCreateFeature', args);
+  return callEzmodoAPI('mcpCreateFeature', args);
 }
 
 async function updateFeature(args) {
-  return callZephlyAPI('mcpUpdateFeature', args);
+  return callEzmodoAPI('mcpUpdateFeature', args);
 }
 
 async function deleteFeature({ featureId }) {
-  return callZephlyAPI('mcpDeleteFeature', { featureId });
+  return callEzmodoAPI('mcpDeleteFeature', { featureId });
 }
 
 async function linkFeatureArtifact({ featureId, targetType, targetId }) {
-  return callZephlyAPI('mcpLinkFeatureArtifact', { featureId, targetType, targetId });
+  return callEzmodoAPI('mcpLinkFeatureArtifact', { featureId, targetType, targetId });
 }
 
 async function unlinkFeatureArtifact({ featureId, targetType, targetId }) {
-  return callZephlyAPI('mcpUnlinkFeatureArtifact', { featureId, targetType, targetId });
+  return callEzmodoAPI('mcpUnlinkFeatureArtifact', { featureId, targetType, targetId });
 }
 
 // Add, remove or replace the code paths a feature owns (E-258). Paths are what
 // auto-link work to the feature when it touches those files.
 async function setFeaturePaths({ featureId, pathsMode, paths }) {
-  return callZephlyAPI('mcpSetFeaturePaths', { featureId, mode: pathsMode || 'add', paths });
+  return callEzmodoAPI('mcpSetFeaturePaths', { featureId, mode: pathsMode || 'add', paths });
 }
 
 async function promoteEpic({ epicId }) {
-  return callZephlyAPI('mcpPromoteEpicToFeature', { epicId });
+  return callEzmodoAPI('mcpPromoteEpicToFeature', { epicId });
 }
 
 // Generate (and persist) the feature's grounded "how it works" living
 // description via the model (E-165). AI-quota gated server-side.
 async function generateHowItWorks({ featureId }) {
-  return callZephlyAPI('mcpGenerateHowItWorks', { featureId });
+  return callEzmodoAPI('mcpGenerateHowItWorks', { featureId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for a feature (BYO-AI,
 // E-190). The agent writes { markdown, sources }; the server validates the cited
 // sources against the real grounded context before saving. No server model call.
 async function applyHowItWorks({ featureId, markdown, sources }) {
-  return callZephlyAPI('mcpApplyHowItWorks', { featureId, markdown, sources });
+  return callEzmodoAPI('mcpApplyHowItWorks', { featureId, markdown, sources });
 }
 
 // Apply an approved init/backfill proposal tree (E-167): create features
@@ -144,5 +144,5 @@ async function applyHowItWorks({ featureId, markdown, sources }) {
 // own AI; this only commits the human-approved result. Server-side ApplyInit
 // resolves tempId→featureId ordering and validates sources.
 async function applyInit({ organizationId, projectId, nodes }) {
-  return callZephlyAPI('mcpApplyFeatureInit', { organizationId, projectId, nodes });
+  return callEzmodoAPI('mcpApplyFeatureInit', { organizationId, projectId, nodes });
 }

@@ -10,7 +10,7 @@
  * in the returned object and must never fail the commit link it rides on.
  */
 
-import { callZephlyAPI } from './http-client.js';
+import { callEzmodoAPI } from './http-client.js';
 import { getCommitNameStatus, getRepositoryRoot } from './git-helpers.js';
 import { readConfig } from './local-cache.js';
 import {
@@ -46,7 +46,7 @@ export async function applyCommitToManifest({ sha, projectId, workingDirectory }
       return { skipped: 'commit changed no files the manifest tracks' };
     }
 
-    const result = await callZephlyAPI('mcpApplyManifestChanges', {
+    const result = await callEzmodoAPI('mcpApplyManifestChanges', {
       projectId: resolvedProjectId,
       commitSha: sha,
       ...delta,

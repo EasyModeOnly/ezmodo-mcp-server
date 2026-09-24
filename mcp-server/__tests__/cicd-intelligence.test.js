@@ -1,8 +1,8 @@
 import { jest } from '@jest/globals';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { getAiInsights } = await import('../handlers/ai-intelligence.js');
@@ -17,41 +17,41 @@ describe('CI/CD intelligence (E-32 #218)', () => {
 
   describe('get_ai_insights routing', () => {
     it('routes build_failure to the build-failure endpoint', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ analysis: { verdict: 'failing' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ analysis: { verdict: 'failing' } });
 
       const result = await getAiInsights({
         type: 'build_failure', projectId: 'proj-1', headSha: 'abc123',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpAnalyzeBuildFailure', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpAnalyzeBuildFailure', {
         projectId: 'proj-1', headSha: 'abc123',
       });
       expect(result.analysis.verdict).toBe('failing');
     });
 
     it('routes deployment_risk to the deployment-risk endpoint', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ risk: { level: 'high' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ risk: { level: 'high' } });
 
       await getAiInsights({
         type: 'deployment_risk', projectId: 'proj-1', environment: 'production', sha: 'abc123',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpPredictDeploymentRisk', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpPredictDeploymentRisk', {
         projectId: 'proj-1', environment: 'production', sha: 'abc123',
       });
     });
 
     it('leaves the existing insight types alone', async () => {
-      mockCallZephlyAPI.mockResolvedValue({});
+      mockCallEzmodoAPI.mockResolvedValue({});
 
       await getAiInsights({ type: 'project_insights', projectId: 'p' });
-      expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetProjectInsights', { projectId: 'p' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetProjectInsights', { projectId: 'p' });
 
       await getAiInsights({ type: 'suggest_next', projectId: 'p' });
-      expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpSuggestNextActions', { projectId: 'p' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSuggestNextActions', { projectId: 'p' });
 
       await getAiInsights({ type: 'dependency_graph', projectId: 'p' });
-      expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpAnalyzeDependencyGraph', { projectId: 'p' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpAnalyzeDependencyGraph', { projectId: 'p' });
     });
 
     it('rejects an unknown type rather than silently doing nothing', async () => {
@@ -62,7 +62,7 @@ describe('CI/CD intelligence (E-32 #218)', () => {
 
   describe('manage_pull_request suggest_reviewers', () => {
     it('routes to the suggest-reviewers endpoint', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ suggestions: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ suggestions: [] });
 
       await managePullRequest({
         action: 'suggest_reviewers',
@@ -71,7 +71,7 @@ describe('CI/CD intelligence (E-32 #218)', () => {
         changedPaths: ['api/handler.go'],
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSuggestReviewers', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSuggestReviewers', {
         projectId: 'proj-1', repoId: '123:acme/backend', changedPaths: ['api/handler.go'],
       });
     });
@@ -79,14 +79,14 @@ describe('CI/CD intelligence (E-32 #218)', () => {
     // Suggesting and requesting are deliberately separate calls: pinging the
     // wrong three people is a social cost a suggestion tool should not incur.
     it('does not request the review as a side effect', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ suggestions: [{ login: '@alice' }] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ suggestions: [{ login: '@alice' }] });
 
       await managePullRequest({
         action: 'suggest_reviewers', projectId: 'p', repoId: 'r', changedPaths: ['a.go'],
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledTimes(1);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalledWith('mcpRequestPRReview', expect.anything());
+      expect(mockCallEzmodoAPI).toHaveBeenCalledTimes(1);
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalledWith('mcpRequestPRReview', expect.anything());
     });
   });
 

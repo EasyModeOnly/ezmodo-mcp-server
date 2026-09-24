@@ -12,7 +12,7 @@
  */
 
 import { previewEntityLinks, partitionProposals, attachSuggestionIds } from '../lib/autolink.js';
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { resolveTaskAutoAssign } from '../lib/auto-assign.js';
 import { suggestTags } from '../lib/suggested-tags.js';
 import { buildTaskUrl } from '../lib/web-url.js';
@@ -54,7 +54,7 @@ export async function manageTask(args) {
  */
 async function claimTask({ taskId, claimNote }, release) {
   if (!taskId) throw new Error(`taskId is required to ${release ? 'release' : 'claim'} a task`);
-  return callZephlyAPI('mcpClaimTask', release ? { taskId, release: true } : { taskId, note: claimNote });
+  return callEzmodoAPI('mcpClaimTask', release ? { taskId, release: true } : { taskId, note: claimNote });
 }
 
 /**
@@ -63,9 +63,9 @@ async function claimTask({ taskId, claimNote }, release) {
  */
 async function suggestedEdits({ taskId, editId, answer, note }, answering) {
   if (!taskId) throw new Error('taskId is required');
-  if (!answering) return callZephlyAPI('mcpTaskSuggestedEdits', { taskId });
+  if (!answering) return callEzmodoAPI('mcpTaskSuggestedEdits', { taskId });
   if (!editId || !answer) throw new Error('editId and answer (accept, reject or withdraw) are required');
-  return callZephlyAPI('mcpTaskSuggestedEdits', { taskId, editId, answer, note });
+  return callEzmodoAPI('mcpTaskSuggestedEdits', { taskId, editId, answer, note });
 }
 
 /**
@@ -124,7 +124,7 @@ async function createTask(args) {
   }
 
   // Create the task
-  const result = await callZephlyAPI('mcpCreateTask', createArgs);
+  const result = await callEzmodoAPI('mcpCreateTask', createArgs);
 
   // If the milestone is frozen and the operation was blocked, return guidance
   if (result?.blocked) {
@@ -288,7 +288,7 @@ export async function bulkCreateTasks(args) {
     );
   }
 
-  const result = await callZephlyAPI('mcpBulkCreateTasks', {
+  const result = await callEzmodoAPI('mcpBulkCreateTasks', {
     projectId,
     epicId,
     tasks: tasks.map(({ changedFiles, linkedFiles, ...rest }) => ({
@@ -370,7 +370,7 @@ export async function reportUntrackedWork(args) {
 }
 
 async function updateTask(args) {
-  const result = await callZephlyAPI('mcpUpdateTask', args);
+  const result = await callEzmodoAPI('mcpUpdateTask', args);
 
   // If the milestone is frozen and the operation was blocked, return guidance
   if (result?.blocked) {
@@ -391,7 +391,7 @@ async function updateTask(args) {
     if (args.status === 'in_progress') {
       // Fetch full task data to populate session file
       try {
-        const taskResult = await callZephlyAPI('mcpGetTask', { taskId: args.taskId });
+        const taskResult = await callEzmodoAPI('mcpGetTask', { taskId: args.taskId });
         if (taskResult?.task) {
           await writeActiveSession({
             taskId: taskResult.task.id,
@@ -412,7 +412,7 @@ async function updateTask(args) {
 }
 
 async function completeTask(args) {
-  const result = await callZephlyAPI('mcpCompleteTask', args);
+  const result = await callEzmodoAPI('mcpCompleteTask', args);
   await clearActiveSession();
   return result;
 }
@@ -426,7 +426,7 @@ async function deferTask(args) {
   if (!args.reason || !args.reason.trim()) {
     throw new Error('reason is required for defer');
   }
-  return callZephlyAPI('mcpDeferTask', {
+  return callEzmodoAPI('mcpDeferTask', {
     taskId: args.taskId,
     reason: args.reason,
     stepId: args.stepId,
@@ -454,12 +454,12 @@ export async function searchTasks(args) {
         epicId: args.epicId,
       };
 
-      const result = await callZephlyAPI('mcpSemanticTaskSearch', semanticArgs);
+      const result = await callEzmodoAPI('mcpSemanticTaskSearch', semanticArgs);
 
       // Fall back to basic search if semantic returns no results (e.g., no embeddings)
       if (!result.results || result.results.length === 0) {
         getLogger().info('Semantic search empty, falling back to basic search', { projectId: args.projectId });
-        return callZephlyAPI('mcpSearchTasks', args);
+        return callEzmodoAPI('mcpSearchTasks', args);
       }
 
       // Transform semantic search response to match expected format
@@ -473,16 +473,16 @@ export async function searchTasks(args) {
     } catch (error) {
       // Fall back to basic search if semantic search fails
       getLogger().warn('Semantic search failed, falling back to basic search', { error: error.message });
-      return callZephlyAPI('mcpSearchTasks', args);
+      return callEzmodoAPI('mcpSearchTasks', args);
     }
   }
 
   // Use basic filter-based search when no searchText or projectId
-  return callZephlyAPI('mcpSearchTasks', args);
+  return callEzmodoAPI('mcpSearchTasks', args);
 }
 
 export async function getTask(args) {
-  const result = await callZephlyAPI('mcpGetTask', args);
+  const result = await callEzmodoAPI('mcpGetTask', args);
   const webUrl = await buildTaskUrl(result?.task?.taskNumber);
   if (webUrl && result?.task) result.task.webUrl = webUrl;
   return result;
@@ -510,7 +510,7 @@ export async function getTask(args) {
 // should now describe with update_manifest_entries. It never fails the link.
 async function linkCommitToTask(args) {
   const { updateManifest = true, ...linkArgs } = args;
-  const result = await callZephlyAPI('mcpLinkCommitToTask', await withCommitFiles(linkArgs));
+  const result = await callEzmodoAPI('mcpLinkCommitToTask', await withCommitFiles(linkArgs));
   if (updateManifest === false) {
     return result;
   }
@@ -546,22 +546,22 @@ async function withCommitFiles(args) {
 }
 
 async function unlinkCommitFromTask(args) {
-  return callZephlyAPI('mcpUnlinkCommitFromTask', args);
+  return callEzmodoAPI('mcpUnlinkCommitFromTask', args);
 }
 
 async function getTaskCommits(args) {
-  return callZephlyAPI('mcpGetTaskCommits', args);
+  return callEzmodoAPI('mcpGetTaskCommits', args);
 }
 
 // Generate (and persist) the task's grounded "how it works" living description
 // via the model. AI-quota gated server-side (mirrors projects.generateProjectHowItWorks).
 async function generateTaskHowItWorks({ taskId }) {
-  return callZephlyAPI('mcpGenerateTaskHowItWorks', { taskId });
+  return callEzmodoAPI('mcpGenerateTaskHowItWorks', { taskId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for a task (BYO-AI,
 // E-190). The agent writes { markdown, sources }; the server validates the cited
 // sources against the real grounded context before saving. No server model call.
 async function applyTaskHowItWorks({ taskId, markdown, sources }) {
-  return callZephlyAPI('mcpApplyTaskHowItWorks', { taskId, markdown, sources });
+  return callEzmodoAPI('mcpApplyTaskHowItWorks', { taskId, markdown, sources });
 }

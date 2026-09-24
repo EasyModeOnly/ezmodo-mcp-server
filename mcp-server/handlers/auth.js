@@ -154,12 +154,8 @@ function status() {
       authenticated: true,
       source: cli.source,
       keyPrefix: cli.keyPrefix,
-      note: cli.legacy
-        ? 'Calls are using an API key left in the Keychain by the pre-rebrand zephly CLI. ' +
-          'Run `authenticate` to sign in with a browser instead — that takes precedence — ' +
-          'or `ezmodo auth login` to replace the old entry.'
-        : 'Calls are using the API key the ezmodo CLI stored. A browser sign-in via ' +
-          '`authenticate` would take precedence over it.',
+      note: 'Calls are using the API key the ezmodo CLI stored. A browser sign-in via ' +
+        '`authenticate` would take precedence over it.',
     };
   }
 

@@ -6,9 +6,9 @@ import { TASK_TOOLS } from '../tools/tasks.js';
 import { RECURRING_TASK_TOOLS } from '../tools/recurring-tasks.js';
 import { WORK_TEMPLATE_TOOLS } from '../tools/work-templates.js';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const tool = (tools, name) => tools.find((t) => t.name === name);

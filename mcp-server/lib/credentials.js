@@ -6,7 +6,7 @@
  *   1. The request context. Only ever set by the HTTP transport, where one
  *      process serves many callers and the credential belongs to the request
  *      rather than the process (#2599). Over stdio this is always empty.
- *   2. EZMODO_API_KEY (or legacy ZEPHLY_API_KEY). An EXPLICIT credential must
+ *   2. EZMODO_API_KEY. An EXPLICIT credential must
  *      beat an implicit one, or overriding the key for a single project becomes
  *      impossible to reason about — and this is what keeps CI, containers and
  *      anything headless working exactly as before OAuth existed.
@@ -108,14 +108,13 @@ export function describeCredentialSync() {
  * succeeded as the CLI's user (#2655). A status that disagrees with what calls
  * actually do is worse than none.
  *
- * @returns {{ source: string, legacy?: boolean, keyPrefix: string }|null}
+ * @returns {{ source: string, keyPrefix: string }|null}
  */
 export function describeCliCredential() {
   const fromCli = cliCredential();
   if (!fromCli) return null;
   return {
     source: fromCli.source,
-    ...(fromCli.legacy ? { legacy: true } : {}),
     keyPrefix: `${fromCli.key.substring(0, 12)}...`,
   };
 }

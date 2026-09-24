@@ -4,9 +4,9 @@
 
 import { describe, it, expect, jest, afterEach } from '@jest/globals';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { listRepositories } = await import('../handlers/github.js');
@@ -18,7 +18,7 @@ describe('listRepositories', () => {
   });
 
   it('returns the linked repositories with their repoIds', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({
+    mockCallEzmodoAPI.mockResolvedValueOnce({
       repositories: [
         {
           id: 'repo-1',
@@ -32,7 +32,7 @@ describe('listRepositories', () => {
 
     const result = await listRepositories({ projectId: 'proj-1' });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListRepositories', { projectId: 'proj-1' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListRepositories', { projectId: 'proj-1' });
     expect(result.repositories[0].repoId).toBe('12345678:EasyModeOnly/ezmodo');
   });
 });

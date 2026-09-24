@@ -8,7 +8,7 @@
  * resolution, and evaluation happen server-side in core/featureflags.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_feature_flag actions.
@@ -37,10 +37,10 @@ export async function manageEnvironment(args) {
   const { action, ...params } = args;
   switch (action) {
   case 'list': return listEnvironments(params);
-  case 'create': return callZephlyAPI('mcpCreateEnvironment', params);
-  case 'update': return callZephlyAPI('mcpUpdateEnvironment', params);
-  case 'delete': return callZephlyAPI('mcpDeleteEnvironment', { environmentId: params.environmentId });
-  case 'set_default': return callZephlyAPI('mcpSetDefaultEnvironment', { environmentId: params.environmentId });
+  case 'create': return callEzmodoAPI('mcpCreateEnvironment', params);
+  case 'update': return callEzmodoAPI('mcpUpdateEnvironment', params);
+  case 'delete': return callEzmodoAPI('mcpDeleteEnvironment', { environmentId: params.environmentId });
+  case 'set_default': return callEzmodoAPI('mcpSetDefaultEnvironment', { environmentId: params.environmentId });
   default:
     throw new Error(`Unknown action: ${action}. Expected list, create, update, delete, or set_default.`);
   }
@@ -49,13 +49,13 @@ export async function manageEnvironment(args) {
 async function listEnvironments({ organizationId, projectId }) {
   const params = { organizationId };
   if (projectId) params.projectId = projectId;
-  return callZephlyAPI('mcpListEnvironments', params);
+  return callEzmodoAPI('mcpListEnvironments', params);
 }
 
 async function setFeatureFlagEnvironmentConfig({ flagId, environmentId, enabled, rolloutPercentage, defaultVariantId }) {
   const body = { flagId, environmentId, enabled, rolloutPercentage };
   if (defaultVariantId !== undefined) body.defaultVariantId = defaultVariantId;
-  return callZephlyAPI('mcpSetFlagEnvironmentConfig', body);
+  return callEzmodoAPI('mcpSetFlagEnvironmentConfig', body);
 }
 
 /**
@@ -74,11 +74,11 @@ export async function getFeatureFlag(args) {
     throw new Error('Provide flagId, or organizationId and key.');
   }
 
-  const result = await callZephlyAPI('mcpGetFeatureFlag', params);
+  const result = await callEzmodoAPI('mcpGetFeatureFlag', params);
   if (includeLinks) {
     const id = flagId || result?.featureFlag?.id || result?.id;
     if (id) {
-      const links = await callZephlyAPI('mcpListFeatureFlagLinks', { flagId: id });
+      const links = await callEzmodoAPI('mcpListFeatureFlagLinks', { flagId: id });
       result.links = links?.links ?? links;
     }
   }
@@ -94,14 +94,14 @@ export async function listFeatureFlags(args) {
   if (args.linkedType && args.linkedId) {
     params.linkedType = args.linkedType;
     params.linkedId = args.linkedId;
-    return callZephlyAPI('mcpListFeatureFlags', params);
+    return callEzmodoAPI('mcpListFeatureFlags', params);
   }
   if (args.projectId) params.projectId = args.projectId;
   if (args.status) params.status = args.status;
   if (args.kind) params.kind = args.kind;
   if (args.includeOrgWide != null) params.includeOrgWide = args.includeOrgWide;
   if (args.limit != null) params.limit = args.limit;
-  return callZephlyAPI('mcpListFeatureFlags', params);
+  return callEzmodoAPI('mcpListFeatureFlags', params);
 }
 
 /**
@@ -112,31 +112,31 @@ export async function evaluateFeatureFlag(args) {
   if (args.subjectId) params.subjectId = args.subjectId;
   if (args.environment) params.environment = args.environment;
   if (args.attributes) params.attributes = args.attributes;
-  return callZephlyAPI('mcpEvaluateFeatureFlag', params);
+  return callEzmodoAPI('mcpEvaluateFeatureFlag', params);
 }
 
 // --- Private helpers ---
 
 async function createFeatureFlag(args) {
-  return callZephlyAPI('mcpCreateFeatureFlag', args);
+  return callEzmodoAPI('mcpCreateFeatureFlag', args);
 }
 
 async function updateFeatureFlag(args) {
-  return callZephlyAPI('mcpUpdateFeatureFlag', args);
+  return callEzmodoAPI('mcpUpdateFeatureFlag', args);
 }
 
 async function deleteFeatureFlag({ flagId }) {
-  return callZephlyAPI('mcpDeleteFeatureFlag', { flagId });
+  return callEzmodoAPI('mcpDeleteFeatureFlag', { flagId });
 }
 
 async function transitionFeatureFlag({ flagId, status, reason }) {
-  return callZephlyAPI('mcpTransitionFeatureFlag', { flagId, status, reason });
+  return callEzmodoAPI('mcpTransitionFeatureFlag', { flagId, status, reason });
 }
 
 async function linkFeatureFlagArtifact({ flagId, targetType, targetId }) {
-  return callZephlyAPI('mcpLinkFeatureFlag', { flagId, targetType, targetId });
+  return callEzmodoAPI('mcpLinkFeatureFlag', { flagId, targetType, targetId });
 }
 
 async function unlinkFeatureFlagArtifact({ flagId, targetType, targetId }) {
-  return callZephlyAPI('mcpUnlinkFeatureFlag', { flagId, targetType, targetId });
+  return callEzmodoAPI('mcpUnlinkFeatureFlag', { flagId, targetType, targetId });
 }

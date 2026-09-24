@@ -204,7 +204,7 @@ export const DOCUMENT_TOOLS = [
     description: 'Retrieve a single document, or list all docs for a project. ' +
       'Provide documentId (or projectId + slug) for single lookup. ' +
       'Provide just projectId to list all docs. ' +
-      'Single-doc content is saved to <repo-config-dir>/docs/ (.ezmodo/docs/ or legacy .zephly/docs/) and returns a file path. ' +
+      'Single-doc content is saved to .ezmodo/docs/ and returns a file path. ' +
       'Optionally include version history or fetch a specific version.',
     inputSchema: {
       type: 'object',

@@ -1,9 +1,9 @@
 import { jest } from '@jest/globals';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 jest.unstable_mockModule('../lib/logger.js', () => ({
   getLogger: () => ({ info() {}, warn() {}, debug() {}, error() {} }),
@@ -17,7 +17,7 @@ const LINKS = [
 ];
 
 function singleCalls() {
-  return mockCallZephlyAPI.mock.calls.filter((c) => c[0] === 'mcpAddLink');
+  return mockCallEzmodoAPI.mock.calls.filter((c) => c[0] === 'mcpAddLink');
 }
 
 describe('applyLinks', () => {
@@ -27,7 +27,7 @@ describe('applyLinks', () => {
   // used to advertise `mcp/v1/links/batch`, which the Go API never implemented,
   // so every create-with-links paid a 404 before doing exactly this.
   it('applies each link with its own mcpAddLink call', async () => {
-    mockCallZephlyAPI.mockResolvedValue({ success: true });
+    mockCallEzmodoAPI.mockResolvedValue({ success: true });
 
     const result = await applyLinks({
       sourceType: 'task',
@@ -35,7 +35,7 @@ describe('applyLinks', () => {
       links: LINKS,
     });
 
-    expect(mockCallZephlyAPI.mock.calls.map((c) => c[0])).toEqual(['mcpAddLink', 'mcpAddLink']);
+    expect(mockCallEzmodoAPI.mock.calls.map((c) => c[0])).toEqual(['mcpAddLink', 'mcpAddLink']);
     expect(singleCalls()[0][1]).toEqual({
       sourceType: 'task',
       sourceId: 'task-1',
@@ -48,7 +48,7 @@ describe('applyLinks', () => {
   });
 
   it('defaults linkType to relates_to but honours an explicit one', async () => {
-    mockCallZephlyAPI.mockResolvedValue({ success: true });
+    mockCallEzmodoAPI.mockResolvedValue({ success: true });
 
     await applyLinks({
       sourceType: 'task',
@@ -66,11 +66,11 @@ describe('applyLinks', () => {
       .toEqual({ applied: [], failed: [] });
     expect(await applyLinks({ sourceType: 'task', sourceId: 't1', links: [{ targetId: 'x' }] }))
       .toEqual({ applied: [], failed: [] });
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 
   it('records one failed link in `failed` without throwing', async () => {
-    mockCallZephlyAPI.mockImplementation(async (_endpoint, params) => {
+    mockCallEzmodoAPI.mockImplementation(async (_endpoint, params) => {
       if (params.targetId === 'goal-1') throw new Error('Target not found');
       return { success: true };
     });
@@ -93,7 +93,7 @@ describe('applyLinks', () => {
   // The entity is the user's work; the links are metadata. Losing every link
   // must still return normally so the create result reaches the caller.
   it('never throws when every link is rejected', async () => {
-    mockCallZephlyAPI.mockRejectedValue(new Error('Forbidden'));
+    mockCallEzmodoAPI.mockRejectedValue(new Error('Forbidden'));
 
     const result = await applyLinks({ sourceType: 'task', sourceId: 't1', links: LINKS });
 
@@ -107,7 +107,7 @@ describe('attachLinks', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('stamps the outcome onto the create result', async () => {
-    mockCallZephlyAPI.mockResolvedValue({ success: true });
+    mockCallEzmodoAPI.mockResolvedValue({ success: true });
 
     const result = { taskId: 't1' };
     await attachLinks(result, { sourceType: 'task', sourceId: 't1', links: LINKS });
@@ -120,13 +120,13 @@ describe('attachLinks', () => {
     const result = { taskId: 't1' };
     await attachLinks(result, { sourceType: 'task', sourceId: 't1', links: undefined });
     expect(result).not.toHaveProperty('links');
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 
   it('adds no `links` property when the entity id could not be resolved', async () => {
     const result = {};
     await attachLinks(result, { sourceType: 'task', sourceId: undefined, links: LINKS });
     expect(result).not.toHaveProperty('links');
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 });

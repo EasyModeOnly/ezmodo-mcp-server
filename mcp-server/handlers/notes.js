@@ -8,14 +8,14 @@
  * have to know that "move to root" is an empty folderId.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 export async function listNotes(args) {
-  return callZephlyAPI('mcpListNotes', args || {});
+  return callEzmodoAPI('mcpListNotes', args || {});
 }
 
 export async function getNote(args) {
-  return callZephlyAPI('mcpGetNote', { noteId: args?.noteId });
+  return callEzmodoAPI('mcpGetNote', { noteId: args?.noteId });
 }
 
 /**
@@ -40,7 +40,7 @@ export async function manageNote(args) {
 export async function manageNoteFolder(args) {
   const { action, ...params } = args;
   switch (action) {
-  case 'list': return callZephlyAPI('mcpListNoteFolders', {});
+  case 'list': return callEzmodoAPI('mcpListNoteFolders', {});
   case 'create': return createNoteFolder(params);
   case 'rename': return renameNoteFolder(params);
   case 'move': return moveNoteFolder(params);
@@ -75,7 +75,7 @@ async function createNote(params) {
   requireField(params, 'title', 'create');
   const body = pick(params, ['title', 'content']);
   if (!isRoot(params.folderId)) body.folderId = params.folderId;
-  return callZephlyAPI('mcpCreateNote', body);
+  return callEzmodoAPI('mcpCreateNote', body);
 }
 
 async function updateNote(params) {
@@ -89,12 +89,12 @@ async function updateNote(params) {
       'No updates provided. Specify at least one of: title, content, append, folderId, isPinned.'
     );
   }
-  return callZephlyAPI('mcpUpdateNote', { noteId: params.noteId, ...fields });
+  return callEzmodoAPI('mcpUpdateNote', { noteId: params.noteId, ...fields });
 }
 
 async function deleteNote(params) {
   requireField(params, 'noteId', 'delete');
-  await callZephlyAPI('mcpDeleteNote', { noteId: params.noteId });
+  await callEzmodoAPI('mcpDeleteNote', { noteId: params.noteId });
   return { deleted: true, noteId: params.noteId };
 }
 
@@ -103,7 +103,7 @@ async function moveNote(params) {
   if (params.folderId === undefined) {
     throw new Error('folderId is required for move (use "root" to move out of any folder)');
   }
-  return callZephlyAPI('mcpUpdateNote', {
+  return callEzmodoAPI('mcpUpdateNote', {
     noteId: params.noteId,
     folderId: isRoot(params.folderId) ? '' : params.folderId,
   });
@@ -111,7 +111,7 @@ async function moveNote(params) {
 
 async function pinNote(params) {
   requireField(params, 'noteId', 'pin');
-  return callZephlyAPI('mcpUpdateNote', {
+  return callEzmodoAPI('mcpUpdateNote', {
     noteId: params.noteId,
     isPinned: params.isPinned !== false,
   });
@@ -122,7 +122,7 @@ async function promoteNote(params) {
   requireField(params, 'kind', 'promote');
   requireField(params, 'organizationId', 'promote');
   requireField(params, 'projectId', 'promote');
-  return callZephlyAPI('mcpPromoteNote', {
+  return callEzmodoAPI('mcpPromoteNote', {
     noteId: params.noteId,
     ...pick(params, [
       'kind', 'organizationId', 'projectId', 'title', 'description', 'priority', 'epicId',
@@ -135,13 +135,13 @@ async function createNoteFolder(params) {
   requireField(params, 'name', 'create');
   const body = { name: params.name };
   if (!isRoot(params.parentId)) body.parentId = params.parentId;
-  return callZephlyAPI('mcpCreateNoteFolder', body);
+  return callEzmodoAPI('mcpCreateNoteFolder', body);
 }
 
 async function renameNoteFolder(params) {
   requireField(params, 'folderId', 'rename');
   requireField(params, 'name', 'rename');
-  return callZephlyAPI('mcpUpdateNoteFolder', { folderId: params.folderId, name: params.name });
+  return callEzmodoAPI('mcpUpdateNoteFolder', { folderId: params.folderId, name: params.name });
 }
 
 async function moveNoteFolder(params) {
@@ -149,7 +149,7 @@ async function moveNoteFolder(params) {
   if (params.parentId === undefined) {
     throw new Error('parentId is required for move (use "root" to move to the top level)');
   }
-  return callZephlyAPI('mcpUpdateNoteFolder', {
+  return callEzmodoAPI('mcpUpdateNoteFolder', {
     folderId: params.folderId,
     parentId: isRoot(params.parentId) ? null : params.parentId,
   });
@@ -157,6 +157,6 @@ async function moveNoteFolder(params) {
 
 async function deleteNoteFolder(params) {
   requireField(params, 'folderId', 'delete');
-  await callZephlyAPI('mcpDeleteNoteFolder', { folderId: params.folderId });
+  await callEzmodoAPI('mcpDeleteNoteFolder', { folderId: params.folderId });
   return { deleted: true, folderId: params.folderId };
 }

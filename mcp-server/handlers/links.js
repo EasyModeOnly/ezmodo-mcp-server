@@ -12,7 +12,7 @@ import {
   partitionProposals,
   attachSuggestionIds,
 } from '../lib/autolink.js';
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_link to add or remove a link.
@@ -32,7 +32,7 @@ export async function manageLink(args) {
 }
 
 async function addLink({ sourceType, sourceId, targetType, targetId, linkType }) {
-  return callZephlyAPI('mcpAddLink', {
+  return callEzmodoAPI('mcpAddLink', {
     sourceType,
     sourceId,
     targetType,
@@ -42,7 +42,7 @@ async function addLink({ sourceType, sourceId, targetType, targetId, linkType })
 }
 
 async function removeLink({ sourceType, sourceId, targetType, targetId, linkType }) {
-  return callZephlyAPI('mcpRemoveLink', {
+  return callEzmodoAPI('mcpRemoveLink', {
     sourceType,
     sourceId,
     targetType,
@@ -60,7 +60,7 @@ async function removeLink({ sourceType, sourceId, targetType, targetId, linkType
 async function verifyLink({ sourceType, sourceId, targetType, targetId, linkType, commitSha }) {
   const params = { sourceType, sourceId, targetType, targetId, linkType };
   if (commitSha) params.commitSha = commitSha;
-  return callZephlyAPI('mcpVerifyLink', params);
+  return callEzmodoAPI('mcpVerifyLink', params);
 }
 
 /**
@@ -103,7 +103,7 @@ export async function listLinks({
   if (hydrate) params.hydrate = 'true';
   if (direction) params.direction = DIRECTION_TO_API[direction] || direction;
   if (includeSuggested) params.includeSuggested = 'true';
-  return callZephlyAPI('mcpListLinks', params);
+  return callEzmodoAPI('mcpListLinks', params);
 }
 
 /**

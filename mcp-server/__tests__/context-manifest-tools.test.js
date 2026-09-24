@@ -84,7 +84,7 @@ jest.unstable_mockModule('../lib/manifest-loader.js', () => ({
     entryCount: 4,
     version: '1.0.0',
     generatedAt: '2026-02-13T19:19:10.592Z',
-    manifestPath: '/project/.zephly/manifest/manifest.json',
+    manifestPath: '/project/.ezmodo/manifest/manifest.json',
   })),
   isLocalManifestAvailable: jest.fn(async () => true),
   getManifestSource: jest.fn(async () => ({ source: 'local', manifest: MOCK_MANIFEST })),
@@ -93,10 +93,10 @@ jest.unstable_mockModule('../lib/manifest-loader.js', () => ({
 
 // Mock the http-client (not needed for local tests, but imported by handlers)
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: jest.fn(async () => ({})),
+  callEzmodoAPI: jest.fn(async () => ({})),
 }));
 
-const { callZephlyAPI } = await import('../lib/http-client.js');
+const { callEzmodoAPI } = await import('../lib/http-client.js');
 const { getManifestSource, saveManifest } = await import('../lib/manifest-loader.js');
 
 // Import handlers after mock setup
@@ -401,7 +401,7 @@ describe('updateManifestEntriesHandler — remote (API is the source of truth)',
 
   beforeEach(() => {
     jest.clearAllMocks();
-    callZephlyAPI.mockResolvedValue(serverResult);
+    callEzmodoAPI.mockResolvedValue(serverResult);
     getManifestSource.mockResolvedValue({ source: 'remote', projectId: 'proj-1' });
   });
 
@@ -420,7 +420,7 @@ describe('updateManifestEntriesHandler — remote (API is the source of truth)',
       deletes: ['old/gone.ts'],
     });
 
-    expect(callZephlyAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', {
+    expect(callEzmodoAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', {
       projectId: 'proj-1',
       upserts: updates,
       deletes: ['old/gone.ts'],
@@ -441,7 +441,7 @@ describe('updateManifestEntriesHandler — remote (API is the source of truth)',
   it('accepts deletes alone', async () => {
     await updateManifestEntriesHandler({ project_id: 'proj-1', deletes: ['old/gone.ts'] });
 
-    expect(callZephlyAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', {
+    expect(callEzmodoAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', {
       projectId: 'proj-1',
       upserts: [],
       deletes: ['old/gone.ts'],
@@ -458,7 +458,7 @@ describe('updateManifestEntriesHandler — remote (API is the source of truth)',
       deletes: ['api/internal/core/tasks/service.go'],
     });
 
-    expect(callZephlyAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', expect.anything());
+    expect(callEzmodoAPI).toHaveBeenCalledWith('mcpApplyManifestChanges', expect.anything());
     expect(result._source).toBe('remote');
     expect(result.localMirror).toEqual({ updated: 1, deleted: 1, saved: true });
     expect(saveManifest).toHaveBeenCalled();
@@ -467,7 +467,7 @@ describe('updateManifestEntriesHandler — remote (API is the source of truth)',
   });
 
   it('warns when the project has no manifest yet', async () => {
-    callZephlyAPI.mockResolvedValue({ manifestMissing: true });
+    callEzmodoAPI.mockResolvedValue({ manifestMissing: true });
 
     const result = await updateManifestEntriesHandler({
       project_id: 'proj-1',

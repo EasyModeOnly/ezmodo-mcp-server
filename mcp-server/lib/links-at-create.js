@@ -21,7 +21,7 @@
  * whole story.
  */
 
-import { callZephlyAPI } from './http-client.js';
+import { callEzmodoAPI } from './http-client.js';
 import { getLogger } from './logger.js';
 
 const DEFAULT_LINK_TYPE = 'relates_to';
@@ -57,7 +57,7 @@ export async function applyLinks({ sourceType, sourceId, links }) {
   const failed = [];
   for (const item of items) {
     try {
-      await callZephlyAPI('mcpAddLink', {
+      await callEzmodoAPI('mcpAddLink', {
         sourceType,
         sourceId,
         targetType: item.targetType,

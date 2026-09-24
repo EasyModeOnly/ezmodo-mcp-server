@@ -5,22 +5,22 @@
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import {
-  createMockCallZephlyAPI,
+  createMockCallEzmodoAPI,
   createMockTask,
   createMockError,
 } from './test-utils.js';
 
 describe('get_task function', () => {
-  let mockCallZephlyAPI;
+  let mockCallEzmodoAPI;
   let getTask;
 
   beforeEach(() => {
     // Create fresh mock for each test
-    mockCallZephlyAPI = createMockCallZephlyAPI();
+    mockCallEzmodoAPI = createMockCallEzmodoAPI();
 
     // Create the getTask function with the mock
     getTask = async (args) => {
-      return mockCallZephlyAPI('mcpGetTask', args);
+      return mockCallEzmodoAPI('mcpGetTask', args);
     };
   });
 
@@ -36,11 +36,11 @@ describe('get_task function', () => {
       expect(result.success).toBe(true);
       expect(result.task).toBeDefined();
       expect(result.task.id).toBe(taskId);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetTask', { taskId });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetTask', { taskId });
     });
 
     it('should handle task not found by ID', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (endpoint === 'mcpGetTask' && args.taskId === 'nonexistent') {
           const error = createMockError('Task not found', 404);
           throw error;
@@ -84,14 +84,14 @@ describe('get_task function', () => {
       expect(result.task).toBeDefined();
       expect(result.task.taskNumber).toBe(taskNumber);
       expect(result.task.projectId).toBe(projectId);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetTask', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetTask', {
         taskNumber,
         projectId,
       });
     });
 
     it('should handle task not found by task number', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (
           endpoint === 'mcpGetTask' &&
           args.taskNumber === 999 &&
@@ -140,7 +140,7 @@ describe('get_task function', () => {
 
   describe('Input validation', () => {
     it('should reject when neither taskId nor taskNumber is provided', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.taskId && (!args.taskNumber || !args.projectId)) {
           throw createMockError(
             "Must provide either 'taskId' OR both 'taskNumber' and 'projectId'",
@@ -153,7 +153,7 @@ describe('get_task function', () => {
     });
 
     it('should reject when taskNumber provided without projectId', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (args.taskNumber && !args.projectId) {
           throw createMockError(
             "Must provide 'projectId' when using 'taskNumber'",
@@ -166,7 +166,7 @@ describe('get_task function', () => {
     });
 
     it('should reject when projectId provided without taskNumber', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (args.projectId && !args.taskNumber && !args.taskId) {
           throw createMockError(
             "Must provide 'taskNumber' when using 'projectId'",
@@ -181,7 +181,7 @@ describe('get_task function', () => {
     });
 
     it('should reject when both taskId and taskNumber are provided', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (args.taskId && args.taskNumber) {
           throw createMockError(
             "Cannot provide both 'taskId' and 'taskNumber'. Use one or the other.",
@@ -200,7 +200,7 @@ describe('get_task function', () => {
     });
 
     it('should reject invalid task number (negative)', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (args.taskNumber < 0) {
           throw createMockError('Task number must be positive', 400);
         }
@@ -212,7 +212,7 @@ describe('get_task function', () => {
     });
 
     it('should reject invalid task number (zero)', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (args.taskNumber === 0) {
           throw createMockError('Task number must be positive', 400);
         }
@@ -226,7 +226,7 @@ describe('get_task function', () => {
 
   describe('Edge cases', () => {
     it('should handle API timeout gracefully', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         throw createMockError('Request timeout', 408);
       });
@@ -235,7 +235,7 @@ describe('get_task function', () => {
     });
 
     it('should handle network errors', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         throw createMockError('Network error', 0);
       });
 
@@ -243,7 +243,7 @@ describe('get_task function', () => {
     });
 
     it('should handle unauthorized access', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         throw createMockError('Unauthorized', 401);
       });
 
@@ -251,7 +251,7 @@ describe('get_task function', () => {
     });
 
     it('should handle forbidden access', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         throw createMockError('Forbidden - No access to this project', 403);
       });
 
@@ -259,7 +259,7 @@ describe('get_task function', () => {
     });
 
     it('should handle server errors', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         throw createMockError('Internal server error', 500);
       });
 
@@ -267,7 +267,7 @@ describe('get_task function', () => {
     });
 
     it('should handle malformed responses', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         return { invalid: 'response' };
       });
 
@@ -277,7 +277,7 @@ describe('get_task function', () => {
     });
 
     it('should handle tasks with null/undefined optional fields', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         return {
           success: true,
           task: createMockTask({

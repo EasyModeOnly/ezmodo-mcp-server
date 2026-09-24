@@ -4,16 +4,16 @@
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import {
-  createMockCallZephlyAPI,
+  createMockCallEzmodoAPI,
   createMockProject,
   createMockError,
 } from './test-utils.js';
 
 describe('Project Context Operations', () => {
-  let mockCallZephlyAPI;
+  let mockCallEzmodoAPI;
 
   beforeEach(() => {
-    mockCallZephlyAPI = createMockCallZephlyAPI();
+    mockCallEzmodoAPI = createMockCallEzmodoAPI();
   });
 
   afterEach(() => {
@@ -25,7 +25,7 @@ describe('Project Context Operations', () => {
 
     beforeEach(() => {
       getProjectContext = async (args) => {
-        return mockCallZephlyAPI('mcpGetProjectContext', args);
+        return mockCallEzmodoAPI('mcpGetProjectContext', args);
       };
     });
 
@@ -43,7 +43,7 @@ describe('Project Context Operations', () => {
     });
 
     it('should reject without projectId', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.projectId) {
           throw createMockError('projectId is required', 400);
         }
@@ -53,7 +53,7 @@ describe('Project Context Operations', () => {
     });
 
     it('should handle project not found', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (args.projectId === 'nonexistent') {
           throw createMockError('Project not found', 404);
         }
@@ -65,7 +65,7 @@ describe('Project Context Operations', () => {
     });
 
     it('should handle unauthorized access', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         throw createMockError('Unauthorized', 401);
       });
 
@@ -75,7 +75,7 @@ describe('Project Context Operations', () => {
     });
 
     it('should include project knowledge array', async () => {
-      mockCallZephlyAPI.mockImplementationOnce(async (endpoint, args) => ({
+      mockCallEzmodoAPI.mockImplementationOnce(async (endpoint, args) => ({
         success: true,
         context: {
           projectId: args.projectId,
@@ -96,7 +96,7 @@ describe('Project Context Operations', () => {
     });
 
     it('should include project memory object', async () => {
-      mockCallZephlyAPI.mockImplementationOnce(async (endpoint, args) => ({
+      mockCallEzmodoAPI.mockImplementationOnce(async (endpoint, args) => ({
         success: true,
         context: {
           projectId: args.projectId,
@@ -123,18 +123,18 @@ describe('Project Context Operations', () => {
   describe('Project access validation', () => {
     it('should verify user has access to project', async () => {
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       const result = await getProjectContext({ projectId: 'project-123' });
 
       expect(result.success).toBe(true);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetProjectContext', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetProjectContext', {
         projectId: 'project-123',
       });
     });
 
     it('should reject access to private project', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (args.projectId === 'private-project') {
           throw createMockError(
             'Forbidden - No access to this project',
@@ -144,7 +144,7 @@ describe('Project Context Operations', () => {
       });
 
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       await expect(
         getProjectContext({ projectId: 'private-project' })
@@ -152,7 +152,7 @@ describe('Project Context Operations', () => {
     });
 
     it('should allow access to team project', async () => {
-      mockCallZephlyAPI.mockImplementationOnce(async (endpoint, args) => ({
+      mockCallEzmodoAPI.mockImplementationOnce(async (endpoint, args) => ({
         success: true,
         context: {
           projectId: args.projectId,
@@ -163,7 +163,7 @@ describe('Project Context Operations', () => {
       }));
 
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       const result = await getProjectContext({ projectId: 'team-project' });
 
@@ -175,7 +175,7 @@ describe('Project Context Operations', () => {
   describe('Context consistency', () => {
     it('should maintain context across multiple calls', async () => {
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       const result1 = await getProjectContext({ projectId: 'project-123' });
       const result2 = await getProjectContext({ projectId: 'project-123' });
@@ -186,7 +186,7 @@ describe('Project Context Operations', () => {
 
     it('should handle concurrent context requests', async () => {
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       const requests = Array.from({ length: 5 }, () =>
         getProjectContext({ projectId: 'project-123' })
@@ -204,13 +204,13 @@ describe('Project Context Operations', () => {
 
   describe('Error handling', () => {
     it('should handle network timeout', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         throw createMockError('Request timeout', 408);
       });
 
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       await expect(
         getProjectContext({ projectId: 'project-123' })
@@ -218,12 +218,12 @@ describe('Project Context Operations', () => {
     });
 
     it('should handle server errors gracefully', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         throw createMockError('Internal server error', 500);
       });
 
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       await expect(
         getProjectContext({ projectId: 'project-123' })
@@ -231,12 +231,12 @@ describe('Project Context Operations', () => {
     });
 
     it('should handle malformed responses', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         return { invalid: 'response' };
       });
 
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       const result = await getProjectContext({ projectId: 'project-123' });
 
@@ -248,7 +248,7 @@ describe('Project Context Operations', () => {
   describe('Performance', () => {
     it('should complete within reasonable time', async () => {
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       const start = Date.now();
       await getProjectContext({ projectId: 'project-123' });
@@ -259,7 +259,7 @@ describe('Project Context Operations', () => {
 
     it('should cache project context appropriately', async () => {
       const getProjectContext = async (args) =>
-        mockCallZephlyAPI('mcpGetProjectContext', args);
+        mockCallEzmodoAPI('mcpGetProjectContext', args);
 
       // First call
       const start1 = Date.now();

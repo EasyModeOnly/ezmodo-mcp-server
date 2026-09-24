@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 
 // Mock the http client and side-effecting lib deps so we exercise the real
 // manageTask dispatcher in isolation (mirrors projects.test.js).
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 const mockWriteActiveSession = jest.fn();
 const mockClearActiveSession = jest.fn();
 const mockResolveTaskAutoAssign = jest.fn();
@@ -10,7 +10,7 @@ const mockBuildTaskUrl = jest.fn();
 const mockGetContext = jest.fn();
 
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 jest.unstable_mockModule('../lib/active-session.js', () => ({
   writeActiveSession: mockWriteActiveSession,
@@ -37,11 +37,11 @@ describe('manageTask dispatch', () => {
   });
 
   it('should generate the how-it-works summary', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ task: { id: 'task-1', howItWorks: '## How it works' } });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ task: { id: 'task-1', howItWorks: '## How it works' } });
 
     const result = await manageTask({ action: 'generate_how_it_works', taskId: 'task-1' });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGenerateTaskHowItWorks', { taskId: 'task-1' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGenerateTaskHowItWorks', { taskId: 'task-1' });
     expect(result.task.howItWorks).toBe('## How it works');
   });
 
@@ -56,7 +56,7 @@ describe('manageTask dispatch', () => {
  */
 describe('manage_task create with links', () => {
   beforeEach(() => {
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => {
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
       if (endpoint === 'mcpCreateTask') return { taskId: 'task-1', taskNumber: 7 };
       return { success: true };
     });
@@ -68,7 +68,7 @@ describe('manage_task create with links', () => {
   afterEach(() => jest.clearAllMocks());
 
   function callsTo(endpoint) {
-    return mockCallZephlyAPI.mock.calls.filter((c) => c[0] === endpoint);
+    return mockCallEzmodoAPI.mock.calls.filter((c) => c[0] === endpoint);
   }
 
   it('applies the links after the task exists and reports the outcome', async () => {
@@ -100,7 +100,7 @@ describe('manage_task create with links', () => {
   });
 
   it('still returns the created task when linking fails', async () => {
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => {
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
       if (endpoint === 'mcpCreateTask') return { taskId: 'task-1', taskNumber: 7 };
       throw new Error('Target not found');
     });
@@ -140,7 +140,7 @@ describe('manageTask create — link suggestions', () => {
 
   function mockCreateFlow({ proposals = [], suggestions = [] }) {
     mockResolveTaskAutoAssign.mockResolvedValue(null);
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => {
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
       switch (endpoint) {
       case 'mcpCreateTask': return { taskId: 'task-1', taskNumber: 1 };
       case 'mcpPreviewLinks': return { proposals };
@@ -225,7 +225,7 @@ describe('manageTask create — link suggestions', () => {
  */
 describe('manage_task create — no component hint', () => {
   beforeEach(() => {
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => (
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => (
       endpoint === 'mcpCreateTask' ? { taskId: 'task-1', taskNumber: 7 } : {}
     ));
     mockResolveTaskAutoAssign.mockResolvedValue({ organizationId: 'org-1', matchedTags: [] });
@@ -249,19 +249,19 @@ describe('manage_task claim / release', () => {
 
   it('claims with a note and releases through one endpoint', async () => {
     const { manageTask } = await import('../handlers/tasks.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ claim: { taskId: 't1' }, warnings: [] });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ claim: { taskId: 't1' }, warnings: [] });
     await manageTask({ action: 'claim', taskId: 't1', claimNote: 'Wiring the cursors' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpClaimTask', { taskId: 't1', note: 'Wiring the cursors' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpClaimTask', { taskId: 't1', note: 'Wiring the cursors' });
 
-    mockCallZephlyAPI.mockResolvedValueOnce({ summary: 'Released.' });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ summary: 'Released.' });
     await manageTask({ action: 'release', taskId: 't1' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpClaimTask', { taskId: 't1', release: true });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpClaimTask', { taskId: 't1', release: true });
   });
 
   it('asks for the task before calling anything', async () => {
     const { manageTask } = await import('../handlers/tasks.js');
     await expect(manageTask({ action: 'claim' })).rejects.toThrow('taskId is required to claim');
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 });
 
@@ -271,13 +271,13 @@ describe('manage_task suggested edits', () => {
 
   it('lists and answers through one endpoint', async () => {
     const { manageTask } = await import('../handlers/tasks.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ edits: [], canReview: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ edits: [], canReview: true });
     await manageTask({ action: 'list_suggested_edits', taskId: 't1' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpTaskSuggestedEdits', { taskId: 't1' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpTaskSuggestedEdits', { taskId: 't1' });
 
-    mockCallZephlyAPI.mockResolvedValueOnce({ edit: { status: 'accepted' } });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ edit: { status: 'accepted' } });
     await manageTask({ action: 'answer_suggested_edit', taskId: 't1', editId: 'e1', answer: 'accept', note: 'Good' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpTaskSuggestedEdits',
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpTaskSuggestedEdits',
       { taskId: 't1', editId: 'e1', answer: 'accept', note: 'Good' });
   });
 
@@ -285,6 +285,6 @@ describe('manage_task suggested edits', () => {
     const { manageTask } = await import('../handlers/tasks.js');
     await expect(manageTask({ action: 'answer_suggested_edit', taskId: 't1', editId: 'e1' }))
       .rejects.toThrow('editId and answer');
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 });

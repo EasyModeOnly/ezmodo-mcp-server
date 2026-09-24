@@ -3,8 +3,7 @@
  *
  * Writes/clears <repo-config-dir>/active-session.json to communicate the
  * active task between Claude Code (via MCP server) and the EzModo desktop
- * app. The session file lives inside whichever config directory the repo
- * already uses — `.ezmodo/` for current repos, `.zephly/` for legacy.
+ * app. The session file lives inside the repo's `.ezmodo/` directory.
  */
 
 import { execSync } from 'child_process';
@@ -29,8 +28,7 @@ function getCurrentBranch() {
 
 /**
  * Write the active-session.json file inside the project's config directory
- * (`.ezmodo/active-session.json`, or legacy `.zephly/active-session.json` if
- * that's what the repo already uses).
+ * (`.ezmodo/active-session.json`).
  *
  * @param {object} taskData
  * @param {string} taskData.taskId
@@ -68,8 +66,7 @@ export async function writeActiveSession(taskData) {
 
 /**
  * Clear (delete) the active-session.json file inside the project's config
- * directory when task work ends. Operates on whichever directory the repo
- * uses (`.ezmodo/` or legacy `.zephly/`).
+ * directory (`.ezmodo/`) when task work ends.
  */
 export async function clearActiveSession() {
   try {

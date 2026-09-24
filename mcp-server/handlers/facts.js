@@ -10,7 +10,7 @@
  * Write operations (create, update, delete) invalidate the cache.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { invalidateCacheSection } from '../lib/local-cache.js';
 
 /**
@@ -31,14 +31,14 @@ export async function manageFact(args) {
  */
 export async function listFacts(args) {
   const { projectId, factId } = args;
-  return callZephlyAPI('mcpListFacts', { projectId, factId });
+  return callEzmodoAPI('mcpListFacts', { projectId, factId });
 }
 
 /**
  * Create a new fact
  */
 async function createFact(args) {
-  const result = await callZephlyAPI('mcpCreateFact', args);
+  const result = await callEzmodoAPI('mcpCreateFact', args);
   await invalidateCacheSection('facts');
   return result;
 }
@@ -47,7 +47,7 @@ async function createFact(args) {
  * Update an existing fact
  */
 async function updateFact(args) {
-  const result = await callZephlyAPI('mcpUpdateFact', args);
+  const result = await callEzmodoAPI('mcpUpdateFact', args);
   await invalidateCacheSection('facts');
   return result;
 }
@@ -56,7 +56,7 @@ async function updateFact(args) {
  * Delete a fact
  */
 async function deleteFact(args) {
-  const result = await callZephlyAPI('mcpDeleteFact', args);
+  const result = await callEzmodoAPI('mcpDeleteFact', args);
   await invalidateCacheSection('facts');
   return result;
 }

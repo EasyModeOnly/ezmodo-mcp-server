@@ -10,7 +10,6 @@ import { calculateGitMatchConfidence } from '../lib/git-utils.js';
 import { isCacheFresh } from '../lib/local-cache.js';
 import {
   CURRENT_REPO_CONFIG_DIR,
-  LEGACY_REPO_CONFIG_DIR,
   findRepoConfigPath,
   getWriteRepoConfigDirName,
 } from '../lib/repo-config-dir.js';
@@ -49,25 +48,6 @@ async function ensureConfigDirGitignored(workingDirectory, configDirName, enable
     console.error('Warning: Failed to update .gitignore:', err);
     return false;
   }
-}
-
-/**
- * Build the response fields that report a leftover legacy config directory.
- *
- * We write `.ezmodo/` unconditionally, so a repo that had `.zephly/` now has
- * both. Readers prefer the new one, so nothing breaks — but silently leaving a
- * stale directory behind is how the transition never ends. Telling the caller
- * makes the cleanup a visible next step rather than a mystery.
- */
-function legacyConfigNotice(legacyConfigPath) {
-  if (!legacyConfigPath) return {};
-  return {
-    legacyConfigPath,
-    legacyConfigWarning:
-      `Wrote ${CURRENT_REPO_CONFIG_DIR}/config.json. This repo also still has a legacy `
-      + `${LEGACY_REPO_CONFIG_DIR}/ directory at ${legacyConfigPath}, which is now unused. `
-      + 'Run `ezmodo migrate-config` (or delete it) to finish moving off it.',
-  };
 }
 
 /**
@@ -117,7 +97,7 @@ ${projectContext}
 
 ### 1. Session Initialization
 
-1. Check \`.ezmodo/config.json\` (or legacy \`.zephly/config.json\`) exists
+1. Check \`.ezmodo/config.json\` exists
 2. Call \`get_current_project_context()\` to load project context — cache the \`projectId\` for the session
 3. If the user specifies an existing task or epic to work on,
 search for it (\`search_tasks\` / \`search_epics\`) and resume using the Context Recovery steps in section 3a
@@ -380,7 +360,7 @@ export async function detectGitRepository(args) {
 
     // Get all accessible projects.
     //
-    // callZephlyAPI unwraps the Go API's {success, data} envelope and hands back
+    // callEzmodoAPI unwraps the Go API's {success, data} envelope and hands back
     // `data` alone, so the response here is `{projects: [...]}` with no `success`
     // flag. This used to test `projectsResult.success`, which is therefore always
     // undefined -- every call took the failure branch and reported "Failed to
@@ -471,8 +451,7 @@ export async function getCurrentProjectContext(args) {
   const { workingDirectory = process.cwd() } = args;
 
   try {
-    // Walk up directory tree looking for a project config file
-    // (`.ezmodo/config.json` preferred, `.zephly/config.json` legacy).
+    // Walk up directory tree looking for a project `.ezmodo/config.json`.
     const configPath = await findRepoConfigPath(workingDirectory);
     if (configPath) {
       const currentDir = path.dirname(path.dirname(configPath));
@@ -645,7 +624,7 @@ export async function getCurrentProjectContext(args) {
     return {
       success: true,
       found: false,
-      message: `No ${CURRENT_REPO_CONFIG_DIR}/config.json (or legacy ${LEGACY_REPO_CONFIG_DIR}/config.json) found. Use initialize_project_context to create one.`,
+      message: `No ${CURRENT_REPO_CONFIG_DIR}/config.json found. Use initialize_project_context to create one.`,
     };
   } catch (error) {
     throw new Error(`Failed to get current project context: ${error.message}`);
@@ -664,25 +643,15 @@ export async function initializeProjectContext(args) {
 
   try {
     // Step 1: Check if config already exists. Writes ALWAYS go to `.ezmodo/`.
-    //
-    // This used to reuse a legacy `.zephly/` when the repo had one, which meant
-    // an agent running this tool on an un-migrated repo kept the old directory
-    // alive instead of moving off it — the tool was extending the very layout
-    // the rebrand is retiring. We read whatever exists (readers dual-check, new
-    // wins) and write the new location, leaving the legacy directory in place
-    // for `ezmodo migrate-config` to clean up.
     const existingConfigPath = await findRepoConfigPath(workingDirectory);
     const configDirName = getWriteRepoConfigDirName();
     const configDir = path.join(workingDirectory, configDirName);
     const configPath = path.join(configDir, 'config.json');
 
-    const legacyConfigPath =
-      existingConfigPath && existingConfigPath !== configPath ? existingConfigPath : null;
-
     let existingConfig = null;
     try {
-      // Seed from the legacy config when that's the only one there, so a repo
-      // being moved over keeps its settings instead of starting from scratch.
+      // Seed from the nearest existing config so re-initializing keeps its
+      // settings instead of starting from scratch.
       const readFrom = existingConfigPath ?? configPath;
       const existingContent = await fs.readFile(readFrom, 'utf-8');
       existingConfig = JSON.parse(existingContent);
@@ -749,7 +718,6 @@ export async function initializeProjectContext(args) {
         gitignoreUpdated,
         claudeMdUpdated,
         existingConfig,
-        ...legacyConfigNotice(legacyConfigPath),
       };
     }
 
@@ -883,7 +851,6 @@ export async function initializeProjectContext(args) {
       gitignoreUpdated,
       claudeMdUpdated,
       existingConfig,
-      ...legacyConfigNotice(legacyConfigPath),
     };
   } catch (error) {
     throw new Error(`Failed to initialize project context: ${error.message}`);

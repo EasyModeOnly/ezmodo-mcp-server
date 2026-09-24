@@ -5,9 +5,8 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 
 // Mock fs/promises. `access` resolves for paths that end in
-// `.ezmodo/config.json` (the current write location) and rejects for the
-// legacy `.zephly/config.json` and everything else, so the dual-read
-// helper in lib/repo-config-dir.js resolves to the .ezmodo path.
+// `.ezmodo/config.json` (the current write location) and rejects for
+// everything else, so lib/repo-config-dir.js resolves to the .ezmodo path.
 const mockReadFile = jest.fn();
 const mockWriteFile = jest.fn();
 const mockMkdir = jest.fn();
@@ -190,10 +189,8 @@ describe('CLAUDE.md generation in initialize_project_context', () => {
     });
   });
 
-  // The tool used to reuse an existing `.zephly/` for writes, which meant an
-  // agent running it on an un-migrated repo kept the old layout alive — it was
-  // extending the very directory the rebrand retires.
-  describe('legacy .zephly/ repo', () => {
+  // #2843: a pre-rebrand `.zephly/` directory is no longer read at all.
+  describe('pre-rebrand .zephly/ repo', () => {
     const LEGACY_CONFIG = '/tmp/test-project/.zephly/config.json';
     const CURRENT_CONFIG = '/tmp/test-project/.ezmodo/config.json';
 
@@ -211,21 +208,7 @@ describe('CLAUDE.md generation in initialize_project_context', () => {
       });
     });
 
-    it('writes .ezmodo/ and never the legacy directory', async () => {
-      await initializeProjectContext({
-        projectId: 'proj-123',
-        organizationId: 'org-1',
-        workingDirectory: WORKING_DIR,
-        addToGitignore: false,
-        addClaudeMd: false,
-      });
-
-      expect(mockWriteFile.mock.calls.some((call) => call[0] === CURRENT_CONFIG)).toBe(true);
-      expect(mockWriteFile.mock.calls.some((call) => call[0] === LEGACY_CONFIG)).toBe(false);
-      expect(mockMkdir.mock.calls.some((call) => String(call[0]).includes('.zephly'))).toBe(false);
-    });
-
-    it('reports the leftover legacy directory instead of leaving it a mystery', async () => {
+    it('writes .ezmodo/ and neither reads nor writes the legacy directory', async () => {
       const result = await initializeProjectContext({
         projectId: 'proj-123',
         organizationId: 'org-1',
@@ -235,21 +218,10 @@ describe('CLAUDE.md generation in initialize_project_context', () => {
       });
 
       expect(result.configPath).toBe(CURRENT_CONFIG);
-      expect(result.legacyConfigPath).toBe(LEGACY_CONFIG);
-      expect(result.legacyConfigWarning).toContain('ezmodo migrate-config');
-    });
-
-    // Losing settings on migration would make the move a downgrade.
-    it('seeds existingConfig from the legacy file', async () => {
-      const result = await initializeProjectContext({
-        projectId: 'proj-123',
-        organizationId: 'org-1',
-        workingDirectory: WORKING_DIR,
-        addToGitignore: false,
-        addClaudeMd: false,
-      });
-
-      expect(result.existingConfig).toEqual({ projectId: 'proj-123', orgSlug: 'test-org' });
+      expect(result.existingConfig).toBeNull();
+      expect(result.legacyConfigPath).toBeUndefined();
+      expect(mockWriteFile.mock.calls.some((call) => call[0] === LEGACY_CONFIG)).toBe(false);
+      expect(mockMkdir.mock.calls.some((call) => String(call[0]).includes('.zephly'))).toBe(false);
     });
 
     // mockImplementation survives clearAllMocks, so leaving it set would make

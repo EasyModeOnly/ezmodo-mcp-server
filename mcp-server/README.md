@@ -82,7 +82,7 @@ valid indefinitely.
 
 Resolved per call, in this order:
 
-1. `EZMODO_API_KEY` (or legacy `ZEPHLY_API_KEY`) — an explicit credential beats
+1. `EZMODO_API_KEY` — an explicit credential beats
    an implicit one, which is what keeps CI predictable.
 2. The OAuth token this server obtained for itself.
 3. The credential `ezmodo auth login` stored, if you happen to have the CLI.

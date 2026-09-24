@@ -5,7 +5,7 @@
  * Consolidated: getAiInsights dispatches by type param.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch get_ai_insights by type to the appropriate handler
@@ -25,31 +25,31 @@ export async function getAiInsights(args) {
 // --- Private helpers ---
 
 async function getProjectInsights(args) {
-  return callZephlyAPI('mcpGetProjectInsights', args);
+  return callEzmodoAPI('mcpGetProjectInsights', args);
 }
 
 async function suggestNextActions(args) {
-  return callZephlyAPI('mcpSuggestNextActions', args);
+  return callEzmodoAPI('mcpSuggestNextActions', args);
 }
 
 async function analyzeDependencyGraph(args) {
-  return callZephlyAPI('mcpAnalyzeDependencyGraph', args);
+  return callEzmodoAPI('mcpAnalyzeDependencyGraph', args);
 }
 
 async function analyzeBuildFailure(args) {
-  return callZephlyAPI('mcpAnalyzeBuildFailure', args);
+  return callEzmodoAPI('mcpAnalyzeBuildFailure', args);
 }
 
 async function predictDeploymentRisk(args) {
-  return callZephlyAPI('mcpPredictDeploymentRisk', args);
+  return callEzmodoAPI('mcpPredictDeploymentRisk', args);
 }
 
 export async function estimateTask(args) {
   const { taskId } = args;
-  return callZephlyAPI('mcpEstimateTask', { taskId });
+  return callEzmodoAPI('mcpEstimateTask', { taskId });
 }
 
 export async function inferDependencies(args) {
   const { projectId } = args;
-  return callZephlyAPI('mcpGetInferredDependencies', { projectId });
+  return callEzmodoAPI('mcpGetInferredDependencies', { projectId });
 }

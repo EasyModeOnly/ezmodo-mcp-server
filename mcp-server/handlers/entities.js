@@ -7,7 +7,7 @@
  * getGoal unifies get (by ID or number) and list.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { buildGoalUrl } from '../lib/web-url.js';
 
 /**
@@ -42,7 +42,7 @@ export async function manageTeam(args) {
 export async function getGoal(args) {
   // Single goal lookup by ID or number
   if (args.goalId || args.goalNumber) {
-    const result = await callZephlyAPI('mcpGetGoal', args);
+    const result = await callEzmodoAPI('mcpGetGoal', args);
     const goalId = result?.goal?.id || result?.goal?.goalId;
     const webUrl = await buildGoalUrl(goalId);
     if (webUrl && result?.goal) result.goal.webUrl = webUrl;
@@ -50,30 +50,30 @@ export async function getGoal(args) {
   }
 
   // List mode
-  return callZephlyAPI('mcpListGoals', args);
+  return callEzmodoAPI('mcpListGoals', args);
 }
 
 // --- Private helpers ---
 
 async function createGoal(args) {
-  const result = await callZephlyAPI('mcpCreateGoal', args);
+  const result = await callEzmodoAPI('mcpCreateGoal', args);
   const webUrl = await buildGoalUrl(result?.goalId);
   if (webUrl) result.webUrl = webUrl;
   return result;
 }
 
 async function updateGoal(args) {
-  return callZephlyAPI('mcpUpdateGoal', args);
+  return callEzmodoAPI('mcpUpdateGoal', args);
 }
 
 async function deleteGoal(args) {
-  return callZephlyAPI('mcpDeleteGoal', args);
+  return callEzmodoAPI('mcpDeleteGoal', args);
 }
 
 // Generate (and persist) the goal's grounded "how it works" living description
 // via the model. AI-quota gated server-side (mirrors features.generateHowItWorks).
 async function generateGoalHowItWorks({ goalId }) {
-  const result = await callZephlyAPI('mcpGenerateGoalHowItWorks', { goalId });
+  const result = await callEzmodoAPI('mcpGenerateGoalHowItWorks', { goalId });
   const id = result?.goal?.id || result?.goal?.goalId || goalId;
   const webUrl = await buildGoalUrl(id);
   if (webUrl && result?.goal) result.goal.webUrl = webUrl;
@@ -83,7 +83,7 @@ async function generateGoalHowItWorks({ goalId }) {
 // Apply (persist) a LOCAL-agent-authored "how it works" for a goal (BYO-AI,
 // E-190). Cited sources are validated server-side before saving; no model call.
 async function applyGoalHowItWorks({ goalId, markdown, sources }) {
-  const result = await callZephlyAPI('mcpApplyGoalHowItWorks', { goalId, markdown, sources });
+  const result = await callEzmodoAPI('mcpApplyGoalHowItWorks', { goalId, markdown, sources });
   const id = result?.goal?.id || result?.goal?.goalId || goalId;
   const webUrl = await buildGoalUrl(id);
   if (webUrl && result?.goal) result.goal.webUrl = webUrl;
@@ -91,5 +91,5 @@ async function applyGoalHowItWorks({ goalId, markdown, sources }) {
 }
 
 async function createTeam(args) {
-  return callZephlyAPI('mcpCreateTeam', args);
+  return callEzmodoAPI('mcpCreateTeam', args);
 }

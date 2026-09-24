@@ -5,7 +5,7 @@
  * Consolidated: managePullRequest dispatches create/update/merge/close/request_review.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * List the git repositories linked to a project, each with the `repoId` every
@@ -20,7 +20,7 @@ import { callZephlyAPI } from '../lib/http-client.js';
  * to hand it over.
  */
 export async function listRepositories({ projectId }) {
-  return callZephlyAPI('mcpListRepositories', { projectId });
+  return callEzmodoAPI('mcpListRepositories', { projectId });
 }
 
 /**
@@ -42,23 +42,23 @@ export async function managePullRequest(args) {
 // --- Private helpers ---
 
 async function createPullRequest(args) {
-  return callZephlyAPI('mcpCreatePullRequest', args);
+  return callEzmodoAPI('mcpCreatePullRequest', args);
 }
 
 async function updatePullRequest(args) {
-  return callZephlyAPI('mcpUpdatePullRequest', args);
+  return callEzmodoAPI('mcpUpdatePullRequest', args);
 }
 
 async function mergePullRequest(args) {
-  return callZephlyAPI('mcpMergePullRequest', args);
+  return callEzmodoAPI('mcpMergePullRequest', args);
 }
 
 async function closePullRequest(args) {
-  return callZephlyAPI('mcpClosePullRequest', args);
+  return callEzmodoAPI('mcpClosePullRequest', args);
 }
 
 async function requestPRReview(args) {
-  return callZephlyAPI('mcpRequestPRReview', args);
+  return callEzmodoAPI('mcpRequestPRReview', args);
 }
 
 /**
@@ -68,5 +68,5 @@ async function requestPRReview(args) {
  * business incurring on its own.
  */
 async function suggestReviewers(args) {
-  return callZephlyAPI('mcpSuggestReviewers', args);
+  return callEzmodoAPI('mcpSuggestReviewers', args);
 }

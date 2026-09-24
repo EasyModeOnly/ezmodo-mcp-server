@@ -1,7 +1,7 @@
 /**
  * Context Manifest Loader
  * Loads and caches the project manifest/manifest.json file for MCP tools.
- * Reads from `.ezmodo/manifest/` with a `.zephly/manifest/` fallback.
+ * Reads from `.ezmodo/manifest/`.
  * Provides a singleton cache with reload mechanism for rebuild_manifest.
  */
 
@@ -9,10 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { findConfigPath, readConfig } from './local-cache.js';
 import { getLogger } from './logger.js';
-import {
-  CURRENT_REPO_CONFIG_DIR,
-  LEGACY_REPO_CONFIG_DIR,
-} from './repo-config-dir.js';
+import { CURRENT_REPO_CONFIG_DIR } from './repo-config-dir.js';
 
 // Singleton cache
 let _manifest = null;
@@ -34,8 +31,7 @@ async function findProjectRoot() {
 }
 
 /**
- * Find the manifest.json file path. Probes `.ezmodo/manifest/manifest.json`
- * first, then legacy `.zephly/manifest/manifest.json`.
+ * Find the `.ezmodo/manifest/manifest.json` file path.
  * @returns {Promise<string|null>} Absolute path to manifest.json, or null
  */
 async function findManifestPath() {
@@ -49,17 +45,14 @@ async function findManifestPath() {
   }
 
   const projectRoot = await findProjectRoot();
-  for (const dirName of [CURRENT_REPO_CONFIG_DIR, LEGACY_REPO_CONFIG_DIR]) {
-    const manifestPath = path.join(projectRoot, dirName, 'manifest', 'manifest.json');
-    try {
-      await fs.access(manifestPath);
-      _manifestPath = manifestPath;
-      return manifestPath;
-    } catch {
-      // try next
-    }
+  const manifestPath = path.join(projectRoot, CURRENT_REPO_CONFIG_DIR, 'manifest', 'manifest.json');
+  try {
+    await fs.access(manifestPath);
+    _manifestPath = manifestPath;
+    return manifestPath;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 /**

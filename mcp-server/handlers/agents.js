@@ -6,7 +6,7 @@
  * what the background agents staged in agent_suggestions.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 export async function listAgentSuggestions({
   limit, entityType, entityId, action, agentType, minConfidence,
@@ -18,7 +18,7 @@ export async function listAgentSuggestions({
   if (action) params.action = action;
   if (agentType) params.agentType = agentType;
   if (minConfidence !== undefined) params.minConfidence = minConfidence;
-  return callZephlyAPI('mcpListAgentSuggestions', params);
+  return callEzmodoAPI('mcpListAgentSuggestions', params);
 }
 
 /**
@@ -69,21 +69,21 @@ export async function acceptAgentSuggestion({ id, reviewNote } = {}) {
   if (!id) throw new Error('accept_agent_suggestion: id is required');
   const body = { id };
   if (reviewNote) body.reviewNote = reviewNote;
-  return callZephlyAPI('mcpAcceptAgentSuggestion', body);
+  return callEzmodoAPI('mcpAcceptAgentSuggestion', body);
 }
 
 export async function rejectAgentSuggestion({ id, reviewNote } = {}) {
   if (!id) throw new Error('reject_agent_suggestion: id is required');
   const body = { id };
   if (reviewNote) body.reviewNote = reviewNote;
-  return callZephlyAPI('mcpRejectAgentSuggestion', body);
+  return callEzmodoAPI('mcpRejectAgentSuggestion', body);
 }
 
 export async function runAgentNow({ agentType, scope } = {}) {
   if (!agentType) throw new Error('run_agent_now: agentType is required');
   const body = { agentType };
   if (scope) body.scope = scope;
-  return callZephlyAPI('mcpRunAgentNow', body);
+  return callEzmodoAPI('mcpRunAgentNow', body);
 }
 
 export async function configureAgent({ agentType, enabled, cadenceSeconds } = {}) {
@@ -91,5 +91,5 @@ export async function configureAgent({ agentType, enabled, cadenceSeconds } = {}
   const body = { agentType };
   if (enabled !== undefined) body.enabled = enabled;
   if (cadenceSeconds !== undefined) body.cadenceSeconds = cadenceSeconds;
-  return callZephlyAPI('mcpConfigureAgent', body);
+  return callEzmodoAPI('mcpConfigureAgent', body);
 }

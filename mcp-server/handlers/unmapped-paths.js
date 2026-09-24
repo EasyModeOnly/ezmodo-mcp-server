@@ -5,7 +5,7 @@
  * server-side in core/unmappedpaths.Service; these only shape the arguments.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * List a project's unmapped paths, pending by default.
@@ -16,7 +16,7 @@ export async function listUnmappedPaths({ projectId, status }) {
   }
   const params = { projectId };
   if (status) params.status = status;
-  return callZephlyAPI('mcpListUnmappedPaths', params);
+  return callEzmodoAPI('mcpListUnmappedPaths', params);
 }
 
 /**
@@ -37,20 +37,20 @@ export async function resolveUnmapped(args) {
 // features could claim are left pending on purpose.
 async function reconcileUnmappedPaths({ projectId }) {
   requireProject(projectId, 'reconcile');
-  return callZephlyAPI('mcpReconcileUnmappedPaths', { projectId });
+  return callEzmodoAPI('mcpReconcileUnmappedPaths', { projectId });
 }
 
 async function assignUnmappedPath({ projectId, pathId, featureId }) {
   requireProject(projectId, 'assign');
   if (!pathId) throw new Error('pathId is required for assign');
   if (!featureId) throw new Error('featureId is required for assign');
-  return callZephlyAPI('mcpAssignUnmappedPath', { projectId, pathId, featureId });
+  return callEzmodoAPI('mcpAssignUnmappedPath', { projectId, pathId, featureId });
 }
 
 async function dismissUnmappedPath({ projectId, pathId }) {
   requireProject(projectId, 'dismiss');
   if (!pathId) throw new Error('pathId is required for dismiss');
-  return callZephlyAPI('mcpDismissUnmappedPath', { projectId, pathId });
+  return callEzmodoAPI('mcpDismissUnmappedPath', { projectId, pathId });
 }
 
 function requireProject(projectId, action) {

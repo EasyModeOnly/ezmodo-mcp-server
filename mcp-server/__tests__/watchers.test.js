@@ -1,8 +1,8 @@
 import { jest } from '@jest/globals';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { manageWatch, listWatched, listNotifications } = await import('../handlers/watchers.js');
@@ -15,22 +15,22 @@ describe('Watching Operations', () => {
 
   describe('manage_watch', () => {
     it('watches a task', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageWatch({ action: 'watch', taskId: 'task-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpManageWatch', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpManageWatch', {
         action: 'watch',
         taskId: 'task-1',
       });
     });
 
     it('unwatches a task', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageWatch({ action: 'unwatch', taskId: 'task-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpManageWatch', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpManageWatch', {
         action: 'unwatch',
         taskId: 'task-1',
       });
@@ -38,30 +38,30 @@ describe('Watching Operations', () => {
 
     it('rejects an unknown action without calling the API', async () => {
       await expect(manageWatch({ action: 'mute', taskId: 'task-1' })).rejects.toThrow(/Unknown action/);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
 
     it('requires a taskId', async () => {
       await expect(manageWatch({ action: 'watch' })).rejects.toThrow(/taskId is required/);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
   });
 
   describe('list_watched', () => {
     it('lists watched tasks for an organization', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ watching: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ watching: [] });
 
       await listWatched({ organizationId: 'org-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListWatched', { organizationId: 'org-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListWatched', { organizationId: 'org-1' });
     });
 
     it('passes a limit when given', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ watching: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ watching: [] });
 
       await listWatched({ organizationId: 'org-1', limit: 10 });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListWatched', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListWatched', {
         organizationId: 'org-1',
         limit: 10,
       });
@@ -69,7 +69,7 @@ describe('Watching Operations', () => {
 
     it('requires an organizationId', async () => {
       await expect(listWatched({})).rejects.toThrow(/organizationId is required/);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
   });
 
@@ -77,19 +77,19 @@ describe('Watching Operations', () => {
     // The API already defaults to unread; echoing the default back would just
     // be noise in the query string.
     it('sends no unreadOnly flag by default', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ notifications: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ notifications: [] });
 
       await listNotifications();
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListNotifications', {});
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListNotifications', {});
     });
 
     it('sends unreadOnly only when explicitly disabled', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ notifications: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ notifications: [] });
 
       await listNotifications({ unreadOnly: false, limit: 5 });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListNotifications', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListNotifications', {
         unreadOnly: false,
         limit: 5,
       });

@@ -2,9 +2,9 @@ import { jest } from '@jest/globals';
 import { createMockError } from './test-utils.js';
 
 // Mock the http client
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { getProjectChanges } = await import('../handlers/activity.js');
@@ -48,11 +48,11 @@ describe('Activity Operations', () => {
     };
 
     it('should get project changes with default params', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce(mockActivityResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockActivityResponse);
 
       const result = await getProjectChanges({ projectId: 'proj-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetProjectChanges', expect.objectContaining({
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetProjectChanges', expect.objectContaining({
         projectId: 'proj-1',
         limit: 20,
         includeSummary: true,
@@ -63,7 +63,7 @@ describe('Activity Operations', () => {
     });
 
     it('should add humanDescription to events', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce(mockActivityResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockActivityResponse);
 
       const result = await getProjectChanges({ projectId: 'proj-1' });
 
@@ -72,11 +72,11 @@ describe('Activity Operations', () => {
     });
 
     it('should parse relative duration "7d"', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
 
       await getProjectChanges({ projectId: 'proj-1', since: '7d' });
 
-      const call = mockCallZephlyAPI.mock.calls[0];
+      const call = mockCallEzmodoAPI.mock.calls[0];
       const sinceDate = new Date(call[1].since);
       const daysAgo = (Date.now() - sinceDate.getTime()) / (1000 * 60 * 60 * 24);
       expect(daysAgo).toBeGreaterThan(6.9);
@@ -84,11 +84,11 @@ describe('Activity Operations', () => {
     });
 
     it('should parse relative duration "2w"', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
 
       await getProjectChanges({ projectId: 'proj-1', since: '2w' });
 
-      const call = mockCallZephlyAPI.mock.calls[0];
+      const call = mockCallEzmodoAPI.mock.calls[0];
       const sinceDate = new Date(call[1].since);
       const daysAgo = (Date.now() - sinceDate.getTime()) / (1000 * 60 * 60 * 24);
       expect(daysAgo).toBeGreaterThan(13.9);
@@ -96,29 +96,29 @@ describe('Activity Operations', () => {
     });
 
     it('should pass through ISO date unchanged', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
 
       await getProjectChanges({ projectId: 'proj-1', since: '2026-04-01T00:00:00Z' });
 
-      const call = mockCallZephlyAPI.mock.calls[0];
+      const call = mockCallEzmodoAPI.mock.calls[0];
       expect(call[1].since).toBe('2026-04-01T00:00:00Z');
     });
 
     it('should pass entity type filter', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
 
       await getProjectChanges({ projectId: 'proj-1', entityTypes: 'task,epic' });
 
-      const call = mockCallZephlyAPI.mock.calls[0];
+      const call = mockCallEzmodoAPI.mock.calls[0];
       expect(call[1].entityType).toBe('task,epic');
     });
 
     it('should cap limit at 100', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ events: [], totalCount: 0, summary: null });
 
       await getProjectChanges({ projectId: 'proj-1', limit: 500 });
 
-      const call = mockCallZephlyAPI.mock.calls[0];
+      const call = mockCallEzmodoAPI.mock.calls[0];
       expect(call[1].limit).toBe(100);
     });
 
@@ -127,7 +127,7 @@ describe('Activity Operations', () => {
     });
 
     it('should handle API error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Not found', 404));
       await expect(getProjectChanges({ projectId: 'proj-1' })).rejects.toThrow('Not found');
     });
   });

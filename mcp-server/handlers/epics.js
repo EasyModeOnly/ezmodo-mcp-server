@@ -10,7 +10,7 @@
  * `suggestedTags` (see lib/auto-assign.js for why they are not applied).
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { resolveEpicAutoAssign } from '../lib/auto-assign.js';
 import { suggestTags } from '../lib/suggested-tags.js';
 import { buildEpicUrl } from '../lib/web-url.js';
@@ -76,7 +76,7 @@ export async function manageEpic(args) {
 async function manageEpicEditor(action, { epicId, editorUserId }) {
   if (!epicId) throw new Error(`epicId is required to ${action} an editor`);
   if (!editorUserId) throw new Error(`editorUserId is required to ${action} an editor`);
-  return callZephlyAPI('mcpManageEpicEditors', { epicId, userId: editorUserId, action });
+  return callEzmodoAPI('mcpManageEpicEditors', { epicId, userId: editorUserId, action });
 }
 
 // (Re)generate the epic's grounded, source-attributed "how it works" living
@@ -85,14 +85,14 @@ async function manageEpicEditor(action, { epicId, editorUserId }) {
 // plus the decisions reached by walking those tasks (settled model A, #2376).
 // Server-side: one model call, AI-quota gated.
 async function generateEpicHowItWorks({ epicId }) {
-  return callZephlyAPI('mcpGenerateEpicHowItWorks', { epicId });
+  return callEzmodoAPI('mcpGenerateEpicHowItWorks', { epicId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for an epic (BYO-AI,
 // E-190). Cited sources are validated server-side against the real grounded
 // context before saving; no model call, so no AI quota is spent.
 async function applyEpicHowItWorks({ epicId, markdown, sources }) {
-  return callZephlyAPI('mcpApplyEpicHowItWorks', { epicId, markdown, sources });
+  return callEzmodoAPI('mcpApplyEpicHowItWorks', { epicId, markdown, sources });
 }
 
 async function createEpic(args) {
@@ -114,7 +114,7 @@ async function createEpic(args) {
   // this line — suggested tags, links, web URL — acts on the EPIC and so is identical
   // either way.
   const result = tasks?.length
-    ? await callZephlyAPI('mcpCreateEpicWithTasks', {
+    ? await callEzmodoAPI('mcpCreateEpicWithTasks', {
       ...createArgs,
       tasks: tasks.map(({ changedFiles, linkedFiles, ...rest }) => ({
         ...rest,
@@ -122,7 +122,7 @@ async function createEpic(args) {
         linkedFiles: normalizeChangedFiles(changedFiles, linkedFiles),
       })),
     })
-    : await callZephlyAPI('mcpCreateEpic', createArgs);
+    : await callEzmodoAPI('mcpCreateEpic', createArgs);
 
   if (tasks?.length) summarizeNestedTasks(result);
 
@@ -143,7 +143,7 @@ async function createEpic(args) {
 }
 
 async function updateEpic(args) {
-  const result = await callZephlyAPI('mcpUpdateEpic', args);
+  const result = await callEzmodoAPI('mcpUpdateEpic', args);
 
   // If the milestone is frozen and the operation was blocked, return guidance
   if (result?.blocked) {
@@ -161,15 +161,15 @@ async function updateEpic(args) {
 }
 
 export async function searchEpics(args) {
-  return callZephlyAPI('mcpSearchEpics', args);
+  return callEzmodoAPI('mcpSearchEpics', args);
 }
 
 export async function listEpics(args) {
-  return callZephlyAPI('mcpListEpics', args);
+  return callEzmodoAPI('mcpListEpics', args);
 }
 
 export async function getEpic(args) {
-  const result = await callZephlyAPI('mcpGetEpic', args);
+  const result = await callEzmodoAPI('mcpGetEpic', args);
   const webUrl = await buildEpicUrl(result?.epic?.epicNumber);
   if (webUrl && result?.epic) result.epic.webUrl = webUrl;
   return result;
@@ -179,7 +179,7 @@ export async function getEpic(args) {
  * Read an epic's plan with its current revision (E-259).
  */
 export async function getEpicPlan(args) {
-  return callZephlyAPI('mcpGetEpicPlan', args);
+  return callEzmodoAPI('mcpGetEpicPlan', args);
 }
 
 /**
@@ -190,7 +190,7 @@ export async function getEpicPlan(args) {
  */
 export async function updateEpicPlan(args) {
   try {
-    return await callZephlyAPI('mcpUpdateEpicPlan', args);
+    return await callEzmodoAPI('mcpUpdateEpicPlan', args);
   } catch (err) {
     if (err?.code === 'PLAN_CONFLICT') {
       const details = err.details || {};
@@ -219,21 +219,21 @@ export async function getEpicActivity(args) {
   if (args.markSeen === false) params.markSeen = 'false';
   // Live mode (#2748): the API waits for news, up to its own cap.
   if (args.waitSeconds > 0) params.waitSeconds = Math.min(Math.floor(args.waitSeconds), 25);
-  return callZephlyAPI('mcpGetEpicActivity', params);
+  return callEzmodoAPI('mcpGetEpicActivity', params);
 }
 
 /**
  * An epic's discussion, oldest first (E-259).
  */
 export async function listEpicComments(args) {
-  return callZephlyAPI('mcpListEpicComments', args);
+  return callEzmodoAPI('mcpListEpicComments', args);
 }
 
 /**
  * Post to an epic's discussion, or reply in a thread (E-259).
  */
 export async function addEpicComment(args) {
-  return callZephlyAPI('mcpAddEpicComment', args);
+  return callEzmodoAPI('mcpAddEpicComment', args);
 }
 
 /**
@@ -251,7 +251,7 @@ export async function managePlanProposal(args = {}) {
     if (!args.plan && !args.ops) {
       throw new Error('Send the plan you want (or the individual changes) to suggest a change');
     }
-    return callZephlyAPI('mcpProposePlanChange', {
+    return callEzmodoAPI('mcpProposePlanChange', {
       epicId: args.epicId,
       plan: args.plan,
       ops: args.ops,
@@ -264,12 +264,12 @@ export async function managePlanProposal(args = {}) {
     if (!args.epicId) throw new Error('epicId is required to list proposals');
     const params = { epicId: args.epicId };
     if (args.status) params.status = args.status;
-    return callZephlyAPI('mcpListPlanProposals', params);
+    return callEzmodoAPI('mcpListPlanProposals', params);
   }
 
   case 'get': {
     if (!args.proposalId) throw new Error('proposalId is required');
-    return callZephlyAPI('mcpListPlanProposals', { proposalId: args.proposalId });
+    return callEzmodoAPI('mcpListPlanProposals', { proposalId: args.proposalId });
   }
 
   case 'review': {
@@ -277,7 +277,7 @@ export async function managePlanProposal(args = {}) {
     if (!args.accept?.length && !args.reject?.length) {
       throw new Error('Say which changes you are taking (accept) and which you are not (reject)');
     }
-    return callZephlyAPI('mcpReviewPlanProposal', {
+    return callEzmodoAPI('mcpReviewPlanProposal', {
       proposalId: args.proposalId,
       accept: args.accept || [],
       reject: args.reject || [],
@@ -287,7 +287,7 @@ export async function managePlanProposal(args = {}) {
 
   case 'withdraw': {
     if (!args.proposalId) throw new Error('proposalId is required to take back a proposal');
-    return callZephlyAPI('mcpReviewPlanProposal', { proposalId: args.proposalId, withdraw: true });
+    return callEzmodoAPI('mcpReviewPlanProposal', { proposalId: args.proposalId, withdraw: true });
   }
 
   default:

@@ -11,14 +11,14 @@ import { jest } from '@jest/globals';
  * caller still wins, derivation is skipped when unnecessary, and nothing about
  * it can fail the commit link.
  */
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 const mockGetCommitFiles = jest.fn();
 const mockGetRepositoryRoot = jest.fn();
 const mockGetCommitNameStatus = jest.fn();
 const mockReadConfig = jest.fn();
 
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 jest.unstable_mockModule('../lib/git-helpers.js', () => ({
   getCommitFiles: mockGetCommitFiles,
@@ -62,7 +62,7 @@ function linkCommit(extra = {}) {
 
 describe('link_commit file derivation', () => {
   beforeEach(() => {
-    mockCallZephlyAPI.mockResolvedValue({ commit: { sha: SHA } });
+    mockCallEzmodoAPI.mockResolvedValue({ commit: { sha: SHA } });
     mockGetRepositoryRoot.mockReturnValue('/repo');
     mockGetCommitNameStatus.mockReturnValue([]);
     mockReadConfig.mockResolvedValue({ projectId: 'proj-1' });
@@ -78,7 +78,7 @@ describe('link_commit file derivation', () => {
     await linkCommit();
 
     expect(mockGetCommitFiles).toHaveBeenCalledWith('/repo', SHA);
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith(
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith(
       'mcpLinkCommitToTask',
       expect.objectContaining({ files: ['api/a.go', 'web/b.tsx'] })
     );
@@ -88,7 +88,7 @@ describe('link_commit file derivation', () => {
     await linkCommit({ files: ['only/this.go'] });
 
     expect(mockGetCommitFiles).not.toHaveBeenCalled();
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith(
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith(
       'mcpLinkCommitToTask',
       expect.objectContaining({ files: ['only/this.go'] })
     );
@@ -99,7 +99,7 @@ describe('link_commit file derivation', () => {
 
     await linkCommit({ files: [] });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith(
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith(
       'mcpLinkCommitToTask',
       expect.objectContaining({ files: ['api/a.go'] })
     );
@@ -112,7 +112,7 @@ describe('link_commit file derivation', () => {
 
     expect(mockGetCommitFiles).not.toHaveBeenCalled();
     expect(result.commit.sha).toBe(SHA);
-    expect(mockCallZephlyAPI.mock.calls[0][1].files).toBeUndefined();
+    expect(mockCallEzmodoAPI.mock.calls[0][1].files).toBeUndefined();
   });
 
   it('still links the commit when git throws', async () => {
@@ -123,7 +123,7 @@ describe('link_commit file derivation', () => {
     const result = await linkCommit();
 
     expect(result.commit.sha).toBe(SHA);
-    expect(mockCallZephlyAPI.mock.calls[0][1].files).toBeUndefined();
+    expect(mockCallEzmodoAPI.mock.calls[0][1].files).toBeUndefined();
   });
 
   it('sends no files key when the commit changed nothing (e.g. a merge)', async () => {
@@ -131,7 +131,7 @@ describe('link_commit file derivation', () => {
 
     await linkCommit();
 
-    expect(mockCallZephlyAPI.mock.calls[0][1].files).toBeUndefined();
+    expect(mockCallEzmodoAPI.mock.calls[0][1].files).toBeUndefined();
   });
 });
 
@@ -142,7 +142,7 @@ describe('link_commit file derivation', () => {
  * never let that fail the link.
  */
 describe('link_commit manifest update', () => {
-  const apply = () => mockCallZephlyAPI.mock.calls.find(([name]) => name === 'mcpApplyManifestChanges');
+  const apply = () => mockCallEzmodoAPI.mock.calls.find(([name]) => name === 'mcpApplyManifestChanges');
 
   beforeEach(() => {
     mockGetRepositoryRoot.mockReturnValue('/repo');
@@ -155,7 +155,7 @@ describe('link_commit manifest update', () => {
       { status: 'R', path: 'api/moved.go', from: 'api/was.go', similarity: 100 },
       { status: 'M', path: 'package-lock.json' },
     ]);
-    mockCallZephlyAPI.mockImplementation(async (name) => {
+    mockCallEzmodoAPI.mockImplementation(async (name) => {
       if (name === 'mcpApplyManifestChanges') {
         return {
           created: ['api/new.go'],
@@ -178,7 +178,7 @@ describe('link_commit manifest update', () => {
   it('links first, then sends the commit\'s delta to the manifest', async () => {
     const result = await linkCommit();
 
-    expect(mockCallZephlyAPI.mock.calls[0][0]).toBe('mcpLinkCommitToTask');
+    expect(mockCallEzmodoAPI.mock.calls[0][0]).toBe('mcpLinkCommitToTask');
     expect(mockGetCommitNameStatus).toHaveBeenCalledWith('/repo', SHA);
     expect(apply()[1]).toEqual({
       projectId: 'proj-1',
@@ -207,7 +207,7 @@ describe('link_commit manifest update', () => {
   it('does not forward updateManifest to the link call', async () => {
     await linkCommit({ updateManifest: true });
 
-    expect(mockCallZephlyAPI.mock.calls[0][1]).not.toHaveProperty('updateManifest');
+    expect(mockCallEzmodoAPI.mock.calls[0][1]).not.toHaveProperty('updateManifest');
   });
 
   it('skips the manifest entirely with updateManifest:false', async () => {
@@ -225,7 +225,7 @@ describe('link_commit manifest update', () => {
   });
 
   it('reports a missing manifest as skipped', async () => {
-    mockCallZephlyAPI.mockImplementation(async (name) => (
+    mockCallEzmodoAPI.mockImplementation(async (name) => (
       name === 'mcpApplyManifestChanges' ? { manifestMissing: true } : { commit: { sha: SHA } }
     ));
 
@@ -235,7 +235,7 @@ describe('link_commit manifest update', () => {
   });
 
   it('reports a manifest error without failing the link', async () => {
-    mockCallZephlyAPI.mockImplementation(async (name) => {
+    mockCallEzmodoAPI.mockImplementation(async (name) => {
       if (name === 'mcpApplyManifestChanges') throw new Error('boom');
       return { commit: { sha: SHA } };
     });

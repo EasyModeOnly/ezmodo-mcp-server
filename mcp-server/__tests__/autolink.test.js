@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 
 const mockCall = jest.fn();
-jest.unstable_mockModule('../lib/http-client.js', () => ({ callZephlyAPI: mockCall }));
+jest.unstable_mockModule('../lib/http-client.js', () => ({ callEzmodoAPI: mockCall }));
 jest.unstable_mockModule('../lib/logger.js', () => ({
   getLogger: () => ({ info() {}, warn() {}, debug() {}, error() {} }),
 }));

@@ -202,17 +202,6 @@ describe('status with only a CLI key (#2655)', () => {
     expect(JSON.stringify(result)).not.toMatch(/ezm_sk_abcdefghij/);
   });
 
-  it('calls out a legacy zephly key and how to replace it', async () => {
-    mockDescribeCliCredential.mockReturnValue({
-      source: 'macOS Keychain (legacy zephly-cli entry)', legacy: true, keyPrefix: 'ezm_sk_r1l9b...',
-    });
-
-    const result = await authenticate({ action: 'status' });
-
-    expect(result.note).toMatch(/pre-rebrand/);
-    expect(result.note).toMatch(/authenticate/);
-  });
-
   it('still prefers OAuth when both exist — same order as resolveCredential', async () => {
     mockGetSignedInIdentity.mockReturnValue({ email: 'a@b.c', userId: 'u', scope: 's' });
     mockDescribeCliCredential.mockReturnValue({ source: 'macOS Keychain (ezmodo CLI)', keyPrefix: 'x' });

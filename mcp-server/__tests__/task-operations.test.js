@@ -5,16 +5,16 @@
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import {
-  createMockCallZephlyAPI,
+  createMockCallEzmodoAPI,
   createMockTask,
   createMockError,
 } from './test-utils.js';
 
 describe('Task Operations', () => {
-  let mockCallZephlyAPI;
+  let mockCallEzmodoAPI;
 
   beforeEach(() => {
-    mockCallZephlyAPI = createMockCallZephlyAPI();
+    mockCallEzmodoAPI = createMockCallEzmodoAPI();
   });
 
   afterEach(() => {
@@ -26,7 +26,7 @@ describe('Task Operations', () => {
 
     beforeEach(() => {
       createTask = async (args) => {
-        return mockCallZephlyAPI('mcpCreateTask', args);
+        return mockCallEzmodoAPI('mcpCreateTask', args);
       };
     });
 
@@ -43,7 +43,7 @@ describe('Task Operations', () => {
       expect(result.taskId).toBeDefined();
       expect(result.taskNumber).toBeDefined();
       expect(result.task.title).toBe(taskData.title);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateTask', taskData);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateTask', taskData);
     });
 
     it('should create task with optional fields', async () => {
@@ -77,7 +77,7 @@ describe('Task Operations', () => {
         description: 'First task',
       });
 
-      mockCallZephlyAPI.mockImplementationOnce(async (endpoint, args) => ({
+      mockCallEzmodoAPI.mockImplementationOnce(async (endpoint, args) => ({
         success: true,
         taskId: 'task-2',
         taskNumber: 43, // Next sequential number
@@ -95,7 +95,7 @@ describe('Task Operations', () => {
     });
 
     it('should reject task creation without required fields', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.projectId || !args.title) {
           throw createMockError('Missing required fields', 400);
         }
@@ -126,7 +126,7 @@ describe('Task Operations', () => {
 
     beforeEach(() => {
       updateTask = async (args) => {
-        return mockCallZephlyAPI('mcpUpdateTask', args);
+        return mockCallEzmodoAPI('mcpUpdateTask', args);
       };
     });
 
@@ -137,7 +137,7 @@ describe('Task Operations', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateTask', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateTask', {
         taskId: 'task-123',
         title: 'Updated Title',
       });
@@ -200,7 +200,7 @@ describe('Task Operations', () => {
     });
 
     it('should reject update without taskId', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.taskId) {
           throw createMockError('taskId is required', 400);
         }
@@ -217,7 +217,7 @@ describe('Task Operations', () => {
 
     beforeEach(() => {
       completeTask = async (args) => {
-        return mockCallZephlyAPI('mcpCompleteTask', args);
+        return mockCallEzmodoAPI('mcpCompleteTask', args);
       };
     });
 
@@ -227,7 +227,7 @@ describe('Task Operations', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCompleteTask', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCompleteTask', {
         taskId: 'task-123',
       });
     });
@@ -242,7 +242,7 @@ describe('Task Operations', () => {
     });
 
     it('should reject completion without taskId', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.taskId) {
           throw createMockError('taskId is required', 400);
         }
@@ -257,7 +257,7 @@ describe('Task Operations', () => {
 
     beforeEach(() => {
       deferTask = async (args) => {
-        return mockCallZephlyAPI('mcpDeferTask', args);
+        return mockCallEzmodoAPI('mcpDeferTask', args);
       };
     });
 
@@ -270,7 +270,7 @@ describe('Task Operations', () => {
       expect(result.success).toBe(true);
       expect(result.deferredEpicId).toBe('epic-deferred-1');
       expect(result.newTaskId).toBeUndefined();
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDeferTask', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeferTask', {
         taskId: 'task-123',
         reason: 'pushed to next sprint',
       });
@@ -290,7 +290,7 @@ describe('Task Operations', () => {
     });
 
     it('should surface the no_milestone error from the API', async () => {
-      mockCallZephlyAPI.mockImplementation(async () => {
+      mockCallEzmodoAPI.mockImplementation(async () => {
         throw createMockError('no_milestone: task is not in a milestone', 422);
       });
 
@@ -303,7 +303,7 @@ describe('Task Operations', () => {
 
     beforeEach(() => {
       searchTasks = async (args) => {
-        return mockCallZephlyAPI('mcpSearchTasks', args);
+        return mockCallEzmodoAPI('mcpSearchTasks', args);
       };
     });
 
@@ -328,7 +328,7 @@ describe('Task Operations', () => {
     });
 
     it('should search with text query', async () => {
-      mockCallZephlyAPI.mockImplementationOnce(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementationOnce(async (endpoint, args) => {
         return {
           success: true,
           tasks: [
@@ -382,7 +382,7 @@ describe('Task Operations', () => {
     });
 
     it('should handle empty search results', async () => {
-      mockCallZephlyAPI.mockImplementationOnce(async () => ({
+      mockCallEzmodoAPI.mockImplementationOnce(async () => ({
         success: true,
         tasks: [],
         count: 0,
@@ -403,8 +403,8 @@ describe('Task Operations', () => {
   describe('Integration scenarios', () => {
     it('should create and then retrieve a task', async () => {
       const createTask = async (args) =>
-        mockCallZephlyAPI('mcpCreateTask', args);
-      const getTask = async (args) => mockCallZephlyAPI('mcpGetTask', args);
+        mockCallEzmodoAPI('mcpCreateTask', args);
+      const getTask = async (args) => mockCallEzmodoAPI('mcpGetTask', args);
 
       // Create task
       const createResult = await createTask({
@@ -425,8 +425,8 @@ describe('Task Operations', () => {
 
     it('should create task and retrieve by task number', async () => {
       const createTask = async (args) =>
-        mockCallZephlyAPI('mcpCreateTask', args);
-      const getTask = async (args) => mockCallZephlyAPI('mcpGetTask', args);
+        mockCallEzmodoAPI('mcpCreateTask', args);
+      const getTask = async (args) => mockCallEzmodoAPI('mcpGetTask', args);
 
       // Create task
       const createResult = await createTask({
@@ -449,8 +449,8 @@ describe('Task Operations', () => {
 
     it('should update and then retrieve a task', async () => {
       const updateTask = async (args) =>
-        mockCallZephlyAPI('mcpUpdateTask', args);
-      const getTask = async (args) => mockCallZephlyAPI('mcpGetTask', args);
+        mockCallEzmodoAPI('mcpUpdateTask', args);
+      const getTask = async (args) => mockCallEzmodoAPI('mcpGetTask', args);
 
       // Update task
       const updateResult = await updateTask({

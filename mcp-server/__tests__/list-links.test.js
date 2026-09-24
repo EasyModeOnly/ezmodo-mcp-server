@@ -1,8 +1,8 @@
 import { jest } from '@jest/globals';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { listLinks } = await import('../handlers/links.js');
@@ -17,11 +17,11 @@ const { LINK_TOOLS } = await import('../tools/links.js');
  * handlers/links.js so agents only ever learn one vocabulary.
  */
 describe('list_links direction (E-225)', () => {
-  beforeEach(() => mockCallZephlyAPI.mockResolvedValue({ links: [] }));
+  beforeEach(() => mockCallEzmodoAPI.mockResolvedValue({ links: [] }));
   afterEach(() => jest.clearAllMocks());
 
   function lastParams() {
-    return mockCallZephlyAPI.mock.calls.at(-1)[1];
+    return mockCallEzmodoAPI.mock.calls.at(-1)[1];
   }
 
   it.each([

@@ -2,9 +2,9 @@ import { jest } from '@jest/globals';
 import { createMockEpic, createMockError } from './test-utils.js';
 
 // Mock the http client
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 // Mock auto-assign — return no matches so tests behave like before
@@ -28,23 +28,23 @@ describe('Epic Operations', () => {
   // already wrote.
   describe('how it works (E-237 #2382)', () => {
     it('should generate the grounded living description', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ epic: { id: 'epic-1', howItWorks: '## Where this stands' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ epic: { id: 'epic-1', howItWorks: '## Where this stands' } });
 
       const result = await manageEpic({ action: 'generate_how_it_works', epicId: 'epic-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGenerateEpicHowItWorks', { epicId: 'epic-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGenerateEpicHowItWorks', { epicId: 'epic-1' });
       expect(result.epic.howItWorks).toBe('## Where this stands');
     });
 
     it('should apply a locally authored description with its sources', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ epic: { id: 'epic-1', howItWorks: '## Mine' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ epic: { id: 'epic-1', howItWorks: '## Mine' } });
 
       const sources = { claims: [{ text: 'x', sources: ['task:t1'], confidence: 'grounded' }], divergences: [] };
       const result = await manageEpic({
         action: 'apply_how_it_works', epicId: 'epic-1', markdown: '## Mine', sources,
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpApplyEpicHowItWorks', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpApplyEpicHowItWorks', {
         epicId: 'epic-1', markdown: '## Mine', sources,
       });
       expect(result.epic.howItWorks).toBe('## Mine');
@@ -58,12 +58,12 @@ describe('Epic Operations', () => {
   describe('createEpic', () => {
     it('should create an epic with required fields', async () => {
       const mockResponse = { success: true, epicId: 'new-epic-id', epicNumber: 5 };
-      mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
       const args = { projectId: 'proj-1', title: 'New Epic' };
       const result = await manageEpic({ action: 'create', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateEpic', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateEpic', args);
       expect(result.success).toBe(true);
       expect(result.epicId).toBe('new-epic-id');
       expect(result.epicNumber).toBe(5);
@@ -71,7 +71,7 @@ describe('Epic Operations', () => {
 
     it('should create an epic with all optional fields', async () => {
       const mockResponse = { success: true, epicId: 'epic-full', epicNumber: 6 };
-      mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
       const args = {
         projectId: 'proj-1',
@@ -83,18 +83,18 @@ describe('Epic Operations', () => {
       };
       const result = await manageEpic({ action: 'create', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateEpic', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateEpic', args);
       expect(result.success).toBe(true);
       expect(result.epicId).toBe('epic-full');
     });
 
     it('should propagate API errors', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Missing required field: projectId', 400));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Missing required field: projectId', 400));
       await expect(manageEpic({ action: 'create', title: 'No Project' })).rejects.toThrow('Missing required field: projectId');
     });
 
     it('should handle network errors', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(new Error('Network error'));
+      mockCallEzmodoAPI.mockRejectedValueOnce(new Error('Network error'));
       await expect(manageEpic({ action: 'create', projectId: 'proj-1', title: 'Test' })).rejects.toThrow('Network error');
     });
   });
@@ -102,54 +102,54 @@ describe('Epic Operations', () => {
   describe('getEpic', () => {
     it('should get an epic by ID', async () => {
       const epic = createMockEpic({ id: 'epic-123', title: 'Found Epic' });
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, epic });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, epic });
 
       const result = await getEpic({ epicId: 'epic-123' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetEpic', { epicId: 'epic-123' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetEpic', { epicId: 'epic-123' });
       expect(result.success).toBe(true);
       expect(result.epic.title).toBe('Found Epic');
     });
 
     it('should handle not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
       await expect(getEpic({ epicId: 'nonexistent' })).rejects.toThrow('Epic not found');
     });
 
     it('should pass additional args through', async () => {
       const epic = createMockEpic();
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, epic });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, epic });
 
       await getEpic({ epicId: 'epic-1', projectId: 'proj-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetEpic', { epicId: 'epic-1', projectId: 'proj-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetEpic', { epicId: 'epic-1', projectId: 'proj-1' });
     });
   });
 
   describe('updateEpic', () => {
     it('should update an epic', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Epic updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Epic updated' });
 
       const args = { epicId: 'epic-1', title: 'Updated Title', status: 'completed' };
       const result = await manageEpic({ action: 'update', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateEpic', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateEpic', args);
       expect(result.success).toBe(true);
       expect(result.message).toBe('Epic updated');
     });
 
     it('should update epic status only', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Epic updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Epic updated' });
 
       const args = { epicId: 'epic-1', status: 'active' };
       const result = await manageEpic({ action: 'update', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateEpic', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateEpic', args);
       expect(result.success).toBe(true);
     });
 
     it('should handle update error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
       await expect(manageEpic({ action: 'update', epicId: 'bad' })).rejects.toThrow('Epic not found');
     });
   });
@@ -157,55 +157,55 @@ describe('Epic Operations', () => {
   describe('listEpics', () => {
     it('should list epics for a project', async () => {
       const epics = [createMockEpic({ id: 'e1' }), createMockEpic({ id: 'e2' })];
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, epics, count: 2 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, epics, count: 2 });
 
       const result = await listEpics({ projectId: 'proj-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListEpics', { projectId: 'proj-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListEpics', { projectId: 'proj-1' });
       expect(result.epics).toHaveLength(2);
       expect(result.count).toBe(2);
     });
 
     it('should return empty list for project with no epics', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, epics: [], count: 0 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, epics: [], count: 0 });
 
       const result = await listEpics({ projectId: 'empty-proj' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListEpics', { projectId: 'empty-proj' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListEpics', { projectId: 'empty-proj' });
       expect(result.epics).toHaveLength(0);
       expect(result.count).toBe(0);
     });
 
     it('should handle server error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(listEpics({ projectId: 'proj-1' })).rejects.toThrow('Internal server error');
     });
   });
 
   describe('searchEpics', () => {
     it('should search epics with filters', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, epics: [createMockEpic()], count: 1 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, epics: [createMockEpic()], count: 1 });
 
       const args = { projectId: 'proj-1', status: 'active', milestoneId: 'milestone-1' };
       const result = await searchEpics(args);
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSearchEpics', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSearchEpics', args);
       expect(result.epics).toHaveLength(1);
       expect(result.count).toBe(1);
     });
 
     it('should search with text query', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, epics: [createMockEpic({ title: 'Auth Epic' })], count: 1 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, epics: [createMockEpic({ title: 'Auth Epic' })], count: 1 });
 
       const args = { projectId: 'proj-1', query: 'auth' };
       const result = await searchEpics(args);
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSearchEpics', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSearchEpics', args);
       expect(result.epics[0].title).toBe('Auth Epic');
     });
 
     it('should return empty results when no match', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, epics: [], count: 0 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, epics: [], count: 0 });
 
       const result = await searchEpics({ projectId: 'proj-1', query: 'nonexistent' });
 
@@ -213,7 +213,7 @@ describe('Epic Operations', () => {
     });
 
     it('should handle server error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(searchEpics({ projectId: 'proj-1' })).rejects.toThrow('Internal server error');
     });
   });
@@ -229,11 +229,11 @@ describe('createEpic with links (E-225)', () => {
   });
 
   function callsTo(endpoint) {
-    return mockCallZephlyAPI.mock.calls.filter((c) => c[0] === endpoint);
+    return mockCallEzmodoAPI.mock.calls.filter((c) => c[0] === endpoint);
   }
 
   it('applies the links after the epic exists and reports the outcome', async () => {
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => {
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
       if (endpoint === 'mcpCreateEpic') return { epicId: 'epic-1', epicNumber: 5 };
       return { success: true };
     });
@@ -254,7 +254,7 @@ describe('createEpic with links (E-225)', () => {
   });
 
   it('still returns the created epic when linking fails', async () => {
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => {
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
       if (endpoint === 'mcpCreateEpic') return { epicId: 'epic-1', epicNumber: 5 };
       throw new Error('Target not found');
     });
@@ -292,9 +292,9 @@ describe('epic plan (E-259)', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('reads the plan through the plan endpoint', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ epicId: 'e1', currentRevision: 3, plan: { proposedTasks: [] } });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ epicId: 'e1', currentRevision: 3, plan: { proposedTasks: [] } });
     const result = await getEpicPlan({ epicId: 'e1', includeHistory: true });
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetEpicPlan', { epicId: 'e1', includeHistory: true });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetEpicPlan', { epicId: 'e1', includeHistory: true });
     expect(result.currentRevision).toBe(3);
   });
 
@@ -308,7 +308,7 @@ describe('epic plan (E-259)', () => {
       changesSince: ['Added task: Export to CSV'],
       current: { proposedTasks: [{ id: 't1', title: 'Export to CSV' }] },
     };
-    mockCallZephlyAPI.mockRejectedValueOnce(err);
+    mockCallEzmodoAPI.mockRejectedValueOnce(err);
 
     const result = await updateEpicPlan({ epicId: 'e1', baseRevision: 1, plan: { notes: 'mine' } });
 
@@ -323,7 +323,7 @@ describe('epic plan (E-259)', () => {
   it('still throws other failures', async () => {
     const err = new Error('forbidden');
     err.status = 403;
-    mockCallZephlyAPI.mockRejectedValueOnce(err);
+    mockCallEzmodoAPI.mockRejectedValueOnce(err);
     await expect(updateEpicPlan({ epicId: 'e1', baseRevision: 0, plan: {} })).rejects.toThrow('forbidden');
   });
 });
@@ -333,45 +333,45 @@ describe('epic discussion (E-259)', () => {
 
   it('lists and posts epic comments through their endpoints', async () => {
     const { listEpicComments, addEpicComment } = await import('../handlers/epics.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ comments: [] });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ comments: [] });
     await listEpicComments({ epicId: 'e1' });
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListEpicComments', { epicId: 'e1' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListEpicComments', { epicId: 'e1' });
 
-    mockCallZephlyAPI.mockResolvedValueOnce({ commentId: 'c1' });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ commentId: 'c1' });
     const result = await addEpicComment({ epicId: 'e1', content: 'Question', parentId: 'c0' });
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpAddEpicComment', { epicId: 'e1', content: 'Question', parentId: 'c0' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpAddEpicComment', { epicId: 'e1', content: 'Question', parentId: 'c0' });
     expect(result.commentId).toBe('c1');
   });
 
   // #2797: a comment says what it is, and a reply can settle what it answers.
   it('passes kind, resolvesParent and the open filter through unchanged', async () => {
     const { listEpicComments, addEpicComment } = await import('../handlers/epics.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ commentId: 'c2' });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ commentId: 'c2' });
     await addEpicComment({ epicId: 'e1', content: 'Too noisy', kind: 'objection' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpAddEpicComment',
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpAddEpicComment',
       { epicId: 'e1', content: 'Too noisy', kind: 'objection' });
 
-    mockCallZephlyAPI.mockResolvedValueOnce({ commentId: 'c3', resolved: 'c2' });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ commentId: 'c3', resolved: 'c2' });
     await addEpicComment({ epicId: 'e1', content: 'Fair, dropped it', parentId: 'c2', resolvesParent: true });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpAddEpicComment',
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpAddEpicComment',
       { epicId: 'e1', content: 'Fair, dropped it', parentId: 'c2', resolvesParent: true });
 
-    mockCallZephlyAPI.mockResolvedValueOnce({ comments: [] });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ comments: [] });
     await listEpicComments({ epicId: 'e1', open: true });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpListEpicComments', { epicId: 'e1', open: true });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpListEpicComments', { epicId: 'e1', open: true });
   });
 
   // #2802: the owner chooses who else may change the plan.
   it('adds and removes an editor through manage_epic', async () => {
     const { manageEpic } = await import('../handlers/epics.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ editors: [{ userId: 'maya' }] });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ editors: [{ userId: 'maya' }] });
     await manageEpic({ action: 'add_editor', epicId: 'e1', editorUserId: 'maya' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpManageEpicEditors',
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpManageEpicEditors',
       { epicId: 'e1', userId: 'maya', action: 'add' });
 
-    mockCallZephlyAPI.mockResolvedValueOnce({ editors: [] });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ editors: [] });
     await manageEpic({ action: 'remove_editor', epicId: 'e1', editorUserId: 'maya' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpManageEpicEditors',
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpManageEpicEditors',
       { epicId: 'e1', userId: 'maya', action: 'remove' });
 
     await expect(manageEpic({ action: 'add_editor', epicId: 'e1' })).rejects.toThrow('editorUserId is required');
@@ -390,27 +390,27 @@ describe('epic discussion (E-259)', () => {
 describe('getEpicActivity (E-259 #2746)', () => {
   it('waits for news when asked, never longer than the API allows (#2748)', async () => {
     const { getEpicActivity } = await import('../handlers/epics.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ activity: {} });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ activity: {} });
     await getEpicActivity({ epicId: 'e1', waitSeconds: 90.7 });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1', waitSeconds: 25 });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1', waitSeconds: 25 });
 
-    mockCallZephlyAPI.mockResolvedValueOnce({ activity: {} });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ activity: {} });
     await getEpicActivity({ epicId: 'e1', waitSeconds: 0 });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1' });
   });
 
   it('asks for what changed since the last look, and marks it seen by default', async () => {
     const { getEpicActivity } = await import('../handlers/epics.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ activity: { summary: ['Nothing has changed since you last looked.'] } });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ activity: { summary: ['Nothing has changed since you last looked.'] } });
     await getEpicActivity({ epicId: 'e1' });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', { epicId: 'e1' });
   });
 
   it('passes since and markSeen:false through', async () => {
     const { getEpicActivity } = await import('../handlers/epics.js');
-    mockCallZephlyAPI.mockResolvedValueOnce({ activity: {} });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ activity: {} });
     await getEpicActivity({ epicId: 'e1', since: '2026-09-19T14:00:00Z', markSeen: false });
-    expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', {
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetEpicActivity', {
       epicId: 'e1', since: '2026-09-19T14:00:00Z', markSeen: 'false',
     });
   });
@@ -425,7 +425,7 @@ describe('plan proposals (E-259 #2745)', () => {
 
   {
     it('sends the plan you want, and the server works out the changes', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({
+      mockCallEzmodoAPI.mockResolvedValueOnce({
         proposal: { id: 'prop-1', status: 'open', ops: [{ id: 'o1', sentence: 'Add task: Export to CSV' }] },
         summary: 'Add task: Export to CSV',
       });
@@ -437,7 +437,7 @@ describe('plan proposals (E-259 #2745)', () => {
         rationale: 'People asked to read the plan elsewhere',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpProposePlanChange', expect.objectContaining({
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpProposePlanChange', expect.objectContaining({
         epicId: 'epic-1',
         rationale: 'People asked to read the plan elsewhere',
       }));
@@ -448,11 +448,11 @@ describe('plan proposals (E-259 #2745)', () => {
     it('refuses to propose nothing', async () => {
       await expect(managePlanProposal({ action: 'propose', epicId: 'epic-1' }))
         .rejects.toThrow(/plan you want/);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
 
     it('accepts and rejects individual changes by their op id', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ proposal: { status: 'partly_accepted' }, revision: 5 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ proposal: { status: 'partly_accepted' }, revision: 5 });
 
       const result = await managePlanProposal({
         action: 'review',
@@ -462,7 +462,7 @@ describe('plan proposals (E-259 #2745)', () => {
         note: 'Good idea, but the goal stays',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpReviewPlanProposal', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReviewPlanProposal', {
         proposalId: 'prop-1',
         accept: ['o1'],
         reject: ['o2'],
@@ -474,15 +474,15 @@ describe('plan proposals (E-259 #2745)', () => {
     it('will not review without saying what you are taking', async () => {
       await expect(managePlanProposal({ action: 'review', proposalId: 'prop-1' }))
         .rejects.toThrow(/which changes/);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
 
     it('takes a proposal back', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ proposal: { status: 'withdrawn' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ proposal: { status: 'withdrawn' } });
 
       await managePlanProposal({ action: 'withdraw', proposalId: 'prop-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpReviewPlanProposal', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReviewPlanProposal', {
         proposalId: 'prop-1',
         withdraw: true,
       });

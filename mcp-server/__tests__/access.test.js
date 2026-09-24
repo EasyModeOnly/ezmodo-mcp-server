@@ -6,9 +6,9 @@ import { dirname, join } from 'path';
 import { ACCESS_ENTITY_TYPES, ACCESS_ROLES } from '../tools/access-entity-types.js';
 import { ACCESS_TOOLS } from '../tools/access.js';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { getAccess, manageAccess } = await import('../handlers/access.js');
@@ -93,11 +93,11 @@ describe('getAccess', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('forwards the target to the read endpoint', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ resolvedAccess: { entries: [] } });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ resolvedAccess: { entries: [] } });
 
     await getAccess(BASE);
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetAccess', BASE);
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetAccess', BASE);
   });
 });
 
@@ -105,22 +105,22 @@ describe('manageAccess dispatch', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('routes update_settings', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ updated: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ updated: true });
 
     await manageAccess({ action: 'update_settings', ...BASE, inheritFromParent: true });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateAccess', {
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateAccess', {
       ...BASE,
       inheritFromParent: true,
     });
   });
 
   it('routes add_entry', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ entry: { id: 'e1' } });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ entry: { id: 'e1' } });
 
     await manageAccess({ action: 'add_entry', ...BASE, userId: 'u2', role: 'viewer' });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpAddAccessEntry', {
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpAddAccessEntry', {
       ...BASE,
       userId: 'u2',
       role: 'viewer',
@@ -128,29 +128,29 @@ describe('manageAccess dispatch', () => {
   });
 
   it('routes remove_entry', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ removed: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ removed: true });
 
     await manageAccess({ action: 'remove_entry', ...BASE, entryId: 'e1' });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpRemoveAccessEntry', {
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpRemoveAccessEntry', {
       ...BASE,
       entryId: 'e1',
     });
   });
 
   it('routes check, defaulting requiredRole server-side', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ granted: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ granted: true });
 
     await manageAccess({ action: 'check', ...BASE });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCheckAccess', BASE);
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCheckAccess', BASE);
   });
 
   it('rejects an unknown action', async () => {
     await expect(manageAccess({ action: 'grant_everything', ...BASE })).rejects.toThrow(
       /Unknown action/
     );
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 });
 
@@ -169,7 +169,7 @@ describe('manageAccess rejects fields belonging to another action', () => {
 
   it.each(cases)('rejects a foreign field on %s', async (action, extras, pattern) => {
     await expect(manageAccess({ action, ...BASE, ...extras })).rejects.toThrow(pattern);
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 
   it('names the action the field actually belongs to', async () => {
@@ -179,7 +179,7 @@ describe('manageAccess rejects fields belonging to another action', () => {
   });
 
   it('allows a call that uses only its own fields', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ removed: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ removed: true });
 
     await expect(
       manageAccess({ action: 'remove_entry', ...BASE, entryId: 'e1' })
@@ -193,22 +193,22 @@ describe('manageAccess update_settings payload', () => {
   // These are tri-state server-side: absent means "leave alone". Forwarding an
   // explicit undefined/null would clear a setting the caller never mentioned.
   it('omits settings that were not provided', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ updated: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ updated: true });
 
     await manageAccess({ action: 'update_settings', ...BASE, publicAccess: false });
 
-    const [, body] = mockCallZephlyAPI.mock.calls[0];
+    const [, body] = mockCallEzmodoAPI.mock.calls[0];
     expect(body).toEqual({ ...BASE, publicAccess: false });
     expect('inheritFromParent' in body).toBe(false);
     expect('accessList' in body).toBe(false);
   });
 
   it('forwards a false inheritFromParent rather than treating it as absent', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ updated: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ updated: true });
 
     await manageAccess({ action: 'update_settings', ...BASE, inheritFromParent: false });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateAccess', {
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateAccess', {
       ...BASE,
       inheritFromParent: false,
     });
@@ -218,14 +218,14 @@ describe('manageAccess update_settings payload', () => {
     await expect(manageAccess({ action: 'update_settings', ...BASE })).rejects.toThrow(
       /at least one of/
     );
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 
   it('forwards an empty accessList, which revokes everyone', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({ updated: true });
+    mockCallEzmodoAPI.mockResolvedValueOnce({ updated: true });
 
     await manageAccess({ action: 'update_settings', ...BASE, accessList: [] });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateAccess', { ...BASE, accessList: [] });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateAccess', { ...BASE, accessList: [] });
   });
 });

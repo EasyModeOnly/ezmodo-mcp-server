@@ -26,19 +26,17 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 // Shared with lib/token-store.js so the two cannot disagree about where the
 // ezmodo config directory is — they write files side by side there.
-import { configDirs } from './user-paths.js';
+import { configDir } from './user-paths.js';
 
 /** The Linux/Windows path: a 0600 JSON file written by `ezmodo auth login`. */
 function fromCredentialsFile() {
-  for (const dir of configDirs()) {
-    const path = join(dir, 'credentials');
-    if (!existsSync(path)) continue;
-    try {
-      const key = JSON.parse(readFileSync(path, 'utf-8'))?.apiKey;
-      if (typeof key === 'string' && key.trim()) return key.trim();
-    } catch {
-      // Unreadable or malformed — try the next location, then give up.
-    }
+  const path = join(configDir(), 'credentials');
+  if (!existsSync(path)) return null;
+  try {
+    const key = JSON.parse(readFileSync(path, 'utf-8'))?.apiKey;
+    if (typeof key === 'string' && key.trim()) return key.trim();
+  } catch {
+    // Unreadable or malformed — give up.
   }
   return null;
 }
@@ -56,24 +54,16 @@ function fromCredentialsFile() {
  */
 function fromMacKeychain() {
   if (process.platform !== 'darwin') return null;
-  // `zephly-cli` is still read because the CLI still reads it
-  // (LEGACY_SERVICE_NAME in cli/src/lib/auth-store.ts): dropping it here alone
-  // would have the server report "not signed in" to someone `ezmodo auth
-  // status` calls signed in. But it is REPORTED as legacy (#2655) — a
-  // pre-rebrand key silently answering for a new install is how a developer
-  // machine went months without ever exercising the OAuth path customers get.
-  for (const service of ['ezmodo-cli', 'zephly-cli']) {
-    try {
-      const key = execFileSync(
-        'security',
-        ['find-generic-password', '-s', service, '-a', 'api-key', '-w'],
-        { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 2000 }
-      ).trim();
-      if (key) return { key, legacy: service === 'zephly-cli' };
-    } catch {
-      // Not stored under this name, no `security` binary, denied, or timed
-      // out. All of them mean the same thing here: try the next, then stop.
-    }
+  try {
+    const key = execFileSync(
+      'security',
+      ['find-generic-password', '-s', 'ezmodo-cli', '-a', 'api-key', '-w'],
+      { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 2000 }
+    ).trim();
+    if (key) return key;
+  } catch {
+    // Not stored, no `security` binary, denied, or timed out. All of them
+    // mean the same thing here: no key.
   }
   return null;
 }
@@ -90,16 +80,8 @@ export function readCliCredential() {
     const fileKey = fromCredentialsFile();
     if (fileKey) return { key: fileKey, source: 'ezmodo CLI credentials file' };
 
-    const keychain = fromMacKeychain();
-    if (keychain) {
-      return keychain.legacy
-        ? {
-          key: keychain.key,
-          source: 'macOS Keychain (legacy zephly-cli entry)',
-          legacy: true,
-        }
-        : { key: keychain.key, source: 'macOS Keychain (ezmodo CLI)' };
-    }
+    const keychainKey = fromMacKeychain();
+    if (keychainKey) return { key: keychainKey, source: 'macOS Keychain (ezmodo CLI)' };
   } catch {
     // Belt and braces. Nothing above should throw, and if something does, a
     // missing fallback must not take down the server.

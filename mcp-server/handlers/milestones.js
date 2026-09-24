@@ -10,7 +10,7 @@
  * will be included in a release or initiative.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { buildMilestoneUrl } from '../lib/web-url.js';
 
 /**
@@ -64,34 +64,34 @@ export async function getMilestone(args) {
 // --- Private helpers ---
 
 async function createMilestone(args) {
-  const result = await callZephlyAPI('mcpCreateMilestone', args);
+  const result = await callEzmodoAPI('mcpCreateMilestone', args);
   const webUrl = await buildMilestoneUrl(result?.slug);
   if (webUrl) result.webUrl = webUrl;
   return result;
 }
 
 async function fetchSingleMilestone(args) {
-  const result = await callZephlyAPI('mcpGetMilestone', args);
+  const result = await callEzmodoAPI('mcpGetMilestone', args);
   const webUrl = await buildMilestoneUrl(result?.milestone?.slug);
   if (webUrl && result?.milestone) result.milestone.webUrl = webUrl;
   return result;
 }
 
 async function updateMilestone(args) {
-  return callZephlyAPI('mcpUpdateMilestone', args);
+  return callEzmodoAPI('mcpUpdateMilestone', args);
 }
 
 async function listMilestones(args) {
-  return callZephlyAPI('mcpListMilestones', args);
+  return callEzmodoAPI('mcpListMilestones', args);
 }
 
 async function deleteMilestone(args) {
-  return callZephlyAPI('mcpDeleteMilestone', args);
+  return callEzmodoAPI('mcpDeleteMilestone', args);
 }
 
 async function linkEpicToMilestone(args) {
   const { epicId, entityType, ...rest } = args;
-  return callZephlyAPI('mcpLinkEpicToMilestone', {
+  return callEzmodoAPI('mcpLinkEpicToMilestone', {
     ...rest,
     entityId: epicId,
     entityType: entityType || 'epic',
@@ -99,20 +99,20 @@ async function linkEpicToMilestone(args) {
 }
 
 async function unlinkEpicFromMilestone(args) {
-  return callZephlyAPI('mcpUnlinkEpicFromMilestone', args);
+  return callEzmodoAPI('mcpUnlinkEpicFromMilestone', args);
 }
 
 async function generateMilestoneChangelog(args) {
-  return callZephlyAPI('mcpGenerateMilestoneChangelog', args);
+  return callEzmodoAPI('mcpGenerateMilestoneChangelog', args);
 }
 
 async function fetchMilestoneProgress(args) {
-  return callZephlyAPI('mcpGetMilestoneProgress', args);
+  return callEzmodoAPI('mcpGetMilestoneProgress', args);
 }
 
 async function reorderMilestoneEpics(args) {
   const { itemIds, ...rest } = args;
-  return callZephlyAPI('mcpReorderMilestoneEpics', {
+  return callEzmodoAPI('mcpReorderMilestoneEpics', {
     ...rest,
     itemIds,
   });
@@ -120,12 +120,12 @@ async function reorderMilestoneEpics(args) {
 
 async function linkSuiteToMilestone(args) {
   const { suiteId, ...rest } = args;
-  return callZephlyAPI('mcpLinkSuiteToMilestone', {
+  return callEzmodoAPI('mcpLinkSuiteToMilestone', {
     ...rest,
     suiteId,
   });
 }
 
 async function unlinkSuiteFromMilestone(args) {
-  return callZephlyAPI('mcpUnlinkSuiteFromMilestone', args);
+  return callEzmodoAPI('mcpUnlinkSuiteFromMilestone', args);
 }

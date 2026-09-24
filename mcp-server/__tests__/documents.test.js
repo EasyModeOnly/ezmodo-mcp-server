@@ -2,9 +2,9 @@ import { jest } from '@jest/globals';
 import { createMockError } from './test-utils.js';
 
 // Mock the http client
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 // Mock local-cache
@@ -38,46 +38,46 @@ describe('Document Operations', () => {
   describe('getDocument', () => {
     it('should save document content to local file and return path', async () => {
       const document = { id: 'doc-1', title: 'My Doc', content: '# Hello', slug: 'my-doc', projectId: 'proj-1' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, document });
-      mockFindConfigPath.mockResolvedValueOnce('/project/.zephly/config.json');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, document });
+      mockFindConfigPath.mockResolvedValueOnce('/project/.ezmodo/config.json');
 
       const result = await getDocument({ documentId: 'doc-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetDocument', { documentId: 'doc-1' });
-      expect(mockMkdir).toHaveBeenCalledWith('/project/.zephly/docs', { recursive: true });
-      expect(mockWriteFile).toHaveBeenCalledWith('/project/.zephly/docs/my-doc.md', '# Hello', 'utf-8');
-      expect(result.localFilePath).toBe('/project/.zephly/docs/my-doc.md');
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDocument', { documentId: 'doc-1' });
+      expect(mockMkdir).toHaveBeenCalledWith('/project/.ezmodo/docs', { recursive: true });
+      expect(mockWriteFile).toHaveBeenCalledWith('/project/.ezmodo/docs/my-doc.md', '# Hello', 'utf-8');
+      expect(result.localFilePath).toBe('/project/.ezmodo/docs/my-doc.md');
       expect(result.document.title).toBe('My Doc');
       expect(result.document.content).toBeUndefined();
     });
 
     it('should use document ID as filename when slug is missing', async () => {
       const document = { id: 'doc-1', title: 'No Slug', content: '# Content', projectId: 'proj-1' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, document });
-      mockFindConfigPath.mockResolvedValueOnce('/project/.zephly/config.json');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, document });
+      mockFindConfigPath.mockResolvedValueOnce('/project/.ezmodo/config.json');
 
       const result = await getDocument({ documentId: 'doc-1' });
 
-      expect(mockWriteFile).toHaveBeenCalledWith('/project/.zephly/docs/doc-1.md', '# Content', 'utf-8');
-      expect(result.localFilePath).toBe('/project/.zephly/docs/doc-1.md');
+      expect(mockWriteFile).toHaveBeenCalledWith('/project/.ezmodo/docs/doc-1.md', '# Content', 'utf-8');
+      expect(result.localFilePath).toBe('/project/.ezmodo/docs/doc-1.md');
     });
 
     it('should get a document by projectId and slug', async () => {
       const document = { id: 'doc-2', title: 'Slug Doc', content: '# Slug', slug: 'slug-doc', projectId: 'proj-1' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, document });
-      mockFindConfigPath.mockResolvedValueOnce('/project/.zephly/config.json');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, document });
+      mockFindConfigPath.mockResolvedValueOnce('/project/.ezmodo/config.json');
 
       const args = { projectId: 'proj-1', slug: 'slug-doc' };
       const result = await getDocument(args);
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetDocument', args);
-      expect(result.localFilePath).toBe('/project/.zephly/docs/slug-doc.md');
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDocument', args);
+      expect(result.localFilePath).toBe('/project/.ezmodo/docs/slug-doc.md');
       expect(result.document.title).toBe('Slug Doc');
     });
 
-    it('should return full response when no .zephly directory found', async () => {
+    it('should return full response when no .ezmodo directory found', async () => {
       const document = { id: 'doc-1', title: 'My Doc', content: '# Hello', slug: 'my-doc', projectId: 'proj-1' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, document });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, document });
       mockFindConfigPath.mockResolvedValueOnce(null);
 
       const result = await getDocument({ documentId: 'doc-1' });
@@ -88,8 +88,8 @@ describe('Document Operations', () => {
 
     it('should return full response when file write fails', async () => {
       const document = { id: 'doc-1', title: 'My Doc', content: '# Hello', slug: 'my-doc', projectId: 'proj-1' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, document });
-      mockFindConfigPath.mockResolvedValueOnce('/project/.zephly/config.json');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, document });
+      mockFindConfigPath.mockResolvedValueOnce('/project/.ezmodo/config.json');
       mockMkdir.mockRejectedValueOnce(new Error('Permission denied'));
 
       const result = await getDocument({ documentId: 'doc-1' });
@@ -99,12 +99,12 @@ describe('Document Operations', () => {
     });
 
     it('should handle document not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Document not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Document not found', 404));
       await expect(getDocument({ documentId: 'nonexistent' })).rejects.toThrow('Document not found');
     });
 
     it('should handle server error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(getDocument({ documentId: 'doc-1' })).rejects.toThrow('Internal server error');
     });
   });
@@ -115,19 +115,19 @@ describe('Document Operations', () => {
         { id: 'doc-1', title: 'Getting Started', content: '# Getting Started\n...' },
         { id: 'doc-2', title: 'API Reference', content: '# API\n...' },
       ];
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documents, count: 2 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documents, count: 2 });
 
       const args = { projectId: 'proj-1' };
       const result = await getDocument(args);
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetDocumentation', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDocumentation', args);
       expect(result.success).toBe(true);
       expect(result.documents).toHaveLength(2);
       expect(result.documents[0].title).toBe('Getting Started');
     });
 
     it('should return empty list for project with no docs', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documents: [], count: 0 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documents: [], count: 0 });
 
       const result = await getDocument({ projectId: 'empty-proj' });
 
@@ -136,12 +136,12 @@ describe('Document Operations', () => {
     });
 
     it('should handle project not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Project not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Project not found', 404));
       await expect(getDocument({ projectId: 'nonexistent' })).rejects.toThrow('Project not found');
     });
 
     it('should handle server error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(getDocument({ projectId: 'proj-1' })).rejects.toThrow('Internal server error');
     });
   });
@@ -149,19 +149,19 @@ describe('Document Operations', () => {
   describe('createDocument', () => {
     it('should create a document with required fields', async () => {
       const mockResponse = { success: true, documentId: 'doc-new' };
-      mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
       const args = { projectId: 'proj-1', title: 'New Doc', content: '# New Document\nContent here.' };
       const result = await manageDocument({ action: 'create', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', args);
       expect(result.success).toBe(true);
       expect(result.documentId).toBe('doc-new');
     });
 
     it('should create a document with publicAccess setting', async () => {
       const mockResponse = { success: true, documentId: 'doc-public' };
-      mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
       const args = {
         projectId: 'proj-1',
@@ -171,12 +171,12 @@ describe('Document Operations', () => {
       };
       const result = await manageDocument({ action: 'create', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', args);
       expect(result.success).toBe(true);
     });
 
     it('should nest top-level summary/keyPoints into aiContext', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-ai' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-ai' });
 
       await manageDocument({ action: 'create',
         projectId: 'proj-1',
@@ -186,7 +186,7 @@ describe('Document Operations', () => {
         keyPoints: ['point 1', 'point 2'],
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', {
         projectId: 'proj-1',
         title: 'AI Doc',
         content: 'Content',
@@ -195,7 +195,7 @@ describe('Document Operations', () => {
     });
 
     it('should pass nested aiContext through to the API', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-ai2' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-ai2' });
 
       await manageDocument({ action: 'create',
         projectId: 'proj-1',
@@ -204,7 +204,7 @@ describe('Document Operations', () => {
         aiContext: { summary: 'Nested summary', keyPoints: ['kp1'], relatedTasks: ['task-1'] },
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', {
         projectId: 'proj-1',
         title: 'AI Doc',
         content: 'Content',
@@ -213,7 +213,7 @@ describe('Document Operations', () => {
     });
 
     it('should merge top-level fields over nested aiContext', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-ai3' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-ai3' });
 
       await manageDocument({ action: 'create',
         projectId: 'proj-1',
@@ -223,7 +223,7 @@ describe('Document Operations', () => {
         summary: 'New summary',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', {
         projectId: 'proj-1',
         title: 'AI Doc',
         content: 'Content',
@@ -232,40 +232,40 @@ describe('Document Operations', () => {
     });
 
     it('should propagate API errors', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Missing required field: title', 400));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Missing required field: title', 400));
       await expect(manageDocument({ action: 'create', projectId: 'proj-1', content: 'no title' })).rejects.toThrow('Missing required field: title');
     });
 
     it('should handle network errors', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(new Error('Network error'));
+      mockCallEzmodoAPI.mockRejectedValueOnce(new Error('Network error'));
       await expect(manageDocument({ action: 'create', projectId: 'proj-1', title: 'Doc', content: 'c' })).rejects.toThrow('Network error');
     });
   });
 
   describe('updateDocument', () => {
     it('should update a document', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
 
       const args = { documentId: 'doc-1', title: 'Updated Title', content: '# Updated\nNew content.' };
       const result = await manageDocument({ action: 'update', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateDocument', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateDocument', args);
       expect(result.success).toBe(true);
       expect(result.message).toBe('Document updated');
     });
 
     it('should update document content only', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
 
       const args = { documentId: 'doc-1', content: 'Only content changed' };
       const result = await manageDocument({ action: 'update', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateDocument', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateDocument', args);
       expect(result.success).toBe(true);
     });
 
     it('should nest top-level summary/keyPoints into aiContext', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
 
       await manageDocument({ action: 'update',
         documentId: 'doc-1',
@@ -273,28 +273,28 @@ describe('Document Operations', () => {
         keyPoints: ['new point'],
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
         documentId: 'doc-1',
         aiContext: { summary: 'Updated summary', keyPoints: ['new point'] },
       });
     });
 
     it('should pass nested aiContext through to the API', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
 
       await manageDocument({ action: 'update',
         documentId: 'doc-1',
         aiContext: { summary: 'Nested summary', keyPoints: ['kp1'], relatedDocs: ['doc-2'] },
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
         documentId: 'doc-1',
         aiContext: { summary: 'Nested summary', keyPoints: ['kp1'], relatedDocs: ['doc-2'] },
       });
     });
 
     it('should merge top-level fields over nested aiContext', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
 
       await manageDocument({ action: 'update',
         documentId: 'doc-1',
@@ -302,19 +302,19 @@ describe('Document Operations', () => {
         keyPoints: ['override point'],
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
         documentId: 'doc-1',
         aiContext: { summary: 'Old', relatedTasks: ['task-1'], keyPoints: ['override point'] },
       });
     });
 
     it('should handle not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Document not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Document not found', 404));
       await expect(manageDocument({ action: 'update', documentId: 'nonexistent', content: 'x' })).rejects.toThrow('Document not found');
     });
 
     it('should handle server error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(manageDocument({ action: 'update', documentId: 'doc-1', content: 'x' })).rejects.toThrow('Internal server error');
     });
   });
@@ -324,18 +324,18 @@ describe('Document Operations', () => {
   describe('document content', () => {
     it('should save document content as .md', async () => {
       const document = { id: 'doc-1', title: 'MD Doc', content: '# Hello', slug: 'md-doc', projectId: 'proj-1' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ document });
-      mockFindConfigPath.mockResolvedValueOnce('/project/.zephly/config.json');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ document });
+      mockFindConfigPath.mockResolvedValueOnce('/project/.ezmodo/config.json');
 
       const result = await getDocument({ documentId: 'doc-1' });
 
-      expect(mockWriteFile).toHaveBeenCalledWith('/project/.zephly/docs/md-doc.md', '# Hello', 'utf-8');
-      expect(result.localFilePath).toBe('/project/.zephly/docs/md-doc.md');
+      expect(mockWriteFile).toHaveBeenCalledWith('/project/.ezmodo/docs/md-doc.md', '# Hello', 'utf-8');
+      expect(result.localFilePath).toBe('/project/.ezmodo/docs/md-doc.md');
     });
 
     it('should return as-is when the document has no content', async () => {
       const document = { id: 'doc-1', title: 'Empty', projectId: 'proj-1' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ document });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ document });
 
       const result = await getDocument({ documentId: 'doc-1' });
 
@@ -344,11 +344,11 @@ describe('Document Operations', () => {
     });
 
     it('should create with markdown content only', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ documentId: 'doc-md' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ documentId: 'doc-md' });
 
       await manageDocument({ action: 'create', projectId: 'proj-1', title: 'MD Doc', content: '# Hello' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', {
         projectId: 'proj-1',
         title: 'MD Doc',
         content: '# Hello',
@@ -356,11 +356,11 @@ describe('Document Operations', () => {
     });
 
     it('should update with markdown content only', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ documentId: 'doc-1' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ documentId: 'doc-1' });
 
       await manageDocument({ action: 'update', documentId: 'doc-1', title: 'New Title' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
         documentId: 'doc-1',
         title: 'New Title',
       });
@@ -371,7 +371,7 @@ describe('Document Operations', () => {
     // answer with an explicit 400 — better than the handler stripping it and
     // reporting a success that changed nothing.
     it('should forward removed section params so the API can reject them', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(
+      mockCallEzmodoAPI.mockRejectedValueOnce(
         createMockError('Section operations were removed along with the legacy section model.', 400)
       );
 
@@ -383,7 +383,7 @@ describe('Document Operations', () => {
         })
       ).rejects.toThrow('Section operations were removed');
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateDocument', {
         documentId: 'doc-1',
         updateSections: [{ sectionId: 's1', content: {} }],
       });
@@ -394,7 +394,7 @@ describe('Document Operations', () => {
 
   describe('diagram documents', () => {
     it('should pass type through when creating a diagram document', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-diagram' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-diagram' });
 
       const result = await manageDocument({
         action: 'create',
@@ -403,7 +403,7 @@ describe('Document Operations', () => {
         type: 'diagram',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', {
         projectId: 'proj-1',
         title: 'Architecture Diagram',
         type: 'diagram',
@@ -413,7 +413,7 @@ describe('Document Operations', () => {
     });
 
     it('should pass content when creating an excalidraw diagram', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-excalidraw' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-excalidraw' });
 
       const result = await manageDocument({
         action: 'create',
@@ -423,7 +423,7 @@ describe('Document Operations', () => {
         content: 'excalidraw',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', {
         projectId: 'proj-1',
         title: 'Whiteboard',
         type: 'diagram',
@@ -437,11 +437,11 @@ describe('Document Operations', () => {
       const documents = [
         { id: 'doc-d1', title: 'System Diagram', type: 'diagram' },
       ];
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documents, count: 1 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documents, count: 1 });
 
       const result = await getDocument({ projectId: 'proj-1', docType: 'diagram' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetDocumentation', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDocumentation', {
         projectId: 'proj-1',
         docType: 'diagram',
       });
@@ -450,7 +450,7 @@ describe('Document Operations', () => {
     });
 
     it('should pass content when creating a sitemap diagram', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-sitemap' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, documentId: 'doc-sitemap' });
 
       const result = await manageDocument({
         action: 'create',
@@ -460,7 +460,7 @@ describe('Document Operations', () => {
         content: 'sitemap',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateDocument', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocument', {
         projectId: 'proj-1',
         title: 'Site Map',
         type: 'diagram',
@@ -481,11 +481,11 @@ describe('Document links (E-225)', () => {
   });
 
   function callsTo(endpoint) {
-    return mockCallZephlyAPI.mock.calls.filter((c) => c[0] === endpoint);
+    return mockCallEzmodoAPI.mock.calls.filter((c) => c[0] === endpoint);
   }
 
   it('applies create-time links after the document exists', async () => {
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => {
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
       if (endpoint === 'mcpCreateDocument') return { success: true, documentId: 'doc-9' };
       return { success: true };
     });
@@ -506,7 +506,7 @@ describe('Document links (E-225)', () => {
   });
 
   it('still returns the created document when linking fails', async () => {
-    mockCallZephlyAPI.mockImplementation(async (endpoint) => {
+    mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
       if (endpoint === 'mcpCreateDocument') return { success: true, documentId: 'doc-9' };
       throw new Error('Target not found');
     });

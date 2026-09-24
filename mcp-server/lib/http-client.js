@@ -18,8 +18,8 @@ import { getApiUrl } from './env.js';
 import { resolveCredential } from './credentials.js';
 import { NOT_AUTHENTICATED } from './auth-guidance.js';
 
-// API base URL is resolved per-request (see callZephlyAPI): getApiUrl() honors
-// the EZMODO_API_URL / ZEPHLY_API_URL override; CONFIG.apiUrl is the build-time
+// API base URL is resolved per-request (see callEzmodoAPI): getApiUrl() honors
+// the EZMODO_API_URL override; CONFIG.apiUrl is the build-time
 // default. Resolving per-call (not at module load) keeps it correct regardless
 // of when the env var is set, and lets a desktop/self-hosted runner point the
 // MCP server at a non-production API.
@@ -84,12 +84,12 @@ function fillRouteParams(endpoint, route, data) {
 }
 
 /**
- * Call Zephly API endpoint
+ * Call an ezmodo API endpoint
  * @param {string} endpoint - Endpoint name (e.g., 'mcpCreateTask')
  * @param {object} data - Request data
  * @returns {Promise<any>} - API response (unwrapped from Go API structure)
  */
-export async function callZephlyAPI(endpoint, data) {
+export async function callEzmodoAPI(endpoint, data) {
   // Get endpoint mapping (route + HTTP method)
   const mapping = ENDPOINT_MAP[endpoint];
 

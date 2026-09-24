@@ -1,4 +1,4 @@
-import { callZephlyAPI } from './http-client.js';
+import { callEzmodoAPI } from './http-client.js';
 
 /**
  * Auto-linking helpers (E-225).
@@ -30,7 +30,7 @@ export async function resolvePathsToFeatures({ projectId, paths }) {
     return { features: [], unresolved: [] };
   }
   try {
-    const result = await callZephlyAPI('mcpResolvePaths', { projectId, paths });
+    const result = await callEzmodoAPI('mcpResolvePaths', { projectId, paths });
     return {
       features: result?.features || [],
       unresolved: result?.unresolved || [],
@@ -67,7 +67,7 @@ export async function previewEntityLinks({
 }) {
   if (!subjectType || !subjectId) return { proposals: [] };
   try {
-    const result = await callZephlyAPI('mcpPreviewLinks', {
+    const result = await callEzmodoAPI('mcpPreviewLinks', {
       projectId,
       subjectType,
       subjectId,
@@ -120,7 +120,7 @@ function targetKey(targetType, targetId) {
 export async function fetchPendingLinkSuggestions({ subjectType, subjectId }) {
   if (!subjectType || !subjectId) return [];
   try {
-    const result = await callZephlyAPI('mcpListAgentSuggestions', {
+    const result = await callEzmodoAPI('mcpListAgentSuggestions', {
       entityType: subjectType,
       entityId: subjectId,
       action: 'link',

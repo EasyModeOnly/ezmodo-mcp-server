@@ -2,10 +2,10 @@ import { jest } from '@jest/globals';
 
 // Same isolation pattern as manage-task.test.js: mock the HTTP client and the
 // side-effecting lib deps so the real handler logic runs.
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 jest.unstable_mockModule('../lib/active-session.js', () => ({
   writeActiveSession: jest.fn(),
@@ -39,7 +39,7 @@ describe('bulkCreateTasks', () => {
 
   // The whole point: N tasks, ONE API call.
   it('sends the entire batch in a single request', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce(okResult(3));
+    mockCallEzmodoAPI.mockResolvedValueOnce(okResult(3));
 
     const result = await bulkCreateTasks({
       projectId: 'proj-1',
@@ -47,8 +47,8 @@ describe('bulkCreateTasks', () => {
       tasks: [{ title: 'A' }, { title: 'B' }, { title: 'C' }],
     });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledTimes(1);
-    const [endpoint, payload] = mockCallZephlyAPI.mock.calls[0];
+    expect(mockCallEzmodoAPI).toHaveBeenCalledTimes(1);
+    const [endpoint, payload] = mockCallEzmodoAPI.mock.calls[0];
     expect(endpoint).toBe('mcpBulkCreateTasks');
     expect(payload.projectId).toBe('proj-1');
     expect(payload.epicId).toBe('epic-1');
@@ -60,7 +60,7 @@ describe('bulkCreateTasks', () => {
   // A partial failure must be impossible to miss, and the message must steer the
   // agent away from re-sending the whole batch (which would duplicate).
   it('surfaces failures separately and warns against re-running the batch', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce({
+    mockCallEzmodoAPI.mockResolvedValueOnce({
       created: 2,
       failed: 1,
       results: [
@@ -87,7 +87,7 @@ describe('bulkCreateTasks', () => {
   });
 
   it('reports a clean success message when nothing failed', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce(okResult(2));
+    mockCallEzmodoAPI.mockResolvedValueOnce(okResult(2));
     const result = await bulkCreateTasks({ projectId: 'proj-1', tasks: [{ title: 'A' }, { title: 'B' }] });
     expect(result.failures).toBeUndefined();
     expect(result.message).toMatch(/Created 2 tasks in one request/);
@@ -100,7 +100,7 @@ describe('bulkCreateTasks', () => {
       projectId: 'proj-1',
       tasks: Array.from({ length: 41 }, (_, i) => ({ title: `T${i}` })),
     })).rejects.toThrow(/limit 40/);
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 
   it('requires projectId and a non-empty tasks array', async () => {
@@ -108,20 +108,20 @@ describe('bulkCreateTasks', () => {
       .rejects.toThrow(/projectId is required/);
     await expect(bulkCreateTasks({ projectId: 'proj-1', tasks: [] }))
       .rejects.toThrow(/non-empty array/);
-    expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 
   // changedFiles is the E-225 spelling; manage_task accepts it, so this must too
   // rather than making callers remember which tool wants which shape.
   it('normalizes changedFiles into linkedFiles per item', async () => {
-    mockCallZephlyAPI.mockResolvedValueOnce(okResult(1));
+    mockCallEzmodoAPI.mockResolvedValueOnce(okResult(1));
 
     await bulkCreateTasks({
       projectId: 'proj-1',
       tasks: [{ title: 'A', changedFiles: ['api/a.go', 'api/b.go'] }],
     });
 
-    const [, payload] = mockCallZephlyAPI.mock.calls[0];
+    const [, payload] = mockCallEzmodoAPI.mock.calls[0];
     expect(payload.tasks[0].linkedFiles).toEqual([
       { path: 'api/a.go', source: 'mcp' },
       { path: 'api/b.go', source: 'mcp' },

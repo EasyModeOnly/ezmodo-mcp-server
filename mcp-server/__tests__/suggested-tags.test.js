@@ -5,12 +5,12 @@ import { jest } from '@jest/globals';
 // applied — in particular, never through a follow-up bulk-tag call, which is
 // what used to fail silently while the response claimed the tags were applied.
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 const mockResolveTaskAutoAssign = jest.fn();
 const mockResolveEpicAutoAssign = jest.fn();
 
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 jest.unstable_mockModule('../lib/auto-assign.js', () => ({
   resolveTaskAutoAssign: mockResolveTaskAutoAssign,
@@ -46,7 +46,7 @@ const MATCHES = {
 };
 
 function calledEndpoints() {
-  return mockCallZephlyAPI.mock.calls.map(([endpoint]) => endpoint);
+  return mockCallEzmodoAPI.mock.calls.map(([endpoint]) => endpoint);
 }
 
 describe('suggestTags', () => {
@@ -67,7 +67,7 @@ describe('create-time tags (#2830)', () => {
 
   it('task create sends explicit tagIds and only suggests the rest', async () => {
     mockResolveTaskAutoAssign.mockResolvedValue(MATCHES);
-    mockCallZephlyAPI.mockResolvedValue({ taskId: 'task-1', taskNumber: 7 });
+    mockCallEzmodoAPI.mockResolvedValue({ taskId: 'task-1', taskNumber: 7 });
 
     const result = await manageTask({
       action: 'create',
@@ -77,7 +77,7 @@ describe('create-time tags (#2830)', () => {
       autolink: false,
     });
 
-    const [, createArgs] = mockCallZephlyAPI.mock.calls.find(([e]) => e === 'mcpCreateTask');
+    const [, createArgs] = mockCallEzmodoAPI.mock.calls.find(([e]) => e === 'mcpCreateTask');
     expect(createArgs.tagIds).toEqual(['tag-api']);
     expect(result.suggestedTags).toEqual([{ id: 'tag-notes', name: 'notes' }]);
     expect(result.autoAssigned).toBeUndefined();
@@ -86,7 +86,7 @@ describe('create-time tags (#2830)', () => {
 
   it('epic create sends explicit tagIds and only suggests the rest', async () => {
     mockResolveEpicAutoAssign.mockResolvedValue(MATCHES);
-    mockCallZephlyAPI.mockResolvedValue({ epicId: 'epic-1', epicNumber: 3 });
+    mockCallEzmodoAPI.mockResolvedValue({ epicId: 'epic-1', epicNumber: 3 });
 
     const result = await manageEpic({
       action: 'create',
@@ -95,7 +95,7 @@ describe('create-time tags (#2830)', () => {
       tagIds: ['tag-api'],
     });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateEpic', expect.objectContaining({ tagIds: ['tag-api'] }));
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateEpic', expect.objectContaining({ tagIds: ['tag-api'] }));
     expect(result.suggestedTags).toEqual([{ id: 'tag-notes', name: 'notes' }]);
     expect(result.autoAssigned).toBeUndefined();
     expect(calledEndpoints()).not.toContain('mcpBulkTagEntities');
@@ -103,7 +103,7 @@ describe('create-time tags (#2830)', () => {
 
   it('epic create with tasks omits suggestedTags when everything matched was applied', async () => {
     mockResolveEpicAutoAssign.mockResolvedValue(MATCHES);
-    mockCallZephlyAPI.mockResolvedValue({
+    mockCallEzmodoAPI.mockResolvedValue({
       epicId: 'epic-2', epicNumber: 4, tasks: { results: [], created: 0, failed: 0 },
     });
 
@@ -115,17 +115,17 @@ describe('create-time tags (#2830)', () => {
       tasks: [{ title: 'one' }],
     });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith(
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith(
       'mcpCreateEpicWithTasks', expect.objectContaining({ tagIds: ['tag-api', 'tag-notes'] }),
     );
     expect(result.suggestedTags).toBeUndefined();
   });
 
   it('epic update passes tagIds through as an array', async () => {
-    mockCallZephlyAPI.mockResolvedValue({ epicId: 'epic-1' });
+    mockCallEzmodoAPI.mockResolvedValue({ epicId: 'epic-1' });
 
     await manageEpic({ action: 'update', epicId: 'epic-1', tagIds: ['tag-api'] });
 
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateEpic', { epicId: 'epic-1', tagIds: ['tag-api'] });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateEpic', { epicId: 'epic-1', tagIds: ['tag-api'] });
   });
 });

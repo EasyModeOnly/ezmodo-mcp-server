@@ -11,7 +11,7 @@ jest.unstable_mockModule('../lib/env.js', () => ({
   getApiUrl: () => 'https://api.test',
 }));
 
-const { callZephlyAPI } = await import('../lib/http-client.js');
+const { callEzmodoAPI } = await import('../lib/http-client.js');
 
 function okResponse(data) {
   return {
@@ -22,7 +22,7 @@ function okResponse(data) {
   };
 }
 
-describe('callZephlyAPI body encoding', () => {
+describe('callEzmodoAPI body encoding', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('gzips large POST bodies with Content-Encoding: gzip', async () => {
@@ -43,7 +43,7 @@ describe('callZephlyAPI body encoding', () => {
     }
     const data = { taskId: 't-1', snapshot: { tables } };
 
-    await callZephlyAPI('mcpCreateTask', data);
+    await callEzmodoAPI('mcpCreateTask', data);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [, opts] = mockFetch.mock.calls[0];
@@ -64,7 +64,7 @@ describe('callZephlyAPI body encoding', () => {
     mockFetch.mockResolvedValueOnce(okResponse({ task: { id: 't-1' } }));
 
     const data = { title: 'small task', projectId: 'p-1' };
-    await callZephlyAPI('mcpCreateTask', data);
+    await callEzmodoAPI('mcpCreateTask', data);
 
     const [, opts] = mockFetch.mock.calls[0];
     expect(opts.headers['Content-Encoding']).toBeUndefined();
@@ -78,7 +78,7 @@ describe('callZephlyAPI body encoding', () => {
   it('sends GET params as query string with no body', async () => {
     mockFetch.mockResolvedValueOnce(okResponse({ projects: [] }));
 
-    await callZephlyAPI('mcpListProjects', { organizationId: 'org-1' });
+    await callEzmodoAPI('mcpListProjects', { organizationId: 'org-1' });
 
     const [url, opts] = mockFetch.mock.calls[0];
     expect(url).toContain('organizationId=org-1');
@@ -88,13 +88,13 @@ describe('callZephlyAPI body encoding', () => {
 });
 
 // E-204: routes with `{param}` placeholders, and 204 No Content.
-describe('callZephlyAPI route params', () => {
+describe('callEzmodoAPI route params', () => {
   afterEach(() => jest.clearAllMocks());
 
   it('fills a path param and does not also send it as a query param', async () => {
     mockFetch.mockResolvedValueOnce(okResponse({ id: 'n 1' }));
 
-    await callZephlyAPI('mcpGetNote', { noteId: 'n 1' });
+    await callEzmodoAPI('mcpGetNote', { noteId: 'n 1' });
 
     const [url] = mockFetch.mock.calls[0];
     expect(url).toBe('https://api.test/mcp/v1/notes/n%201');
@@ -103,7 +103,7 @@ describe('callZephlyAPI route params', () => {
   it('keeps the other fields in the body of a write', async () => {
     mockFetch.mockResolvedValueOnce(okResponse({ id: 'n-1' }));
 
-    await callZephlyAPI('mcpUpdateNote', { noteId: 'n-1', title: 'T' });
+    await callEzmodoAPI('mcpUpdateNote', { noteId: 'n-1', title: 'T' });
 
     const [url, opts] = mockFetch.mock.calls[0];
     expect(url).toBe('https://api.test/mcp/v1/notes/n-1');
@@ -113,7 +113,7 @@ describe('callZephlyAPI route params', () => {
   });
 
   it('throws before any request when a path param is missing', async () => {
-    await expect(callZephlyAPI('mcpGetNote', {})).rejects.toThrow('noteId is required for mcpGetNote');
+    await expect(callEzmodoAPI('mcpGetNote', {})).rejects.toThrow('noteId is required for mcpGetNote');
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -125,7 +125,7 @@ describe('callZephlyAPI route params', () => {
       text: async () => '',
     });
 
-    const result = await callZephlyAPI('mcpDeleteNote', { noteId: 'n-1' });
+    const result = await callEzmodoAPI('mcpDeleteNote', { noteId: 'n-1' });
 
     const [url, opts] = mockFetch.mock.calls[0];
     expect(url).toBe('https://api.test/mcp/v1/notes/n-1');
@@ -137,7 +137,7 @@ describe('callZephlyAPI route params', () => {
 // The client half of #2282. The API now distinguishes "your key is bad" from
 // "the database is unreachable"; these assert the agent-visible consequence of
 // that distinction, and pin the regression that produced the phantom message.
-describe('callZephlyAPI error classification', () => {
+describe('callEzmodoAPI error classification', () => {
   afterEach(() => jest.clearAllMocks());
 
   function errorResponse(status, statusText, bodyText) {
@@ -163,7 +163,7 @@ describe('callZephlyAPI error classification', () => {
       )
     );
 
-    await expect(callZephlyAPI('mcpSearchEpics', { query: 'x' })).rejects.toMatchObject({
+    await expect(callEzmodoAPI('mcpSearchEpics', { query: 'x' })).rejects.toMatchObject({
       status: 503,
       retryable: true,
     });
@@ -178,7 +178,7 @@ describe('callZephlyAPI error classification', () => {
       )
     );
 
-    const thrown = await callZephlyAPI('mcpSearchEpics', { query: 'x' }).catch((e) => e);
+    const thrown = await callEzmodoAPI('mcpSearchEpics', { query: 'x' }).catch((e) => e);
 
     expect(thrown.status).toBe(401);
     expect(thrown.retryable).toBeUndefined();
@@ -195,7 +195,7 @@ describe('callZephlyAPI error classification', () => {
       errorResponse(401, 'Unauthorized', 'API key validation failed: database capacity temporarily exhausted\n')
     );
 
-    const thrown = await callZephlyAPI('mcpSearchEpics', { query: 'x' }).catch((e) => e);
+    const thrown = await callEzmodoAPI('mcpSearchEpics', { query: 'x' }).catch((e) => e);
 
     expect(thrown.message).toBe('Unauthorized');
     // The true cause was on the wire the whole time and the client discarded

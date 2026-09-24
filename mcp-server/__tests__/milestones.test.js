@@ -2,9 +2,9 @@ import { jest } from '@jest/globals';
 import { createMockError } from './test-utils.js';
 
 // Mock the http client
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { manageMilestone, getMilestone } = await import('../handlers/milestones.js');
@@ -17,19 +17,19 @@ describe('Milestone Operations', () => {
   describe('createMilestone', () => {
     it('should create a milestone with required fields', async () => {
       const mockResponse = { success: true, milestoneId: 'ms-new' };
-      mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
       const args = { projectId: 'proj-1', title: 'v1.0 Release' };
       const result = await manageMilestone({ action: 'create', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateMilestone', args);
       expect(result.success).toBe(true);
       expect(result.milestoneId).toBe('ms-new');
     });
 
     it('should create a milestone with all optional fields', async () => {
       const mockResponse = { success: true, milestoneId: 'ms-full' };
-      mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
       const args = {
         projectId: 'proj-1',
@@ -40,22 +40,22 @@ describe('Milestone Operations', () => {
       };
       const result = await manageMilestone({ action: 'create', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateMilestone', args);
       expect(result.success).toBe(true);
     });
 
     it('should create a milestone nested under a parent (tiered milestones)', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, milestoneId: 'ms-child' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestoneId: 'ms-child' });
 
       const args = { projectId: 'proj-1', title: 'Release v1', type: 'version', parentMilestoneId: 'ms-parent' };
       const result = await manageMilestone({ action: 'create', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateMilestone', args);
       expect(result.success).toBe(true);
     });
 
     it('should propagate API errors', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Missing required field: projectId', 400));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Missing required field: projectId', 400));
       await expect(manageMilestone({ action: 'create', title: 'No Project' })).rejects.toThrow('Missing required field: projectId');
     });
   });
@@ -63,57 +63,57 @@ describe('Milestone Operations', () => {
   describe('getMilestone', () => {
     it('should get a milestone by ID', async () => {
       const mockMilestone = { id: 'ms-1', title: 'v1.0 Release', status: 'active' };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, milestone: mockMilestone });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestone: mockMilestone });
 
       const args = { milestoneId: 'ms-1' };
       const result = await getMilestone(args);
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetMilestone', args);
       expect(result.success).toBe(true);
       expect(result.milestone.title).toBe('v1.0 Release');
     });
 
     it('should handle not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
       await expect(getMilestone({ milestoneId: 'nonexistent' })).rejects.toThrow('Milestone not found');
     });
   });
 
   describe('updateMilestone', () => {
     it('should update a milestone', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Milestone updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Milestone updated' });
 
       const args = { milestoneId: 'ms-1', title: 'v1.1 Release', status: 'completed' };
       const result = await manageMilestone({ action: 'update', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
       expect(result.success).toBe(true);
       expect(result.message).toBe('Milestone updated');
     });
 
     it('should update milestone status only', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Milestone updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Milestone updated' });
 
       const args = { milestoneId: 'ms-1', status: 'completed' };
       const result = await manageMilestone({ action: 'update', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
       expect(result.success).toBe(true);
     });
 
     it('should re-parent (or clear parent with "") via parentMilestoneId', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Milestone updated' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Milestone updated' });
 
       // Empty string clears the parent (promote to top-level).
       const args = { milestoneId: 'ms-1', parentMilestoneId: '' };
       const result = await manageMilestone({ action: 'update', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
       expect(result.success).toBe(true);
     });
 
     it('should handle update error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
       await expect(manageMilestone({ action: 'update', milestoneId: 'bad' })).rejects.toThrow('Milestone not found');
     });
   });
@@ -124,18 +124,18 @@ describe('Milestone Operations', () => {
         { id: 'ms-1', title: 'v1.0' },
         { id: 'ms-2', title: 'v2.0' },
       ];
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, milestones, count: 2 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestones, count: 2 });
 
       const args = { projectId: 'proj-1' };
       const result = await getMilestone(args);
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListMilestones', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListMilestones', args);
       expect(result.milestones).toHaveLength(2);
       expect(result.count).toBe(2);
     });
 
     it('should return empty list when no milestones exist', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, milestones: [], count: 0 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestones: [], count: 0 });
 
       const result = await getMilestone({ projectId: 'empty-proj' });
 
@@ -143,36 +143,36 @@ describe('Milestone Operations', () => {
     });
 
     it('should handle server error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(getMilestone({ projectId: 'proj-1' })).rejects.toThrow('Internal server error');
     });
   });
 
   describe('deleteMilestone', () => {
     it('should delete a milestone', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Milestone deleted' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Milestone deleted' });
 
       const args = { milestoneId: 'ms-1' };
       const result = await manageMilestone({ action: 'delete', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDeleteMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeleteMilestone', args);
       expect(result.success).toBe(true);
     });
 
     it('should handle delete error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
       await expect(manageMilestone({ action: 'delete', milestoneId: 'nonexistent' })).rejects.toThrow('Milestone not found');
     });
   });
 
   describe('linkEpicToMilestone', () => {
     it('should link an epic to a milestone', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Epic linked to milestone' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Epic linked to milestone' });
 
       const args = { milestoneId: 'ms-1', epicId: 'epic-1' };
       const result = await manageMilestone({ action: 'link_epic', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpLinkEpicToMilestone', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpLinkEpicToMilestone', {
         milestoneId: 'ms-1',
         entityId: 'epic-1',
         entityType: 'epic',
@@ -182,29 +182,29 @@ describe('Milestone Operations', () => {
     });
 
     it('should handle milestone not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
       await expect(manageMilestone({ action: 'link_epic', milestoneId: 'bad', epicId: 'epic-1' })).rejects.toThrow('Milestone not found');
     });
 
     it('should handle epic not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
       await expect(manageMilestone({ action: 'link_epic', milestoneId: 'ms-1', epicId: 'bad' })).rejects.toThrow('Epic not found');
     });
   });
 
   describe('unlinkEpicFromMilestone', () => {
     it('should unlink an epic from a milestone', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Epic unlinked from milestone' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Epic unlinked from milestone' });
 
       const args = { milestoneId: 'ms-1', epicId: 'epic-1' };
       const result = await manageMilestone({ action: 'unlink_epic', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUnlinkEpicFromMilestone', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUnlinkEpicFromMilestone', args);
       expect(result.success).toBe(true);
     });
 
     it('should handle error when link does not exist', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Link not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Link not found', 404));
       await expect(manageMilestone({ action: 'unlink_epic', milestoneId: 'ms-1', epicId: 'epic-1' })).rejects.toThrow('Link not found');
     });
   });
@@ -215,18 +215,18 @@ describe('Milestone Operations', () => {
         markdown: '## v1.0 Release\n\n### Features\n- New dashboard\n- Task management',
         sections: [{ title: 'Features', items: ['New dashboard', 'Task management'] }],
       };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, changelog: mockChangelog });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, changelog: mockChangelog });
 
       const args = { milestoneId: 'ms-1' };
       const result = await manageMilestone({ action: 'generate_changelog', ...args });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGenerateMilestoneChangelog', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGenerateMilestoneChangelog', args);
       expect(result.success).toBe(true);
       expect(result.changelog.markdown).toContain('v1.0 Release');
     });
 
     it('should handle milestone with no completed work', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, changelog: { markdown: '', sections: [] } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, changelog: { markdown: '', sections: [] } });
 
       const result = await manageMilestone({ action: 'generate_changelog', milestoneId: 'ms-empty' });
 
@@ -234,7 +234,7 @@ describe('Milestone Operations', () => {
     });
 
     it('should handle server error', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(manageMilestone({ action: 'generate_changelog', milestoneId: 'ms-1' })).rejects.toThrow('Internal server error');
     });
   });
@@ -250,13 +250,13 @@ describe('Milestone Operations', () => {
         percentage: 75,
       };
       // First call: getMilestone, second call: getProgress
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, milestone: mockMilestone });
-      mockCallZephlyAPI.mockResolvedValueOnce(mockProgress);
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestone: mockMilestone });
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockProgress);
 
       const result = await getMilestone({ milestoneId: 'ms-1', includeProgress: true });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetMilestone', { milestoneId: 'ms-1' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetMilestoneProgress', { milestoneId: 'ms-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetMilestone', { milestoneId: 'ms-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetMilestoneProgress', { milestoneId: 'ms-1' });
       expect(result.progress.percentage).toBe(75);
       expect(result.progress.completedTasks).toBe(15);
     });
@@ -270,8 +270,8 @@ describe('Milestone Operations', () => {
         completedTasks: 0,
         percentage: 0,
       };
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true, milestone: mockMilestone });
-      mockCallZephlyAPI.mockResolvedValueOnce(mockProgress);
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestone: mockMilestone });
+      mockCallEzmodoAPI.mockResolvedValueOnce(mockProgress);
 
       const result = await getMilestone({ milestoneId: 'ms-empty', includeProgress: true });
 
@@ -279,7 +279,7 @@ describe('Milestone Operations', () => {
     });
 
     it('should handle not found', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Milestone not found', 404));
       await expect(getMilestone({ milestoneId: 'nonexistent', includeProgress: true })).rejects.toThrow('Milestone not found');
     });
   });

@@ -39,7 +39,6 @@ export default [
       "coverage/**",
       "__tests__/**",
       "jest.config.js",
-      "index-old.js",
       // Machine-written by scripts/build-instructions.mjs: the skill text is
       // emitted as one JSON string literal per block, so max-len is neither
       // meetable nor meaningful there.

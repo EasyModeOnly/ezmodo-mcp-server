@@ -9,7 +9,7 @@
  * They can be promoted to project tasks via move_to_project.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_todo actions to the appropriate handler
@@ -25,19 +25,19 @@ export async function manageTodo(args) {
 }
 
 export async function listTodos(args) {
-  return callZephlyAPI('mcpListTodos', args || {});
+  return callEzmodoAPI('mcpListTodos', args || {});
 }
 
 // --- Private helpers ---
 
 async function createTodo(args) {
-  return callZephlyAPI('mcpCreateTodo', args);
+  return callEzmodoAPI('mcpCreateTodo', args);
 }
 
 async function completeTodo(args) {
-  return callZephlyAPI('mcpCompleteTodo', args);
+  return callEzmodoAPI('mcpCompleteTodo', args);
 }
 
 async function moveTodoToProject(args) {
-  return callZephlyAPI('mcpMoveTodo', args);
+  return callEzmodoAPI('mcpMoveTodo', args);
 }

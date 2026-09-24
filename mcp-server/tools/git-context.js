@@ -3,7 +3,7 @@
  * MCP tools for git repository detection and project context management
  *
  * Project-First Hierarchy: Projects are the primary container.
- * Use these tools to auto-detect which Zephly project you're working on.
+ * Use these tools to auto-detect which ezmodo project you're working on.
  */
 
 export const GIT_CONTEXT_TOOLS = [
@@ -28,8 +28,8 @@ export const GIT_CONTEXT_TOOLS = [
   },
   {
     name: 'get_current_project_context',
-    description: 'Detect and read existing .ezmodo/config.json (or legacy ' +
-      '.zephly/config.json) from current directory or parent directories. ' +
+    description: 'Detect and read existing .ezmodo/config.json ' +
+      'from current directory or parent directories. ' +
       'Returns project context if found, ' +
       'or null if not configured. Use this BEFORE other MCP tools to ' +
       'auto-detect which project you\'re working on. Project-First: ' +
@@ -75,11 +75,11 @@ export const GIT_CONTEXT_TOOLS = [
         },
         workingDirectory: {
           type: 'string',
-          description: 'Directory to create .ezmodo/config.json in (defaults to current directory). If a legacy .zephly/ directory already exists in the repo, the existing location is reused for writes.',
+          description: 'Directory to create .ezmodo/config.json in (defaults to current directory).',
         },
         addToGitignore: {
           type: 'boolean',
-          description: 'Whether to add the config directory (.ezmodo/ or legacy .zephly/) to .gitignore (default: true)',
+          description: 'Whether to add the config directory (.ezmodo/) to .gitignore (default: true)',
           default: true,
         },
         addClaudeMd: {

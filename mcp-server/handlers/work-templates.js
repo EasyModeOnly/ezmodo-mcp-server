@@ -7,7 +7,7 @@
  * core/worktemplates.Service.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_work_template actions.
@@ -15,16 +15,16 @@ import { callZephlyAPI } from '../lib/http-client.js';
 export async function manageWorkTemplate(args) {
   const { action, ...params } = args;
   switch (action) {
-  case 'create': return callZephlyAPI('mcpCreateWorkTemplate', params);
-  case 'update': return callZephlyAPI('mcpUpdateWorkTemplate', params);
-  case 'delete': return callZephlyAPI('mcpDeleteWorkTemplate', { templateId: params.templateId });
-  case 'get': return callZephlyAPI('mcpGetWorkTemplate', { templateId: params.templateId });
-  case 'instantiate': return callZephlyAPI('mcpInstantiateWorkTemplate', params);
+  case 'create': return callEzmodoAPI('mcpCreateWorkTemplate', params);
+  case 'update': return callEzmodoAPI('mcpUpdateWorkTemplate', params);
+  case 'delete': return callEzmodoAPI('mcpDeleteWorkTemplate', { templateId: params.templateId });
+  case 'get': return callEzmodoAPI('mcpGetWorkTemplate', { templateId: params.templateId });
+  case 'instantiate': return callEzmodoAPI('mcpInstantiateWorkTemplate', params);
   case 'list': {
     const listParams = {};
     if (params.organizationId) listParams.organizationId = params.organizationId;
     if (params.kind) listParams.kind = params.kind;
-    return callZephlyAPI('mcpListWorkTemplates', listParams);
+    return callEzmodoAPI('mcpListWorkTemplates', listParams);
   }
   default:
     throw new Error(`Unknown action: ${action}. Expected create, update, delete, list, get, or instantiate.`);

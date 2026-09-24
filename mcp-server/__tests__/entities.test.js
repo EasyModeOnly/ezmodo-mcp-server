@@ -2,9 +2,9 @@ import { jest } from '@jest/globals';
 import { createMockError } from './test-utils.js';
 
 // Mock the http client
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { manageGoal, manageTeam, getGoal } = await import('../handlers/entities.js');
@@ -18,12 +18,12 @@ describe('Entity Operations', () => {
     describe('createGoal', () => {
       it('should create a goal with required fields', async () => {
         const mockResponse = { success: true, goalId: 'goal-new', goalNumber: 3 };
-        mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+        mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
         const args = { organizationId: 'org-1', title: 'Increase Revenue' };
         const result = await manageGoal({ action: 'create', ...args });
 
-        expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateGoal', args);
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateGoal', args);
         expect(result.success).toBe(true);
         expect(result.goalId).toBe('goal-new');
         expect(result.goalNumber).toBe(3);
@@ -31,7 +31,7 @@ describe('Entity Operations', () => {
 
       it('should create a goal with all optional fields', async () => {
         const mockResponse = { success: true, goalId: 'goal-full', goalNumber: 4 };
-        mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+        mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
         const args = {
           organizationId: 'org-1',
@@ -43,12 +43,12 @@ describe('Entity Operations', () => {
         };
         const result = await manageGoal({ action: 'create', ...args });
 
-        expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateGoal', args);
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateGoal', args);
         expect(result.success).toBe(true);
       });
 
       it('should propagate API errors', async () => {
-        mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Missing required field: organizationId', 400));
+        mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Missing required field: organizationId', 400));
         await expect(manageGoal({ action: 'create', title: 'No Org' })).rejects.toThrow('Missing required field: organizationId');
       });
     });
@@ -56,34 +56,34 @@ describe('Entity Operations', () => {
     describe('getGoal', () => {
       it('should get a goal by ID', async () => {
         const mockGoal = { id: 'goal-1', title: 'Revenue Target', status: 'active' };
-        mockCallZephlyAPI.mockResolvedValueOnce({ success: true, goal: mockGoal });
+        mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, goal: mockGoal });
 
         const result = await getGoal({ goalId: 'goal-1' });
 
-        expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetGoal', { goalId: 'goal-1' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetGoal', { goalId: 'goal-1' });
         expect(result.success).toBe(true);
         expect(result.goal.title).toBe('Revenue Target');
       });
 
       it('should handle not found', async () => {
-        mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Goal not found', 404));
+        mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Goal not found', 404));
         await expect(getGoal({ goalId: 'nonexistent' })).rejects.toThrow('Goal not found');
       });
     });
 
     describe('updateGoal', () => {
       it('should update a goal', async () => {
-        mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Goal updated' });
+        mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Goal updated' });
 
         const args = { goalId: 'goal-1', title: 'Updated Goal Title', status: 'at_risk' };
         const result = await manageGoal({ action: 'update', ...args });
 
-        expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateGoal', args);
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateGoal', args);
         expect(result.success).toBe(true);
       });
 
       it('should handle update error', async () => {
-        mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Goal not found', 404));
+        mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Goal not found', 404));
         await expect(manageGoal({ action: 'update', goalId: 'bad-id' })).rejects.toThrow('Goal not found');
       });
     });
@@ -94,18 +94,18 @@ describe('Entity Operations', () => {
           { id: 'g1', title: 'Goal One' },
           { id: 'g2', title: 'Goal Two' },
         ];
-        mockCallZephlyAPI.mockResolvedValueOnce({ success: true, goals, count: 2 });
+        mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, goals, count: 2 });
 
         const args = { organizationId: 'org-1' };
         const result = await getGoal(args);
 
-        expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListGoals', args);
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListGoals', args);
         expect(result.goals).toHaveLength(2);
         expect(result.count).toBe(2);
       });
 
       it('should return empty list when no goals exist', async () => {
-        mockCallZephlyAPI.mockResolvedValueOnce({ success: true, goals: [], count: 0 });
+        mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, goals: [], count: 0 });
 
         const result = await getGoal({ organizationId: 'org-empty' });
 
@@ -113,24 +113,24 @@ describe('Entity Operations', () => {
       });
 
       it('should handle server error', async () => {
-        mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
+        mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
         await expect(getGoal({ organizationId: 'org-1' })).rejects.toThrow('Internal server error');
       });
     });
 
     describe('deleteGoal', () => {
       it('should delete a goal', async () => {
-        mockCallZephlyAPI.mockResolvedValueOnce({ success: true, message: 'Goal deleted' });
+        mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Goal deleted' });
 
         const args = { goalId: 'goal-1' };
         const result = await manageGoal({ action: 'delete', ...args });
 
-        expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDeleteGoal', args);
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeleteGoal', args);
         expect(result.success).toBe(true);
       });
 
       it('should handle delete error', async () => {
-        mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Goal not found', 404));
+        mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Goal not found', 404));
         await expect(manageGoal({ action: 'delete', goalId: 'nonexistent' })).rejects.toThrow('Goal not found');
       });
     });
@@ -140,18 +140,18 @@ describe('Entity Operations', () => {
     describe('createTeam', () => {
       it('should create a team', async () => {
         const mockResponse = { success: true, teamId: 'team-new' };
-        mockCallZephlyAPI.mockResolvedValueOnce(mockResponse);
+        mockCallEzmodoAPI.mockResolvedValueOnce(mockResponse);
 
         const args = { organizationId: 'org-1', name: 'Frontend Team', description: 'UI developers' };
         const result = await manageTeam({ action: 'create', ...args });
 
-        expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateTeam', args);
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateTeam', args);
         expect(result.success).toBe(true);
         expect(result.teamId).toBe('team-new');
       });
 
       it('should propagate API errors', async () => {
-        mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Organization not found', 404));
+        mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Organization not found', 404));
         await expect(manageTeam({ action: 'create', organizationId: 'bad', name: 'Team' })).rejects.toThrow('Organization not found');
       });
     });

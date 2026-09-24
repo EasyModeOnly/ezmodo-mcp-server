@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 
 // Mock every side-effecting dependency of the create path so we exercise the
 // real reportUntrackedWork -> createTask flow in isolation.
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 const mockWriteActiveSession = jest.fn();
 const mockClearActiveSession = jest.fn();
 const mockResolveTaskAutoAssign = jest.fn();
@@ -10,7 +10,7 @@ const mockBuildTaskUrl = jest.fn();
 const mockGetContext = jest.fn();
 
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 jest.unstable_mockModule('../lib/active-session.js', () => ({
   writeActiveSession: mockWriteActiveSession,
@@ -33,13 +33,13 @@ const { reportUntrackedWork } = await import('../handlers/tasks.js');
 
 /** Extract the create-call payload sent to the Go API. */
 function lastCreateArgs() {
-  const call = mockCallZephlyAPI.mock.calls.find((c) => c[0] === 'mcpCreateTask');
+  const call = mockCallEzmodoAPI.mock.calls.find((c) => c[0] === 'mcpCreateTask');
   return call ? call[1] : undefined;
 }
 
 describe('report_untracked_work', () => {
   beforeEach(() => {
-    mockCallZephlyAPI.mockResolvedValue({
+    mockCallEzmodoAPI.mockResolvedValue({
       taskId: 'task-1',
       taskNumber: 42,
       task: { id: 'task-1', taskNumber: 42, title: 'Quick fix' },
@@ -124,7 +124,7 @@ describe('report_untracked_work', () => {
     // Links are applied one request each (there is no batch route), so the
     // assertions read the sequence of mcpAddLink payloads.
     function linkCalls() {
-      return mockCallZephlyAPI.mock.calls.filter((c) => c[0] === 'mcpAddLink').map((c) => c[1]);
+      return mockCallEzmodoAPI.mock.calls.filter((c) => c[0] === 'mcpAddLink').map((c) => c[1]);
     }
 
     it('passes epicId through to the create call', async () => {

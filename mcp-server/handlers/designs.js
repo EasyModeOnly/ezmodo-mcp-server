@@ -9,7 +9,7 @@
  * server-side in core/designs.Service.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { attachLinks } from '../lib/links-at-create.js';
 
 /**
@@ -43,13 +43,13 @@ export async function getDesign(args) {
     if (filters.kind) params.kind = filters.kind;
     if (filters.status) params.status = filters.status;
     if (filters.limit != null) params.limit = filters.limit;
-    return callZephlyAPI('mcpListDesigns', params);
+    return callEzmodoAPI('mcpListDesigns', params);
   }
 
   if (designId) {
-    const result = await callZephlyAPI('mcpGetDesign', { designId });
+    const result = await callEzmodoAPI('mcpGetDesign', { designId });
     if (includeLinks) {
-      const links = await callZephlyAPI('mcpListDesignLinks', { designId });
+      const links = await callEzmodoAPI('mcpListDesignLinks', { designId });
       result.links = links?.links ?? links;
     }
     return result;
@@ -70,7 +70,7 @@ export async function listDesigns(args) {
   if (args.status) params.status = args.status;
   if (args.includeOrgWide != null) params.includeOrgWide = args.includeOrgWide;
   if (args.limit != null) params.limit = args.limit;
-  return callZephlyAPI('mcpListDesigns', params);
+  return callEzmodoAPI('mcpListDesigns', params);
 }
 
 /**
@@ -81,7 +81,7 @@ export async function getDesignSystem(args) {
   const params = {};
   if (args.organizationId) params.organizationId = args.organizationId;
   if (args.projectId) params.projectId = args.projectId;
-  return callZephlyAPI('mcpGetDesignSystem', params);
+  return callEzmodoAPI('mcpGetDesignSystem', params);
 }
 
 // --- Private helpers ---
@@ -89,7 +89,7 @@ export async function getDesignSystem(args) {
 async function createDesign(args) {
   // `links` is applied by the MCP layer after the design exists (E-225).
   const { links, ...createArgs } = args;
-  const result = await callZephlyAPI('mcpCreateDesign', createArgs);
+  const result = await callEzmodoAPI('mcpCreateDesign', createArgs);
 
   // Attach create-time links (E-225) — best effort, never fails the create.
   await attachLinks(result, {
@@ -102,17 +102,17 @@ async function createDesign(args) {
 }
 
 async function updateDesign(args) {
-  return callZephlyAPI('mcpUpdateDesign', args);
+  return callEzmodoAPI('mcpUpdateDesign', args);
 }
 
 async function deleteDesign({ designId }) {
-  return callZephlyAPI('mcpDeleteDesign', { designId });
+  return callEzmodoAPI('mcpDeleteDesign', { designId });
 }
 
 async function linkDesignArtifact({ designId, targetType, targetId }) {
-  return callZephlyAPI('mcpLinkDesign', { designId, targetType, targetId });
+  return callEzmodoAPI('mcpLinkDesign', { designId, targetType, targetId });
 }
 
 async function unlinkDesignArtifact({ designId, targetType, targetId }) {
-  return callZephlyAPI('mcpUnlinkDesign', { designId, targetType, targetId });
+  return callEzmodoAPI('mcpUnlinkDesign', { designId, targetType, targetId });
 }

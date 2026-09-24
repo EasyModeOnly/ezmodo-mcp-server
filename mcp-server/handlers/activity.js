@@ -3,7 +3,7 @@
  * Handles get_project_changes MCP tool calls
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Parse a relative duration string (e.g., "7d", "2w") into an ISO date string.
@@ -96,7 +96,7 @@ export async function getProjectChanges(args) {
   if (entityTypes) params.entityType = entityTypes;
   if (eventTypes) params.eventType = eventTypes;
 
-  const result = await callZephlyAPI('mcpGetProjectChanges', params);
+  const result = await callEzmodoAPI('mcpGetProjectChanges', params);
 
   // Enrich events with human-readable descriptions
   const events = (result.events || []).map(event => ({

@@ -83,11 +83,11 @@ describe('loadManifestScope', () => {
     expect(loadManifestScope(root)).toEqual({ include: ['a/**'], exclude: ['b/**'] });
   });
 
-  it('falls back to the legacy .zephly directory', () => {
+  it('ignores a pre-rebrand .zephly directory (#2843)', () => {
     root = mkdtempSync(join(tmpdir(), 'ezmodo-scope-'));
     mkdirSync(join(root, '.zephly', 'manifest'), { recursive: true });
     writeFileSync(join(root, '.zephly', 'manifest', 'config.json'), JSON.stringify({ include: ['x/**'] }));
-    expect(loadManifestScope(root).include).toEqual(['x/**']);
+    expect(loadManifestScope(root)).toBeNull();
   });
 
   it('returns null when there is no config', () => {

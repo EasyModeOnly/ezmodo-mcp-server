@@ -85,7 +85,7 @@ describe('detectGitRepository', () => {
     mockListRepositories.mockResolvedValue({ repositories: [] });
   });
 
-  // The regression this file exists for: callZephlyAPI unwraps the Go API's
+  // The regression this file exists for: callEzmodoAPI unwraps the Go API's
   // {success, data} envelope, so getProject({}) resolves to `{projects: [...]}`
   // with no `success` flag. The old guard tested for one and therefore reported
   // "Failed to fetch accessible projects" on every single call, while holding

@@ -1,7 +1,7 @@
 /**
  * Local Cache Utility
  * Reads and writes the project config.json cache for tags.
- * Looks in `.ezmodo/` first, falls back to legacy `.zephly/`.
+ * Lives in the repo's `.ezmodo/` directory.
  * Used by MCP handlers to avoid unnecessary API calls for frequently-read data.
  */
 
@@ -29,8 +29,7 @@ export function isCacheFresh(lastUpdatedAt, ttlDays = 1) {
 }
 
 /**
- * Walk up the directory tree to find the project config.json. Tries
- * `.ezmodo/config.json` first, falls back to legacy `.zephly/config.json`.
+ * Walk up the directory tree to find the project `.ezmodo/config.json`.
  * Caches the result in memory for subsequent calls.
  * @returns {Promise<string|null>} Absolute path to config.json, or null if not found
  */
@@ -51,8 +50,7 @@ export async function findConfigPath(startDir = process.cwd()) {
 }
 
 /**
- * Read and parse the project config.json file (current `.ezmodo/` location
- * or legacy `.zephly/` fallback).
+ * Read and parse the project `.ezmodo/config.json` file.
  * @returns {Promise<object|null>} Parsed config, or null if not found/invalid
  */
 export async function readConfig() {
@@ -67,9 +65,7 @@ export async function readConfig() {
 }
 
 /**
- * Write the config object back to the currently-resolved project config path
- * (either `.ezmodo/config.json` or, for legacy checkouts, `.zephly/config.json`).
- * Writes never relocate the file — use `ezmodo migrate-config` for that.
+ * Write the config object back to the resolved `.ezmodo/config.json`.
  * @returns {Promise<boolean>} true if written successfully
  */
 export async function writeConfig(config) {

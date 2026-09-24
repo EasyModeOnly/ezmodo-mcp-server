@@ -25,10 +25,10 @@ function createMockTestSuite(overrides = {}) {
 }
 
 describe('Test Suite Tools', () => {
-  let mockCallZephlyAPI;
+  let mockCallEzmodoAPI;
 
   beforeEach(() => {
-    mockCallZephlyAPI = jest.fn(async (endpoint, args) => {
+    mockCallEzmodoAPI = jest.fn(async (endpoint, args) => {
       switch (endpoint) {
         case 'mcpListTestSuites':
           return {
@@ -85,7 +85,7 @@ describe('Test Suite Tools', () => {
     let listTestSuites;
 
     beforeEach(() => {
-      listTestSuites = async (args) => mockCallZephlyAPI('mcpListTestSuites', args);
+      listTestSuites = async (args) => mockCallEzmodoAPI('mcpListTestSuites', args);
     });
 
     it('should list test suites for a project', async () => {
@@ -94,13 +94,13 @@ describe('Test Suite Tools', () => {
       expect(result.suites).toHaveLength(2);
       expect(result.suites[0].title).toBe('Regression Suite');
       expect(result.count).toBe(2);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListTestSuites', { projectId: 'project-123' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListTestSuites', { projectId: 'project-123' });
     });
 
     it('should pass category filter', async () => {
       await listTestSuites({ projectId: 'project-123', category: 'smoke' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListTestSuites', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListTestSuites', {
         projectId: 'project-123',
         category: 'smoke',
       });
@@ -109,7 +109,7 @@ describe('Test Suite Tools', () => {
     it('should pass pagination params', async () => {
       await listTestSuites({ projectId: 'project-123', limit: 10, cursor: 'abc' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListTestSuites', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListTestSuites', {
         projectId: 'project-123',
         limit: 10,
         cursor: 'abc',
@@ -121,7 +121,7 @@ describe('Test Suite Tools', () => {
     let getTestSuite;
 
     beforeEach(() => {
-      getTestSuite = async (args) => mockCallZephlyAPI('mcpGetTestSuite', args);
+      getTestSuite = async (args) => mockCallEzmodoAPI('mcpGetTestSuite', args);
     });
 
     it('should get a specific test suite', async () => {
@@ -129,7 +129,7 @@ describe('Test Suite Tools', () => {
 
       expect(result.suite).toBeDefined();
       expect(result.suite.id).toBe('suite-456');
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetTestSuite', { projectId: 'project-123', suiteId: 'suite-456' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetTestSuite', { projectId: 'project-123', suiteId: 'suite-456' });
     });
   });
 
@@ -137,7 +137,7 @@ describe('Test Suite Tools', () => {
     let createTestSuite;
 
     beforeEach(() => {
-      createTestSuite = async (args) => mockCallZephlyAPI('mcpCreateTestSuite', args);
+      createTestSuite = async (args) => mockCallEzmodoAPI('mcpCreateTestSuite', args);
     });
 
     it('should create a test suite with required fields', async () => {
@@ -149,7 +149,7 @@ describe('Test Suite Tools', () => {
       const result = await createTestSuite(data);
 
       expect(result.suiteId).toBe('new-suite-id');
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateTestSuite', data);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateTestSuite', data);
     });
 
     it('should create a test suite with all fields', async () => {
@@ -165,11 +165,11 @@ describe('Test Suite Tools', () => {
       const result = await createTestSuite(data);
 
       expect(result.suiteId).toBe('new-suite-id');
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateTestSuite', data);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateTestSuite', data);
     });
 
     it('should reject creation without required fields', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.projectId || !args.title) {
           throw new Error('Missing required fields');
         }
@@ -184,7 +184,7 @@ describe('Test Suite Tools', () => {
     let updateTestSuite;
 
     beforeEach(() => {
-      updateTestSuite = async (args) => mockCallZephlyAPI('mcpUpdateTestSuite', args);
+      updateTestSuite = async (args) => mockCallEzmodoAPI('mcpUpdateTestSuite', args);
     });
 
     it('should update a test suite', async () => {
@@ -198,7 +198,7 @@ describe('Test Suite Tools', () => {
       const result = await updateTestSuite(data);
 
       expect(result.status).toBe('success');
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateTestSuite', data);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateTestSuite', data);
     });
 
     it('should update description only', async () => {
@@ -217,14 +217,14 @@ describe('Test Suite Tools', () => {
     let deleteTestSuite;
 
     beforeEach(() => {
-      deleteTestSuite = async (args) => mockCallZephlyAPI('mcpDeleteTestSuite', args);
+      deleteTestSuite = async (args) => mockCallEzmodoAPI('mcpDeleteTestSuite', args);
     });
 
     it('should delete a test suite', async () => {
       const result = await deleteTestSuite({ projectId: 'project-123', suiteId: 'suite-123' });
 
       expect(result.status).toBe('success');
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDeleteTestSuite', { projectId: 'project-123', suiteId: 'suite-123' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeleteTestSuite', { projectId: 'project-123', suiteId: 'suite-123' });
     });
   });
 
@@ -232,7 +232,7 @@ describe('Test Suite Tools', () => {
     let addCasesToSuite;
 
     beforeEach(() => {
-      addCasesToSuite = async (args) => mockCallZephlyAPI('mcpAddCasesToSuite', args);
+      addCasesToSuite = async (args) => mockCallEzmodoAPI('mcpAddCasesToSuite', args);
     });
 
     it('should add cases to a suite', async () => {
@@ -248,11 +248,11 @@ describe('Test Suite Tools', () => {
       const result = await addCasesToSuite(data);
 
       expect(result.status).toBe('success');
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpAddCasesToSuite', data);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpAddCasesToSuite', data);
     });
 
     it('should reject without cases', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.cases || args.cases.length === 0) {
           throw new Error('Missing required field: cases');
         }
@@ -268,7 +268,7 @@ describe('Test Suite Tools', () => {
     let removeCasesFromSuite;
 
     beforeEach(() => {
-      removeCasesFromSuite = async (args) => mockCallZephlyAPI('mcpRemoveCasesFromSuite', args);
+      removeCasesFromSuite = async (args) => mockCallEzmodoAPI('mcpRemoveCasesFromSuite', args);
     });
 
     it('should remove cases from a suite', async () => {
@@ -283,11 +283,11 @@ describe('Test Suite Tools', () => {
       const result = await removeCasesFromSuite(data);
 
       expect(result.status).toBe('success');
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpRemoveCasesFromSuite', data);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpRemoveCasesFromSuite', data);
     });
 
     it('should reject without cases', async () => {
-      mockCallZephlyAPI.mockImplementation(async (endpoint, args) => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint, args) => {
         if (!args.cases || args.cases.length === 0) {
           throw new Error('Missing required field: cases');
         }

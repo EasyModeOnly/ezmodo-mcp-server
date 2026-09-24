@@ -9,7 +9,7 @@
  * core/decisions.Service.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { attachLinks } from '../lib/links-at-create.js';
 
 /**
@@ -45,9 +45,9 @@ export async function getDecision(args) {
   const { includeLinks, decisionId, organizationId, linkedType, linkedId, ...filters } = args;
 
   if (decisionId) {
-    const result = await callZephlyAPI('mcpGetDecision', { decisionId });
+    const result = await callEzmodoAPI('mcpGetDecision', { decisionId });
     if (includeLinks) {
-      const links = await callZephlyAPI('mcpListDecisionLinks', { decisionId });
+      const links = await callEzmodoAPI('mcpListDecisionLinks', { decisionId });
       result.links = links?.links ?? links;
     }
     return result;
@@ -57,7 +57,7 @@ export async function getDecision(args) {
   if (filters.epicId) {
     const params = { epicId: filters.epicId };
     if (filters.status) params.status = filters.status;
-    return callZephlyAPI('mcpListDecisions', params);
+    return callEzmodoAPI('mcpListDecisions', params);
   }
 
   // List mode
@@ -70,7 +70,7 @@ export async function getDecision(args) {
   if (filters.projectId) params.projectId = filters.projectId;
   if (filters.status) params.status = filters.status;
   if (filters.limit != null) params.limit = filters.limit;
-  return callZephlyAPI('mcpListDecisions', params);
+  return callEzmodoAPI('mcpListDecisions', params);
 }
 
 // --- Private helpers ---
@@ -82,7 +82,7 @@ async function createDecision(args) {
   if (Array.isArray(createArgs.choices)) {
     createArgs.choices = createArgs.choices.map((c) => (typeof c === 'string' ? c : c?.label));
   }
-  const result = await callZephlyAPI('mcpCreateDecision', createArgs);
+  const result = await callEzmodoAPI('mcpCreateDecision', createArgs);
 
   // Attach create-time links (E-225) — best effort, never fails the create.
   await attachLinks(result, {
@@ -100,31 +100,31 @@ async function updateDecision(args) {
   if (Array.isArray(args.choices)) {
     args = { ...args, choices: args.choices.map((c) => (typeof c === 'string' ? { label: c } : c)) };
   }
-  return callZephlyAPI('mcpUpdateDecision', args);
+  return callEzmodoAPI('mcpUpdateDecision', args);
 }
 
 async function deleteDecision({ decisionId }) {
-  return callZephlyAPI('mcpDeleteDecision', { decisionId });
+  return callEzmodoAPI('mcpDeleteDecision', { decisionId });
 }
 
 async function linkDecisionArtifact({ decisionId, targetType, targetId }) {
-  return callZephlyAPI('mcpLinkDecisionArtifact', { decisionId, targetType, targetId });
+  return callEzmodoAPI('mcpLinkDecisionArtifact', { decisionId, targetType, targetId });
 }
 
 async function unlinkDecisionArtifact({ decisionId, targetType, targetId }) {
-  return callZephlyAPI('mcpUnlinkDecisionArtifact', { decisionId, targetType, targetId });
+  return callEzmodoAPI('mcpUnlinkDecisionArtifact', { decisionId, targetType, targetId });
 }
 
 // Mark a decision as superseded by another decision (records the supersession
 // chain; the superseded decision's status moves to "superseded" server-side).
 async function supersedeDecision({ decisionId, supersededById }) {
-  return callZephlyAPI('mcpSupersedeDecision', { decisionId, supersededById });
+  return callEzmodoAPI('mcpSupersedeDecision', { decisionId, supersededById });
 }
 
 // Elevate a task's decision-type knowledge item into a durable Decision (E-170),
 // optionally linking the new decision to an artifact in the same call.
 async function promoteFromKnowledge({ organizationId, taskId, knowledgeId, title, linkToType, linkToId }) {
-  return callZephlyAPI('mcpPromoteDecisionFromKnowledge', {
+  return callEzmodoAPI('mcpPromoteDecisionFromKnowledge', {
     organizationId,
     taskId,
     knowledgeId,
@@ -139,18 +139,18 @@ async function promoteFromKnowledge({ organizationId, taskId, knowledgeId, title
 // Record a pick. It counts for the person whose key is used, and replaces
 // their earlier pick; the server records which AI made it.
 async function addDecisionInput({ decisionId, choiceId, reason }) {
-  return callZephlyAPI('mcpAddDecisionInput', { decisionId, choiceId, reason });
+  return callEzmodoAPI('mcpAddDecisionInput', { decisionId, choiceId, reason });
 }
 
 // Decide. The server refuses anyone but the epic's owner or an editor.
 async function decideDecision({ decisionId, status, choiceId, decision, rejectedReasons }) {
-  return callZephlyAPI('mcpDecideDecision', { decisionId, status, choiceId, decision, rejectedReasons });
+  return callEzmodoAPI('mcpDecideDecision', { decisionId, status, choiceId, decision, rejectedReasons });
 }
 
 async function holdTask({ decisionId, taskId }) {
-  return callZephlyAPI('mcpHoldTaskForDecision', { decisionId, taskId });
+  return callEzmodoAPI('mcpHoldTaskForDecision', { decisionId, taskId });
 }
 
 async function releaseTask({ decisionId, taskId }) {
-  return callZephlyAPI('mcpReleaseTaskFromDecision', { decisionId, taskId });
+  return callEzmodoAPI('mcpReleaseTaskFromDecision', { decisionId, taskId });
 }

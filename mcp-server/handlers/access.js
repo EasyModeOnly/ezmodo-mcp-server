@@ -14,7 +14,7 @@
  * and silently discarded (#2168, #2169, #2171).
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 // Fields that only mean something for one action. Passing one to a different
 // action is a mistake worth surfacing: silently ignoring `role` on a
@@ -57,7 +57,7 @@ function rejectForeignFields(action, params) {
  * Read an entity's access settings. Requires viewer access to the entity.
  */
 export async function getAccess({ entityType, entityId, organizationId }) {
-  return callZephlyAPI('mcpGetAccess', { entityType, entityId, organizationId });
+  return callEzmodoAPI('mcpGetAccess', { entityType, entityId, organizationId });
 }
 
 /**
@@ -103,7 +103,7 @@ async function updateAccessSettings({
     );
   }
 
-  return callZephlyAPI('mcpUpdateAccess', body);
+  return callEzmodoAPI('mcpUpdateAccess', body);
 }
 
 /**
@@ -114,7 +114,7 @@ async function addAccessEntry({ entityType, entityId, organizationId, userId, te
   const body = { entityType, entityId, organizationId, role };
   if (userId) body.userId = userId;
   if (teamId) body.teamId = teamId;
-  return callZephlyAPI('mcpAddAccessEntry', body);
+  return callEzmodoAPI('mcpAddAccessEntry', body);
 }
 
 /**
@@ -122,7 +122,7 @@ async function addAccessEntry({ entityType, entityId, organizationId, userId, te
  * write:access scope.
  */
 async function removeAccessEntry({ entityType, entityId, organizationId, entryId }) {
-  return callZephlyAPI('mcpRemoveAccessEntry', {
+  return callEzmodoAPI('mcpRemoveAccessEntry', {
     entityType,
     entityId,
     organizationId,
@@ -137,5 +137,5 @@ async function removeAccessEntry({ entityType, entityId, organizationId, entryId
 async function checkAccess({ entityType, entityId, organizationId, requiredRole }) {
   const body = { entityType, entityId, organizationId };
   if (requiredRole) body.requiredRole = requiredRole;
-  return callZephlyAPI('mcpCheckAccess', body);
+  return callEzmodoAPI('mcpCheckAccess', body);
 }

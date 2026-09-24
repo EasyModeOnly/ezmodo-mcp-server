@@ -10,7 +10,7 @@
  * truth in code (capture-at-build).
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_catalog actions.
@@ -48,13 +48,13 @@ export async function getCatalog(args) {
     throw new Error('catalogId is required');
   }
 
-  const result = await callZephlyAPI('mcpGetCatalog', { catalogId });
+  const result = await callEzmodoAPI('mcpGetCatalog', { catalogId });
 
   if (version != null) {
-    result.version = await callZephlyAPI('mcpGetCatalogVersion', { catalogId, version });
+    result.version = await callEzmodoAPI('mcpGetCatalogVersion', { catalogId, version });
   } else if (!metadataOnly) {
     try {
-      result.currentVersion = await callZephlyAPI('mcpGetCurrentCatalog', { catalogId });
+      result.currentVersion = await callEzmodoAPI('mcpGetCurrentCatalog', { catalogId });
     } catch {
       // No snapshot taken yet — leave the live catalog empty rather than erroring.
       result.currentVersion = null;
@@ -64,7 +64,7 @@ export async function getCatalog(args) {
   if (includeVersions) {
     const params = { catalogId };
     if (versionsLimit != null) params.limit = versionsLimit;
-    const versions = await callZephlyAPI('mcpListCatalogVersions', params);
+    const versions = await callEzmodoAPI('mcpListCatalogVersions', params);
     result.versions = versions?.versions ?? versions;
   }
 
@@ -83,7 +83,7 @@ export async function listCatalogs(args) {
   if (args.linkedType) params.linkedType = args.linkedType;
   if (args.linkedId) params.linkedId = args.linkedId;
   if (args.limit != null) params.limit = args.limit;
-  return callZephlyAPI('mcpListCatalogs', params);
+  return callEzmodoAPI('mcpListCatalogs', params);
 }
 
 /**
@@ -91,7 +91,7 @@ export async function listCatalogs(args) {
  */
 export async function getCatalogDiff(args) {
   const { catalogId, from, to } = args;
-  return callZephlyAPI('mcpDiffCatalog', { catalogId, from, to });
+  return callEzmodoAPI('mcpDiffCatalog', { catalogId, from, to });
 }
 
 /**
@@ -103,29 +103,29 @@ export async function listCatalogItems(args) {
   if (!catalogId) {
     throw new Error('catalogId is required');
   }
-  return callZephlyAPI('mcpListCatalogItems', { catalogId });
+  return callEzmodoAPI('mcpListCatalogItems', { catalogId });
 }
 
 // --- Private helpers ---
 
 async function createCatalog(args) {
-  return callZephlyAPI('mcpCreateCatalog', args);
+  return callEzmodoAPI('mcpCreateCatalog', args);
 }
 
 async function updateCatalog(args) {
-  return callZephlyAPI('mcpUpdateCatalog', args);
+  return callEzmodoAPI('mcpUpdateCatalog', args);
 }
 
 async function deleteCatalog({ catalogId }) {
-  return callZephlyAPI('mcpDeleteCatalog', { catalogId });
+  return callEzmodoAPI('mcpDeleteCatalog', { catalogId });
 }
 
 async function linkCatalogArtifact({ catalogId, targetType, targetId }) {
-  return callZephlyAPI('mcpLinkCatalog', { catalogId, targetType, targetId });
+  return callEzmodoAPI('mcpLinkCatalog', { catalogId, targetType, targetId });
 }
 
 async function unlinkCatalogArtifact({ catalogId, targetType, targetId }) {
-  return callZephlyAPI('mcpUnlinkCatalog', { catalogId, targetType, targetId });
+  return callEzmodoAPI('mcpUnlinkCatalog', { catalogId, targetType, targetId });
 }
 
 // Item-level links (E-218): itemKey targets a single entry. With a url it's an
@@ -139,7 +139,7 @@ async function linkCatalogItem({ catalogId, itemKey, targetType, targetId, url, 
     params.targetType = targetType;
     params.targetId = targetId;
   }
-  return callZephlyAPI('mcpLinkCatalogItem', params);
+  return callEzmodoAPI('mcpLinkCatalogItem', params);
 }
 
 async function unlinkCatalogItem({ catalogId, itemKey, targetType, targetId, url }) {
@@ -150,7 +150,7 @@ async function unlinkCatalogItem({ catalogId, itemKey, targetType, targetId, url
     params.targetType = targetType;
     params.targetId = targetId;
   }
-  return callZephlyAPI('mcpUnlinkCatalogItem', params);
+  return callEzmodoAPI('mcpUnlinkCatalogItem', params);
 }
 
 /**
@@ -169,7 +169,7 @@ async function snapshotCatalog({ catalogId, mode, snapshot, upsertItems, removeK
   if (upsertItems) params.upsertItems = upsertItems;
   if (removeKeys) params.removeKeys = removeKeys;
   if (source) params.source = source;
-  return callZephlyAPI('mcpSnapshotCatalog', params);
+  return callEzmodoAPI('mcpSnapshotCatalog', params);
 }
 
 // --- Screens catalog (E-258) ---
@@ -180,7 +180,7 @@ async function discoverScreens({ projectId }) {
   if (!projectId) {
     throw new Error('projectId is required for discover_screens');
   }
-  return callZephlyAPI('mcpDiscoverScreens', { projectId });
+  return callEzmodoAPI('mcpDiscoverScreens', { projectId });
 }
 
 // Add screens to the project's screens catalog (created on first use),
@@ -194,7 +194,7 @@ async function importScreens({ projectId, screens, featureId }) {
   }
   const params = { projectId, screens };
   if (featureId) params.featureId = featureId;
-  return callZephlyAPI('mcpImportScreens', params);
+  return callEzmodoAPI('mcpImportScreens', params);
 }
 
 // Reconcile the project's screens catalog with its synced manifest and
@@ -203,5 +203,5 @@ async function syncScreens({ projectId }) {
   if (!projectId) {
     throw new Error('projectId is required for sync_screens');
   }
-  return callZephlyAPI('mcpSyncScreens', { projectId });
+  return callEzmodoAPI('mcpSyncScreens', { projectId });
 }

@@ -18,7 +18,7 @@ import {
   getManifestSource,
   resolveManifestProjectId,
 } from '../lib/manifest-loader.js';
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import {
   getContextForTags,
   getContextForTask,
@@ -43,7 +43,7 @@ const MAX_CONTEXT_FACTS = 50;
  */
 async function fetchProjectFacts(projectId) {
   try {
-    const result = await callZephlyAPI('mcpListFacts', { projectId });
+    const result = await callEzmodoAPI('mcpListFacts', { projectId });
     const facts = result.facts || [];
     return facts.slice(0, MAX_CONTEXT_FACTS);
   } catch {
@@ -98,7 +98,7 @@ async function handleSearch(args) {
   // Remote path: delegate to Go API
   if (source.source === 'remote') {
     const apiMode = mode === 'task' ? 'keyword' : mode;
-    const result = await callZephlyAPI('mcpSearchManifest', {
+    const result = await callEzmodoAPI('mcpSearchManifest', {
       projectId: source.projectId,
       query,
       mode: apiMode,
@@ -112,7 +112,7 @@ async function handleSearch(args) {
     // Semantic fallback: if keyword search returns few results, try vector similarity
     if (results.length < 5 && !tags) {
       try {
-        const semanticResult = await callZephlyAPI('mcpSemanticSearchFiles', {
+        const semanticResult = await callEzmodoAPI('mcpSemanticSearchFiles', {
           projectId: source.projectId,
           query,
           limit: maxResults,
@@ -216,7 +216,7 @@ async function handleFileContext(args) {
 
   // Remote path
   if (source.source === 'remote') {
-    const apiResult = await callZephlyAPI('mcpGetRelatedFiles', {
+    const apiResult = await callEzmodoAPI('mcpGetRelatedFiles', {
       projectId: source.projectId,
       filePath,
       depth,
@@ -299,14 +299,14 @@ async function handleFileContext(args) {
   // Add graph/impact overlays if requested
   if (include) {
     if (include.includes('impact')) {
-      result.impact = await callZephlyAPI('mcpAnalyzeImpact', {
+      result.impact = await callEzmodoAPI('mcpAnalyzeImpact', {
         projectId,
         filePath,
         depth: args.depth,
       });
     }
     if (include.includes('graph')) {
-      result.graph = await callZephlyAPI('mcpQueryProjectGraph', {
+      result.graph = await callEzmodoAPI('mcpQueryProjectGraph', {
         projectId,
         queryType: args.queryType || 'context',
         filePath,
@@ -359,7 +359,7 @@ async function handleEntityContext(args) {
 
   if (sections.includes('graph_stats')) {
     promises.push(
-      callZephlyAPI('mcpGetGraphStats', { projectId })
+      callEzmodoAPI('mcpGetGraphStats', { projectId })
         .then(r => { results.graph_stats = r; })
         .catch(e => { results.graph_stats = { error: e.message }; })
     );
@@ -367,7 +367,7 @@ async function handleEntityContext(args) {
 
   if (sections.includes('organization')) {
     promises.push(
-      callZephlyAPI('mcpAnalyzeProjectOrganization', { projectId })
+      callEzmodoAPI('mcpAnalyzeProjectOrganization', { projectId })
         .then(r => { results.organization = r; })
         .catch(e => { results.organization = { error: e.message }; })
     );
@@ -386,7 +386,7 @@ async function handleEntityContext(args) {
     else if (entityType === 'tag') graphParams.tagId = entityId;
 
     promises.push(
-      callZephlyAPI('mcpQueryProjectGraph', graphParams)
+      callEzmodoAPI('mcpQueryProjectGraph', graphParams)
         .then(r => { results.graph = r; })
         .catch(e => { results.graph = { error: e.message }; })
     );
@@ -398,7 +398,7 @@ async function handleEntityContext(args) {
     if (entityType === 'file') impactParams.filePath = entityId;
 
     promises.push(
-      callZephlyAPI('mcpAnalyzeImpact', impactParams)
+      callEzmodoAPI('mcpAnalyzeImpact', impactParams)
         .then(r => { results.impact = r; })
         .catch(e => { results.impact = { error: e.message }; })
     );
@@ -425,7 +425,7 @@ async function fetchOverview(args) {
 
   if (source.source === 'remote') {
     const params = { projectId: source.projectId };
-    const result = await callZephlyAPI('mcpGetManifestOverview', params);
+    const result = await callEzmodoAPI('mcpGetManifestOverview', params);
     return { ...result, _source: 'remote', _meta: { projectId: source.projectId } };
   }
 
@@ -456,7 +456,7 @@ async function fetchCriticalFiles(args) {
   const source = await getManifestSource(projectId);
 
   if (source.source === 'remote') {
-    const result = await callZephlyAPI('mcpGetCriticalFiles', {
+    const result = await callEzmodoAPI('mcpGetCriticalFiles', {
       projectId: source.projectId,
       limit,
     });
@@ -689,7 +689,7 @@ export async function updateManifestEntriesHandler(args) {
   const projectId = await resolveManifestProjectId(projectIdArg);
 
   if (projectId) {
-    const result = await callZephlyAPI('mcpApplyManifestChanges', {
+    const result = await callEzmodoAPI('mcpApplyManifestChanges', {
       projectId,
       upserts: updates,
       deletes,
@@ -784,7 +784,7 @@ export async function getManifestSchema(args) {
     title: 'ContextManifest',
     description:
       'A structured index of all files in a project, their roles, dependencies, ' +
-      'and AI-useful summaries. Used by Zephly to power context queries, impact ' +
+      'and AI-useful summaries. Used by ezmodo to power context queries, impact ' +
       'analysis, and knowledge graph features.',
 
     definitions: {

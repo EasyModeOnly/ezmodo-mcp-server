@@ -6,10 +6,10 @@
 import { jest } from '@jest/globals';
 
 /**
- * Mock implementation of callZephlyAPI for testing
+ * Mock implementation of callEzmodoAPI for testing
  * Returns predictable responses based on endpoint name
  */
-export function createMockCallZephlyAPI() {
+export function createMockCallEzmodoAPI() {
   const mockImplementation = jest.fn(async (endpoint, args) => {
     // Mock responses for different endpoints
     switch (endpoint) {

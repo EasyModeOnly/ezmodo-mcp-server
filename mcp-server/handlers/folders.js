@@ -3,7 +3,7 @@
  * Handler functions for document folder-related MCP tools
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_folder actions to the appropriate handler
@@ -38,17 +38,17 @@ export async function listFolders(args) {
  * Params: organizationId (required).
  */
 export async function getOrgAreas(args) {
-  return callZephlyAPI('mcpGetOrgAreas', args);
+  return callEzmodoAPI('mcpGetOrgAreas', args);
 }
 
 // --- Private helpers ---
 
 async function fetchFolderList(args) {
-  return callZephlyAPI('mcpListFolders', args);
+  return callEzmodoAPI('mcpListFolders', args);
 }
 
 async function getFolderTree(args) {
-  return callZephlyAPI('mcpGetFolderTree', args);
+  return callEzmodoAPI('mcpGetFolderTree', args);
 }
 
 /**
@@ -73,7 +73,7 @@ async function createFolder(args) {
   if (parentFolderId) {
     mapped.parentId = parentFolderId;
   }
-  const result = await callZephlyAPI('mcpCreateFolder', mapped);
+  const result = await callEzmodoAPI('mcpCreateFolder', mapped);
   if (access !== undefined) result.warning = ACCESS_UNSUPPORTED;
   return result;
 }
@@ -88,7 +88,7 @@ async function updateFolder(args) {
   let result;
 
   if (hasFieldUpdates) {
-    result = await callZephlyAPI('mcpUpdateFolder', rest);
+    result = await callEzmodoAPI('mcpUpdateFolder', rest);
   } else {
     result = { success: true, folderId: args.folderId };
   }
@@ -96,7 +96,7 @@ async function updateFolder(args) {
   // Move folder if parentFolderId was specified
   if (parentFolderId !== undefined) {
     const newParentId = (parentFolderId === '' || parentFolderId === 'root') ? null : parentFolderId;
-    await callZephlyAPI('mcpMoveFolder', {
+    await callEzmodoAPI('mcpMoveFolder', {
       projectId: args.projectId,
       folderId: args.folderId,
       newParentId,
@@ -123,5 +123,5 @@ async function updateFolder(args) {
 }
 
 async function deleteFolder(args) {
-  return callZephlyAPI('mcpDeleteFolder', args);
+  return callEzmodoAPI('mcpDeleteFolder', args);
 }

@@ -1,9 +1,9 @@
 import { jest } from '@jest/globals';
 import { createMockError } from './test-utils.js';
 
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { listNotes, getNote, manageNote, manageNoteFolder } = await import('../handlers/notes.js');
@@ -52,63 +52,63 @@ describe('note handlers', () => {
 
   describe('listNotes / getNote', () => {
     it('passes list filters through as query params', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ notes: [], total: 0 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ notes: [], total: 0 });
       const args = { folderId: 'root', query: 'idea', limit: 5 };
       await listNotes(args);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListNotes', args);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListNotes', args);
     });
 
     it('lists with no args', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ notes: [], total: 0 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ notes: [], total: 0 });
       await listNotes(undefined);
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListNotes', {});
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListNotes', {});
     });
 
     it('gets a note by id', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'n-1', content: '# Hi' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'n-1', content: '# Hi' });
       const result = await getNote({ noteId: 'n-1' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpGetNote', { noteId: 'n-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetNote', { noteId: 'n-1' });
       expect(result.content).toBe('# Hi');
     });
 
     it('surfaces a 404', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Note not found', 404));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Note not found', 404));
       await expect(getNote({ noteId: 'nope' })).rejects.toThrow('Note not found');
     });
   });
 
   describe('manage_note', () => {
     it('creates a note with markdown content in a folder', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'n-1' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'n-1' });
       await manageNote({ action: 'create', title: 'T', content: '- a', folderId: 'f-1' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateNote', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateNote', {
         title: 'T', content: '- a', folderId: 'f-1',
       });
     });
 
     it('creates at root when folderId is "root"', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'n-1' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'n-1' });
       await manageNote({ action: 'create', title: 'T', folderId: 'root' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateNote', { title: 'T' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateNote', { title: 'T' });
     });
 
     it('requires a title to create', async () => {
       await expect(manageNote({ action: 'create' })).rejects.toThrow('title is required');
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
 
     it('updates with append and ignores promote-only fields', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'n-1' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'n-1' });
       await manageNote({ action: 'update', noteId: 'n-1', append: 'more', kind: 'task' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNote', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateNote', {
         noteId: 'n-1', append: 'more',
       });
     });
 
     it('maps folderId "root" to "" on update', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'n-1' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'n-1' });
       await manageNote({ action: 'update', noteId: 'n-1', folderId: 'root' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNote', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateNote', {
         noteId: 'n-1', folderId: '',
       });
     });
@@ -118,13 +118,13 @@ describe('note handlers', () => {
         '(e.g. underline, @mentions). Use `append` to add content, or edit it in the web app.';
       const refusal = createMockError(message, 409);
       refusal.code = 'note_not_markdown_safe';
-      mockCallZephlyAPI.mockRejectedValueOnce(refusal);
+      mockCallEzmodoAPI.mockRejectedValueOnce(refusal);
 
       const call = manageNote({ action: 'update', noteId: 'n-1', content: '# rewritten' });
       await expect(call).rejects.toMatchObject({
         message, status: 409, code: 'note_not_markdown_safe',
       });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNote', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateNote', {
         noteId: 'n-1', content: '# rewritten',
       });
     });
@@ -134,15 +134,15 @@ describe('note handlers', () => {
     });
 
     it('moves a note to root through the update route', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'n-1', folderId: null });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'n-1', folderId: null });
       await manageNote({ action: 'move', noteId: 'n-1', folderId: 'root' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNote', { noteId: 'n-1', folderId: '' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateNote', { noteId: 'n-1', folderId: '' });
     });
 
     it('moves a note into a folder', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'n-1', folderId: 'f-2' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'n-1', folderId: 'f-2' });
       await manageNote({ action: 'move', noteId: 'n-1', folderId: 'f-2' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNote', { noteId: 'n-1', folderId: 'f-2' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateNote', { noteId: 'n-1', folderId: 'f-2' });
     });
 
     it('requires a folderId to move', async () => {
@@ -150,40 +150,40 @@ describe('note handlers', () => {
     });
 
     it('pins by default and unpins with isPinned:false', async () => {
-      mockCallZephlyAPI.mockResolvedValue({ id: 'n-1' });
+      mockCallEzmodoAPI.mockResolvedValue({ id: 'n-1' });
       await manageNote({ action: 'pin', noteId: 'n-1' });
       await manageNote({ action: 'pin', noteId: 'n-1', isPinned: false });
-      expect(mockCallZephlyAPI).toHaveBeenNthCalledWith(1, 'mcpUpdateNote', { noteId: 'n-1', isPinned: true });
-      expect(mockCallZephlyAPI).toHaveBeenNthCalledWith(2, 'mcpUpdateNote', { noteId: 'n-1', isPinned: false });
+      expect(mockCallEzmodoAPI).toHaveBeenNthCalledWith(1, 'mcpUpdateNote', { noteId: 'n-1', isPinned: true });
+      expect(mockCallEzmodoAPI).toHaveBeenNthCalledWith(2, 'mcpUpdateNote', { noteId: 'n-1', isPinned: false });
     });
 
     it('deletes and reports what it deleted', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
       const result = await manageNote({ action: 'delete', noteId: 'n-1' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDeleteNote', { noteId: 'n-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeleteNote', { noteId: 'n-1' });
       expect(result).toEqual({ deleted: true, noteId: 'n-1' });
     });
 
     it('promotes a note into a bug in a chosen project', async () => {
       const created = { kind: 'bug', entityType: 'task', id: 't-1', number: 42 };
-      mockCallZephlyAPI.mockResolvedValueOnce(created);
+      mockCallEzmodoAPI.mockResolvedValueOnce(created);
       const result = await manageNote({
         action: 'promote', noteId: 'n-1', kind: 'bug', organizationId: 'o-1',
         projectId: 'p-1', priority: 'high', content: 'ignored',
       });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpPromoteNote', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpPromoteNote', {
         noteId: 'n-1', kind: 'bug', organizationId: 'o-1', projectId: 'p-1', priority: 'high',
       });
       expect(result).toEqual(created);
     });
 
     it('passes featureId through when promoting to an epic', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ kind: 'epic', entityType: 'epic', id: 'e-1', number: 7 });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ kind: 'epic', entityType: 'epic', id: 'e-1', number: 7 });
       await manageNote({
         action: 'promote', noteId: 'n-1', kind: 'epic', organizationId: 'o-1',
         projectId: 'p-1', featureId: 'f-1',
       });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpPromoteNote', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpPromoteNote', {
         noteId: 'n-1', kind: 'epic', organizationId: 'o-1', projectId: 'p-1', featureId: 'f-1',
       });
     });
@@ -197,11 +197,11 @@ describe('note handlers', () => {
       const args = { action: 'promote', noteId: 'n-1', kind: 'task', organizationId: 'o-1', projectId: 'p-1' };
       delete args[field];
       await expect(manageNote(args)).rejects.toThrow(`${field} is required for promote`);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
 
     it('surfaces a 403 when promoting into a project the user cannot reach', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('Forbidden', 403));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Forbidden', 403));
       await expect(manageNote({
         action: 'promote', noteId: 'n-1', kind: 'task', organizationId: 'o-1', projectId: 'p-x',
       })).rejects.toThrow('Forbidden');
@@ -214,33 +214,33 @@ describe('note handlers', () => {
 
   describe('manage_note_folder', () => {
     it('lists folders', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ folders: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ folders: [] });
       await manageNoteFolder({ action: 'list' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListNoteFolders', {});
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListNoteFolders', {});
     });
 
     it('creates a nested folder', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'f-2' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'f-2' });
       await manageNoteFolder({ action: 'create', name: 'Ideas', parentId: 'f-1' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateNoteFolder', { name: 'Ideas', parentId: 'f-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateNoteFolder', { name: 'Ideas', parentId: 'f-1' });
     });
 
     it('creates a top-level folder', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'f-2' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'f-2' });
       await manageNoteFolder({ action: 'create', name: 'Ideas' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateNoteFolder', { name: 'Ideas' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateNoteFolder', { name: 'Ideas' });
     });
 
     it('renames a folder', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'f-1', name: 'New' });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'f-1', name: 'New' });
       await manageNoteFolder({ action: 'rename', folderId: 'f-1', name: 'New' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNoteFolder', { folderId: 'f-1', name: 'New' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateNoteFolder', { folderId: 'f-1', name: 'New' });
     });
 
     it('moves a folder to the top level with parentId null', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ id: 'f-1', parentId: null });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'f-1', parentId: null });
       await manageNoteFolder({ action: 'move', folderId: 'f-1', parentId: 'root' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateNoteFolder', { folderId: 'f-1', parentId: null });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateNoteFolder', { folderId: 'f-1', parentId: null });
     });
 
     it('requires parentId to move', async () => {
@@ -248,15 +248,15 @@ describe('note handlers', () => {
     });
 
     it('surfaces a cycle rejection from the API', async () => {
-      mockCallZephlyAPI.mockRejectedValueOnce(createMockError('folder cannot be moved into its own descendant', 400));
+      mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('folder cannot be moved into its own descendant', 400));
       await expect(manageNoteFolder({ action: 'move', folderId: 'f-1', parentId: 'f-3' }))
         .rejects.toThrow('descendant');
     });
 
     it('deletes a folder', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
       const result = await manageNoteFolder({ action: 'delete', folderId: 'f-1' });
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDeleteNoteFolder', { folderId: 'f-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeleteNoteFolder', { folderId: 'f-1' });
       expect(result).toEqual({ deleted: true, folderId: 'f-1' });
     });
 

@@ -3,7 +3,7 @@
  * Handler functions for project-related MCP tools
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Dispatch manage_project actions
@@ -27,7 +27,7 @@ export async function getProject(args) {
 
   // Mode 1: get project context by ID
   if (projectId) {
-    return callZephlyAPI('mcpGetProjectContext', { projectId });
+    return callEzmodoAPI('mcpGetProjectContext', { projectId });
   }
 
   // Mode 2: search by query text, or list all
@@ -36,11 +36,11 @@ export async function getProject(args) {
   }
 
   // Mode 3: list all
-  return callZephlyAPI('mcpListProjects', {});
+  return callEzmodoAPI('mcpListProjects', {});
 }
 
 async function createProject(args) {
-  return callZephlyAPI('mcpCreateProject', args);
+  return callEzmodoAPI('mcpCreateProject', args);
 }
 
 // Update an existing project. Only the fields present in `args` are changed —
@@ -48,26 +48,26 @@ async function createProject(args) {
 // agent set gitUrl/gitProvider after creation, which is what commit-to-task
 // linking and feature link resolution key off.
 async function updateProject(args) {
-  return callZephlyAPI('mcpUpdateProject', args);
+  return callEzmodoAPI('mcpUpdateProject', args);
 }
 
 // Generate (and persist) the project's grounded "how it works" living description
 // via the model. AI-quota gated server-side (mirrors entities.generateGoalHowItWorks).
 async function generateProjectHowItWorks({ projectId }) {
-  return callZephlyAPI('mcpGenerateProjectHowItWorks', { projectId });
+  return callEzmodoAPI('mcpGenerateProjectHowItWorks', { projectId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for a project (BYO-AI,
 // E-190). Cited sources are validated server-side before saving; no model call.
 async function applyProjectHowItWorks({ projectId, markdown, sources }) {
-  return callZephlyAPI('mcpApplyProjectHowItWorks', { projectId, markdown, sources });
+  return callEzmodoAPI('mcpApplyProjectHowItWorks', { projectId, markdown, sources });
 }
 
 // Project Story (E-208): a grounded, source-attributed narrative of what has
 // happened to a project since it began. Returns a fresh cached story when
 // available, otherwise generates one (AI-quota gated server-side).
 export async function getProjectStory({ projectId, window, from, to }) {
-  return callZephlyAPI('mcpGetProjectStory', { projectId, window, from, to });
+  return callEzmodoAPI('mcpGetProjectStory', { projectId, window, from, to });
 }
 
 async function searchProjects(args) {
@@ -79,9 +79,9 @@ async function searchProjects(args) {
   } = args;
 
   try {
-    const allProjects = await callZephlyAPI('mcpListProjects', {});
+    const allProjects = await callEzmodoAPI('mcpListProjects', {});
 
-    // callZephlyAPI already unwrapped the {success, data} envelope, so what
+    // callEzmodoAPI already unwrapped the {success, data} envelope, so what
     // arrives is `{projects: [...]}` with no `success` flag. Testing for one
     // sent every search down this branch and returned the whole unfiltered
     // list -- a `query` that matched nothing was indistinguishable from one

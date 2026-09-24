@@ -9,7 +9,7 @@
  * Write operations (create, update, delete, merge) invalidate the cache.
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { getCachedTags, updateCacheSections, invalidateCacheSection } from '../lib/local-cache.js';
 
 /**
@@ -56,35 +56,35 @@ export async function listTags(args) {
 // --- Private helpers ---
 
 async function createTag(args) {
-  const result = await callZephlyAPI('mcpCreateTag', args);
+  const result = await callEzmodoAPI('mcpCreateTag', args);
   await invalidateCacheSection('tags');
   return result;
 }
 
 async function updateTag(args) {
-  const result = await callZephlyAPI('mcpUpdateTag', args);
+  const result = await callEzmodoAPI('mcpUpdateTag', args);
   await invalidateCacheSection('tags');
   return result;
 }
 
 async function deleteTag(args) {
-  const result = await callZephlyAPI('mcpDeleteTag', args);
+  const result = await callEzmodoAPI('mcpDeleteTag', args);
   await invalidateCacheSection('tags');
   return result;
 }
 
 async function mergeTags(args) {
-  const result = await callZephlyAPI('mcpMergeTags', args);
+  const result = await callEzmodoAPI('mcpMergeTags', args);
   await invalidateCacheSection('tags');
   return result;
 }
 
 async function bulkTagEntities(args) {
-  return callZephlyAPI('mcpBulkTagEntities', args);
+  return callEzmodoAPI('mcpBulkTagEntities', args);
 }
 
 async function getTag(args) {
-  return callZephlyAPI('mcpGetTag', args);
+  return callEzmodoAPI('mcpGetTag', args);
 }
 
 async function listTagsFiltered(args) {
@@ -98,7 +98,7 @@ async function listTagsFiltered(args) {
   }
 
   // Call API
-  const result = await callZephlyAPI('mcpListTags', args);
+  const result = await callEzmodoAPI('mcpListTags', args);
 
   // Cache unfiltered results for future use
   if (!hasFilters && result?.tags) {
@@ -116,9 +116,9 @@ async function listTagsFiltered(args) {
 }
 
 async function findEntitiesByTags(args) {
-  return callZephlyAPI('mcpFindEntitiesByTags', args);
+  return callEzmodoAPI('mcpFindEntitiesByTags', args);
 }
 
 async function suggestTags(args) {
-  return callZephlyAPI('mcpSuggestTags', args);
+  return callEzmodoAPI('mcpSuggestTags', args);
 }

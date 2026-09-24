@@ -1,9 +1,9 @@
 import { jest } from '@jest/globals';
 
 // Mock the http client
-const mockCallZephlyAPI = jest.fn();
+const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
-  callZephlyAPI: mockCallZephlyAPI,
+  callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
 const { manageCatalog, getCatalog, listCatalogs, listCatalogItems, getCatalogDiff } = await import('../handlers/catalogs.js');
@@ -15,41 +15,41 @@ describe('Catalog Operations', () => {
 
   describe('manageCatalog', () => {
     it('should create a catalog', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ catalog: { id: 'cat-1', kind: 'notifications' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ catalog: { id: 'cat-1', kind: 'notifications' } });
 
       const params = { organizationId: 'org-1', name: 'Notifications', kind: 'notifications' };
       const result = await manageCatalog({ action: 'create', ...params });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpCreateCatalog', params);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateCatalog', params);
       expect(result.catalog.id).toBe('cat-1');
     });
 
     it('should discover screens for a project (E-258)', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ screens: [{ name: 'HomeScreen', sourcePath: 'mobile/lib/home.dart' }] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ screens: [{ name: 'HomeScreen', sourcePath: 'mobile/lib/home.dart' }] });
 
       const result = await manageCatalog({ action: 'discover_screens', projectId: 'p1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDiscoverScreens', { projectId: 'p1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDiscoverScreens', { projectId: 'p1' });
       expect(result.screens).toHaveLength(1);
     });
 
     it('should import screens, passing the feature only when given', async () => {
-      mockCallZephlyAPI.mockResolvedValue({ screens: [] });
+      mockCallEzmodoAPI.mockResolvedValue({ screens: [] });
       const screens = [{ name: 'HomeScreen', sourcePath: 'mobile/lib/home.dart' }];
 
       await manageCatalog({ action: 'import_screens', projectId: 'p1', screens, featureId: 'f1' });
-      expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpImportScreens', { projectId: 'p1', screens, featureId: 'f1' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpImportScreens', { projectId: 'p1', screens, featureId: 'f1' });
 
       await manageCatalog({ action: 'import_screens', projectId: 'p1', screens });
-      expect(mockCallZephlyAPI).toHaveBeenLastCalledWith('mcpImportScreens', { projectId: 'p1', screens });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpImportScreens', { projectId: 'p1', screens });
     });
 
     it('should sync screens for a project', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ screens: {}, navigation: { derived: 2 } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ screens: {}, navigation: { derived: 2 } });
 
       const result = await manageCatalog({ action: 'sync_screens', projectId: 'p1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSyncScreens', { projectId: 'p1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSyncScreens', { projectId: 'p1' });
       expect(result.navigation.derived).toBe(2);
       await expect(manageCatalog({ action: 'sync_screens' })).rejects.toThrow(/projectId/);
     });
@@ -57,67 +57,67 @@ describe('Catalog Operations', () => {
     it('should validate screens arguments before calling the API', async () => {
       await expect(manageCatalog({ action: 'discover_screens' })).rejects.toThrow(/projectId/);
       await expect(manageCatalog({ action: 'import_screens', projectId: 'p1', screens: [] })).rejects.toThrow(/screens/);
-      expect(mockCallZephlyAPI).not.toHaveBeenCalled();
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
 
     it('should update a catalog', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ catalog: { id: 'cat-1' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ catalog: { id: 'cat-1' } });
 
       const params = { catalogId: 'cat-1', name: 'Updated' };
       await manageCatalog({ action: 'update', ...params });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUpdateCatalog', params);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateCatalog', params);
     });
 
     it('should delete a catalog', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageCatalog({ action: 'delete', catalogId: 'cat-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDeleteCatalog', { catalogId: 'cat-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeleteCatalog', { catalogId: 'cat-1' });
     });
 
     it('should link a document to a catalog', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageCatalog({ action: 'link', catalogId: 'cat-1', targetType: 'document', targetId: 'doc-9' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpLinkCatalog', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpLinkCatalog', {
         catalogId: 'cat-1', targetType: 'document', targetId: 'doc-9',
       });
     });
 
     it('should unlink an artifact from a catalog', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageCatalog({ action: 'unlink', catalogId: 'cat-1', targetType: 'feature', targetId: 'feat-9' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUnlinkCatalog', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUnlinkCatalog', {
         catalogId: 'cat-1', targetType: 'feature', targetId: 'feat-9',
       });
     });
 
     it('should snapshot a catalog (with source)', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ version: { version: 1 } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ version: { version: 1 } });
 
       const snapshot = { columns: [{ key: 'trigger' }], items: [{ key: 'task_assigned' }] };
       const source = { sourcePaths: ['api/model/notification.go'], commitSha: 'abc' };
       await manageCatalog({ action: 'snapshot', catalogId: 'cat-1', snapshot, source });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', { catalogId: 'cat-1', snapshot, source });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', { catalogId: 'cat-1', snapshot, source });
     });
 
     it('should omit source on snapshot when not provided', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ version: { version: 1 } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ version: { version: 1 } });
 
       const snapshot = { items: [{ key: 'a' }] };
       await manageCatalog({ action: 'snapshot', catalogId: 'cat-1', snapshot });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', { catalogId: 'cat-1', snapshot });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', { catalogId: 'cat-1', snapshot });
     });
 
     it('should forward patch-mode params on snapshot', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ version: { version: 4 } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ version: { version: 4 } });
 
       const upsertItems = [{ key: 'orders', label: 'orders' }];
       const removeKeys = ['legacy_carts'];
@@ -128,30 +128,30 @@ describe('Catalog Operations', () => {
 
       // No `snapshot` key — a patch that only touches items must not send an
       // empty snapshot blob that would clobber columns/meta server-side.
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', {
         catalogId: 'cat-1', mode: 'patch', upsertItems, removeKeys, source,
       });
     });
 
     it('should forward columns/meta alongside a patch when supplied', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ version: { version: 5 } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ version: { version: 5 } });
 
       const snapshot = { columns: [{ key: 'columns' }, { key: 'indexes' }] };
       const upsertItems = [{ key: 'users' }];
       await manageCatalog({ action: 'snapshot', catalogId: 'cat-1', mode: 'patch', snapshot, upsertItems });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', {
         catalogId: 'cat-1', mode: 'patch', snapshot, upsertItems,
       });
     });
 
     it('should omit mode on a plain replace snapshot', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ version: { version: 1 } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ version: { version: 1 } });
 
       const snapshot = { items: [{ key: 'a' }] };
       await manageCatalog({ action: 'snapshot', catalogId: 'cat-1', snapshot });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', { catalogId: 'cat-1', snapshot });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSnapshotCatalog', { catalogId: 'cat-1', snapshot });
     });
 
     it('should reject an unknown action', async () => {
@@ -159,53 +159,53 @@ describe('Catalog Operations', () => {
     });
 
     it('should link work to a single item when itemKey is present', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageCatalog({
         action: 'link', catalogId: 'cat-1', itemKey: 'comment.mention',
         targetType: 'task', targetId: 'task-9',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpLinkCatalogItem', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpLinkCatalogItem', {
         catalogId: 'cat-1', itemKey: 'comment.mention', targetType: 'task', targetId: 'task-9',
       });
     });
 
     it('should link an external url to an item when itemKey + url are present', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ url: { id: 'ext-1' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ url: { id: 'ext-1' } });
 
       await manageCatalog({
         action: 'link', catalogId: 'cat-1', itemKey: 'billing.failed',
         url: 'https://dashboard.stripe.com/x', label: 'Stripe',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpLinkCatalogItem', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpLinkCatalogItem', {
         catalogId: 'cat-1', itemKey: 'billing.failed', url: 'https://dashboard.stripe.com/x', label: 'Stripe',
       });
     });
 
     it('should unlink an item work link when itemKey is present', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageCatalog({
         action: 'unlink', catalogId: 'cat-1', itemKey: 'comment.mention',
         targetType: 'task', targetId: 'task-9',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUnlinkCatalogItem', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUnlinkCatalogItem', {
         catalogId: 'cat-1', itemKey: 'comment.mention', targetType: 'task', targetId: 'task-9',
       });
     });
 
     it('should unlink an item external url by url when itemKey + url are present', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ success: true });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
 
       await manageCatalog({
         action: 'unlink', catalogId: 'cat-1', itemKey: 'billing.failed',
         url: 'https://dashboard.stripe.com/x',
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpUnlinkCatalogItem', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUnlinkCatalogItem', {
         catalogId: 'cat-1', itemKey: 'billing.failed', url: 'https://dashboard.stripe.com/x',
       });
     });
@@ -217,11 +217,11 @@ describe('Catalog Operations', () => {
     });
 
     it('should pass catalogId through', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ items: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ items: [] });
 
       await listCatalogItems({ catalogId: 'cat-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListCatalogItems', { catalogId: 'cat-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListCatalogItems', { catalogId: 'cat-1' });
     });
   });
 
@@ -231,19 +231,19 @@ describe('Catalog Operations', () => {
     });
 
     it('should fetch the current snapshot by default', async () => {
-      mockCallZephlyAPI
+      mockCallEzmodoAPI
         .mockResolvedValueOnce({ catalog: { id: 'cat-1' } })
         .mockResolvedValueOnce({ version: 3, snapshot: { items: [] } });
 
       const result = await getCatalog({ catalogId: 'cat-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenNthCalledWith(1, 'mcpGetCatalog', { catalogId: 'cat-1' });
-      expect(mockCallZephlyAPI).toHaveBeenNthCalledWith(2, 'mcpGetCurrentCatalog', { catalogId: 'cat-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenNthCalledWith(1, 'mcpGetCatalog', { catalogId: 'cat-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenNthCalledWith(2, 'mcpGetCurrentCatalog', { catalogId: 'cat-1' });
       expect(result.currentVersion.version).toBe(3);
     });
 
     it('should leave currentVersion null when no snapshot exists yet', async () => {
-      mockCallZephlyAPI
+      mockCallEzmodoAPI
         .mockResolvedValueOnce({ catalog: { id: 'cat-1' } })
         .mockRejectedValueOnce(new Error('404 not found'));
 
@@ -253,55 +253,55 @@ describe('Catalog Operations', () => {
     });
 
     it('should fetch a specific version when requested', async () => {
-      mockCallZephlyAPI
+      mockCallEzmodoAPI
         .mockResolvedValueOnce({ catalog: { id: 'cat-1' } })
         .mockResolvedValueOnce({ version: 2, snapshot: { items: [] } });
 
       await getCatalog({ catalogId: 'cat-1', version: 2 });
 
-      expect(mockCallZephlyAPI).toHaveBeenNthCalledWith(2, 'mcpGetCatalogVersion', { catalogId: 'cat-1', version: 2 });
+      expect(mockCallEzmodoAPI).toHaveBeenNthCalledWith(2, 'mcpGetCatalogVersion', { catalogId: 'cat-1', version: 2 });
     });
 
     it('should skip the snapshot blob when metadataOnly', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ catalog: { id: 'cat-1' } });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ catalog: { id: 'cat-1' } });
 
       await getCatalog({ catalogId: 'cat-1', metadataOnly: true });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledTimes(1);
+      expect(mockCallEzmodoAPI).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('listCatalogs', () => {
     it('should pass filters (incl. linked entity) through', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ catalogs: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ catalogs: [] });
 
       await listCatalogs({
         organizationId: 'org-1', projectId: 'proj-1', kind: 'notifications',
         linkedType: 'feature', linkedId: 'feat-9', limit: 10,
       });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListCatalogs', {
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListCatalogs', {
         organizationId: 'org-1', projectId: 'proj-1', kind: 'notifications',
         linkedType: 'feature', linkedId: 'feat-9', limit: 10,
       });
     });
 
     it('should omit unspecified filters', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ catalogs: [] });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ catalogs: [] });
 
       await listCatalogs({ organizationId: 'org-1' });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpListCatalogs', { organizationId: 'org-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListCatalogs', { organizationId: 'org-1' });
     });
   });
 
   describe('getCatalogDiff', () => {
     it('should pass catalogId/from/to through', async () => {
-      mockCallZephlyAPI.mockResolvedValueOnce({ diff: {} });
+      mockCallEzmodoAPI.mockResolvedValueOnce({ diff: {} });
 
       await getCatalogDiff({ catalogId: 'cat-1', from: 1, to: 2 });
 
-      expect(mockCallZephlyAPI).toHaveBeenCalledWith('mcpDiffCatalog', { catalogId: 'cat-1', from: 1, to: 2 });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDiffCatalog', { catalogId: 'cat-1', from: 1, to: 2 });
     });
   });
 });

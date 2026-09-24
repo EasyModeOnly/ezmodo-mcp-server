@@ -3,7 +3,7 @@
  * Handler functions for task subscriptions and the notification inbox (E-41)
  */
 
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 
 /**
  * Watch or unwatch a task.
@@ -18,7 +18,7 @@ export async function manageWatch(args) {
     throw new Error('taskId is required');
   }
 
-  return callZephlyAPI('mcpManageWatch', { action, taskId });
+  return callEzmodoAPI('mcpManageWatch', { action, taskId });
 }
 
 /**
@@ -31,7 +31,7 @@ export async function listWatched(args) {
     throw new Error('organizationId is required');
   }
 
-  return callZephlyAPI('mcpListWatched', {
+  return callEzmodoAPI('mcpListWatched', {
     organizationId,
     ...(limit ? { limit } : {}),
     // offset 0 is the default, so sending it would only be query-string noise.
@@ -45,7 +45,7 @@ export async function listWatched(args) {
 export async function listNotifications(args = {}) {
   const { unreadOnly, limit } = args;
 
-  return callZephlyAPI('mcpListNotifications', {
+  return callEzmodoAPI('mcpListNotifications', {
     // Only send unreadOnly when explicitly false — the API defaults to unread,
     // and sending the default back would just be noise in the query string.
     ...(unreadOnly === false ? { unreadOnly: false } : {}),

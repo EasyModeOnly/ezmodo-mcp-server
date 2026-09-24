@@ -4,7 +4,7 @@
  */
 
 import path from 'path';
-import { callZephlyAPI } from './http-client.js';
+import { callEzmodoAPI } from './http-client.js';
 import { getLogger } from './logger.js';
 import {
   isGitRepository,
@@ -170,8 +170,8 @@ async function createEpicWorktree(args) {
 
   try {
     // Get epic details
-    // Note: callZephlyAPI unwraps Go API responses, so we get {epic} directly
-    const epicData = await callZephlyAPI('mcpGetEpic', { epicId });
+    // Note: callEzmodoAPI unwraps Go API responses, so we get {epic} directly
+    const epicData = await callEzmodoAPI('mcpGetEpic', { epicId });
     if (!epicData || !epicData.epic) {
       throw new Error('Epic not found');
     }
@@ -183,7 +183,7 @@ async function createEpicWorktree(args) {
     let projectResult = null;
     if (epic.projectId) {
       try {
-        projectResult = await callZephlyAPI('mcpGetProjectContext', {
+        projectResult = await callEzmodoAPI('mcpGetProjectContext', {
           projectId: epic.projectId,
         });
       } catch (err) {
@@ -256,7 +256,7 @@ async function createEpicWorktree(args) {
       behindBy: 0,
     };
 
-    await callZephlyAPI('mcpUpdateEpic', {
+    await callEzmodoAPI('mcpUpdateEpic', {
       epicId,
       gitContext: epicGitContext,
     });
@@ -270,11 +270,11 @@ async function createEpicWorktree(args) {
       if (epic.projectId) {
         searchParams.projectId = epic.projectId;
       }
-      const tasksData = await callZephlyAPI('mcpSearchTasks', searchParams);
+      const tasksData = await callEzmodoAPI('mcpSearchTasks', searchParams);
 
       if (tasksData?.tasks) {
         for (const task of tasksData.tasks) {
-          await callZephlyAPI('mcpUpdateTask', {
+          await callEzmodoAPI('mcpUpdateTask', {
             taskId: task.id,
             gitContext: {
               branchName: newBranchName,
@@ -323,8 +323,8 @@ async function createTaskWorktree(args) {
 
   try {
     // Get task details
-    // Note: callZephlyAPI unwraps Go API responses, so we get {task} directly
-    const taskData = await callZephlyAPI('mcpGetTask', { taskId });
+    // Note: callEzmodoAPI unwraps Go API responses, so we get {task} directly
+    const taskData = await callEzmodoAPI('mcpGetTask', { taskId });
     if (!taskData || !taskData.task) {
       throw new Error('Task not found');
     }
@@ -332,7 +332,7 @@ async function createTaskWorktree(args) {
     const task = taskData.task;
 
     // Get project context to determine repository path and base branch
-    const projectResult = await callZephlyAPI('mcpGetProjectContext', {
+    const projectResult = await callEzmodoAPI('mcpGetProjectContext', {
       projectId: task.projectId,
     });
 
@@ -400,7 +400,7 @@ async function createTaskWorktree(args) {
       behindBy: 0,
     };
 
-    await callZephlyAPI('mcpUpdateTask', {
+    await callEzmodoAPI('mcpUpdateTask', {
       taskId,
       gitContext,
     });
@@ -434,8 +434,8 @@ async function syncTaskWorktreeStatus(args) {
 
   try {
     // Get task details
-    // Note: callZephlyAPI unwraps Go API responses, so we get {task} directly
-    const taskData = await callZephlyAPI('mcpGetTask', { taskId });
+    // Note: callEzmodoAPI unwraps Go API responses, so we get {task} directly
+    const taskData = await callEzmodoAPI('mcpGetTask', { taskId });
     if (!taskData || !taskData.task) {
       throw new Error('Task not found');
     }
@@ -502,7 +502,7 @@ async function syncTaskWorktreeStatus(args) {
         try {
           const commitUrl = commitUrlBase ? `${commitUrlBase}/commit/${commit.sha}` : undefined;
 
-          await callZephlyAPI('mcpLinkCommitToTask', {
+          await callEzmodoAPI('mcpLinkCommitToTask', {
             taskId,
             sha: commit.sha,
             message: commit.message,
@@ -541,7 +541,7 @@ async function syncTaskWorktreeStatus(args) {
       }
     }
 
-    await callZephlyAPI('mcpUpdateTask', {
+    await callEzmodoAPI('mcpUpdateTask', {
       taskId,
       gitContext: updatedGitContext,
     });
@@ -600,7 +600,7 @@ async function linkBranchCommitsToTask(args) {
     }
 
     // Get task to check for existing linked commits
-    const taskData = await callZephlyAPI('mcpGetTask', { taskId });
+    const taskData = await callEzmodoAPI('mcpGetTask', { taskId });
     if (!taskData || !taskData.task) {
       throw new Error('Task not found');
     }
@@ -657,7 +657,7 @@ async function linkBranchCommitsToTask(args) {
       try {
         const commitUrl = commitUrlBase ? `${commitUrlBase}/commit/${commit.sha}` : undefined;
 
-        await callZephlyAPI('mcpLinkCommitToTask', {
+        await callEzmodoAPI('mcpLinkCommitToTask', {
           taskId,
           sha: commit.sha,
           message: commit.message,
@@ -679,7 +679,7 @@ async function linkBranchCommitsToTask(args) {
       const lastCommit = getLastCommit(gitRepoPath, targetBranch);
       const defaultBase = baseBranch || getDefaultBranch(gitRepoPath);
 
-      await callZephlyAPI('mcpUpdateTask', {
+      await callEzmodoAPI('mcpUpdateTask', {
         taskId,
         gitContext: {
           ...task.gitContext,
@@ -693,7 +693,7 @@ async function linkBranchCommitsToTask(args) {
     } else if (linkedCommits.length > 0) {
       // Just update the last linked commit SHA
       const lastCommit = getLastCommit(gitRepoPath, targetBranch);
-      await callZephlyAPI('mcpUpdateTask', {
+      await callEzmodoAPI('mcpUpdateTask', {
         taskId,
         gitContext: {
           ...task.gitContext,
@@ -731,7 +731,7 @@ async function cleanupTaskWorktrees(args) {
 
   try {
     // Get project context
-    const projectData = await callZephlyAPI('mcpGetProjectContext', { projectId });
+    const projectData = await callEzmodoAPI('mcpGetProjectContext', { projectId });
     if (!projectData?.project) {
       throw new Error('Failed to get project context');
     }
@@ -750,19 +750,19 @@ async function cleanupTaskWorktrees(args) {
     if (taskIds && taskIds.length > 0) {
       // Specific tasks
       for (const taskId of taskIds) {
-        const taskData = await callZephlyAPI('mcpGetTask', { taskId });
+        const taskData = await callEzmodoAPI('mcpGetTask', { taskId });
         if (taskData?.task) {
           tasksToCleanup.push(taskData.task);
         }
       }
     } else {
       // Find all completed/cancelled tasks with worktrees
-      const completedData = await callZephlyAPI('mcpSearchTasks', {
+      const completedData = await callEzmodoAPI('mcpSearchTasks', {
         projectId,
         status: 'completed',
       });
 
-      const cancelledData = await callZephlyAPI('mcpSearchTasks', {
+      const cancelledData = await callEzmodoAPI('mcpSearchTasks', {
         projectId,
         status: 'cancelled',
       });
@@ -846,7 +846,7 @@ async function cleanupTaskWorktrees(args) {
           }
 
           // Clear git context from task
-          await callZephlyAPI('mcpUpdateTask', {
+          await callEzmodoAPI('mcpUpdateTask', {
             taskId: task.id,
             gitContext: null,
           });
@@ -884,7 +884,7 @@ export async function listProjectWorktrees(args) {
 
   try {
     // Get project context
-    const projectData = await callZephlyAPI('mcpGetProjectContext', { projectId });
+    const projectData = await callEzmodoAPI('mcpGetProjectContext', { projectId });
     if (!projectData?.project) {
       throw new Error('Failed to get project context');
     }
@@ -902,7 +902,7 @@ export async function listProjectWorktrees(args) {
     const worktrees = listWorktrees(repoRoot);
 
     // Get all tasks with git context
-    const tasksData = await callZephlyAPI('mcpSearchTasks', { projectId });
+    const tasksData = await callEzmodoAPI('mcpSearchTasks', { projectId });
     const tasks = tasksData?.tasks || [];
     const tasksWithGit = tasks.filter(t => t.gitContext && t.gitContext.branchName);
 

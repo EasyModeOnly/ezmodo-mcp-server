@@ -14,7 +14,7 @@
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { CURRENT_REPO_CONFIG_DIR, LEGACY_REPO_CONFIG_DIR } from './repo-config-dir.js';
+import { CURRENT_REPO_CONFIG_DIR } from './repo-config-dir.js';
 
 /** How many already-summarised paths to ask the agent to re-check. */
 export const REVIEW_SUMMARY_CAP = 15;
@@ -134,8 +134,8 @@ export function createScopeMatcher(config) {
 }
 
 /**
- * Read the repo's manifest config (`.ezmodo/manifest/config.json`, then the
- * legacy `.zephly/` one). Returns null when there is none or it is unreadable —
+ * Read the repo's manifest config (`.ezmodo/manifest/config.json`). Returns
+ * null when there is none or it is unreadable —
  * the caller then uses the default scope.
  *
  * @param {string} repoRoot
@@ -143,16 +143,13 @@ export function createScopeMatcher(config) {
  */
 export function loadManifestScope(repoRoot) {
   if (!repoRoot) return null;
-  for (const dirName of [CURRENT_REPO_CONFIG_DIR, LEGACY_REPO_CONFIG_DIR]) {
-    try {
-      const content = readFileSync(join(repoRoot, dirName, 'manifest', 'config.json'), 'utf-8');
-      const parsed = JSON.parse(content);
-      return { include: parsed.include, exclude: parsed.exclude };
-    } catch {
-      // missing or unreadable — try the next location
-    }
+  try {
+    const configPath = join(repoRoot, CURRENT_REPO_CONFIG_DIR, 'manifest', 'config.json');
+    const parsed = JSON.parse(readFileSync(configPath, 'utf-8'));
+    return { include: parsed.include, exclude: parsed.exclude };
+  } catch {
+    return null; // missing or unreadable
   }
-  return null;
 }
 
 // ============================================================================

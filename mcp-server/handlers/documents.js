@@ -5,7 +5,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import { callZephlyAPI } from '../lib/http-client.js';
+import { callEzmodoAPI } from '../lib/http-client.js';
 import { findConfigPath } from '../lib/local-cache.js';
 import { getLogger } from '../lib/logger.js';
 import { attachLinks } from '../lib/links-at-create.js';
@@ -97,11 +97,11 @@ export async function getDocumentTemplate(args) {
 // --- Private helpers ---
 
 async function getDocumentation(args) {
-  return callZephlyAPI('mcpGetDocumentation', args);
+  return callEzmodoAPI('mcpGetDocumentation', args);
 }
 
 async function fetchSingleDocument(args) {
-  const data = await callZephlyAPI('mcpGetDocument', args);
+  const data = await callEzmodoAPI('mcpGetDocument', args);
   const doc = data.document;
 
   if (!doc) {
@@ -156,7 +156,7 @@ async function createDocument(args) {
     };
   }
 
-  const result = await callZephlyAPI('mcpCreateDocument', rest);
+  const result = await callEzmodoAPI('mcpCreateDocument', rest);
 
   // Attach create-time links (E-225) — best effort, never fails the create.
   await attachLinks(result, {
@@ -187,7 +187,7 @@ async function updateDocument(args) {
     rest.removeRelatedItem = removeRelatedItem;
   }
 
-  return callZephlyAPI('mcpUpdateDocument', rest);
+  return callEzmodoAPI('mcpUpdateDocument', rest);
 }
 
 /**
@@ -195,33 +195,33 @@ async function updateDocument(args) {
  * Params: organizationId (required), folderId (optional), limit (optional).
  */
 export async function listOrgDocuments(args) {
-  return callZephlyAPI('mcpListOrgDocuments', args);
+  return callEzmodoAPI('mcpListOrgDocuments', args);
 }
 
 // Document Version helpers
 
 async function listDocumentVersions(args) {
-  return callZephlyAPI('mcpListDocumentVersions', args);
+  return callEzmodoAPI('mcpListDocumentVersions', args);
 }
 
 async function fetchDocumentVersion(args) {
-  return callZephlyAPI('mcpGetDocumentVersion', args);
+  return callEzmodoAPI('mcpGetDocumentVersion', args);
 }
 
 // Document Template helpers
 
 async function listDocumentTemplates(args) {
-  return callZephlyAPI('mcpListDocumentTemplates', args);
+  return callEzmodoAPI('mcpListDocumentTemplates', args);
 }
 
 async function fetchSingleDocumentTemplate(args) {
-  return callZephlyAPI('mcpGetDocumentTemplate', args);
+  return callEzmodoAPI('mcpGetDocumentTemplate', args);
 }
 
 async function createDocumentTemplate(args) {
-  return callZephlyAPI('mcpCreateDocumentTemplate', args);
+  return callEzmodoAPI('mcpCreateDocumentTemplate', args);
 }
 
 async function deleteDocumentTemplate(args) {
-  return callZephlyAPI('mcpDeleteDocumentTemplate', args);
+  return callEzmodoAPI('mcpDeleteDocumentTemplate', args);
 }

@@ -23,16 +23,16 @@ const { writeActiveSession, clearActiveSession } = await import('../lib/active-s
 
 describe('active-session', () => {
   let tmpDir;
-  let zephlyDir;
+  let configDir;
   let originalCwd;
 
   beforeEach(async () => {
-    // Create temp directory with .zephly/config.json
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'zephly-test-'));
-    zephlyDir = path.join(tmpDir, '.zephly');
-    await fs.mkdir(zephlyDir, { recursive: true });
+    // Create temp directory with .ezmodo/config.json
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ezmodo-test-'));
+    configDir = path.join(tmpDir, '.ezmodo');
+    await fs.mkdir(configDir, { recursive: true });
     await fs.writeFile(
-      path.join(zephlyDir, 'config.json'),
+      path.join(configDir, 'config.json'),
       JSON.stringify({ projectId: 'test-project' }),
     );
 
@@ -60,7 +60,7 @@ describe('active-session', () => {
         epicNumber: 7,
       });
 
-      const sessionPath = path.join(zephlyDir, 'active-session.json');
+      const sessionPath = path.join(configDir, 'active-session.json');
       const content = JSON.parse(await fs.readFile(sessionPath, 'utf-8'));
 
       expect(content.taskId).toBe('task-123');
@@ -80,7 +80,7 @@ describe('active-session', () => {
         title: 'Test task',
       });
 
-      const sessionPath = path.join(zephlyDir, 'active-session.json');
+      const sessionPath = path.join(configDir, 'active-session.json');
       const content = JSON.parse(await fs.readFile(sessionPath, 'utf-8'));
 
       expect(content.taskId).toBe('task-123');
@@ -99,14 +99,14 @@ describe('active-session', () => {
         title: 'Test task',
       });
 
-      const sessionPath = path.join(zephlyDir, 'active-session.json');
+      const sessionPath = path.join(configDir, 'active-session.json');
       const content = JSON.parse(await fs.readFile(sessionPath, 'utf-8'));
 
       expect(content.branch).toBeNull();
     });
 
-    it('does nothing when no .zephly/ directory exists', async () => {
-      // Point cwd to a directory without .zephly
+    it('does nothing when no .ezmodo/ directory exists', async () => {
+      // Point cwd to a directory without .ezmodo
       const emptyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'empty-'));
       process.cwd = () => emptyDir;
 
@@ -124,7 +124,7 @@ describe('active-session', () => {
   describe('clearActiveSession', () => {
     it('deletes active-session.json', async () => {
       // Create session file first
-      const sessionPath = path.join(zephlyDir, 'active-session.json');
+      const sessionPath = path.join(configDir, 'active-session.json');
       await fs.writeFile(sessionPath, '{}');
 
       await clearActiveSession();

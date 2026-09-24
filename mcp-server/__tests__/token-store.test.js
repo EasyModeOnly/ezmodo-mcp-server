@@ -8,7 +8,6 @@ let tempHome;
 const mockConfigDir = jest.fn();
 jest.unstable_mockModule('../lib/user-paths.js', () => ({
   configDir: mockConfigDir,
-  configDirs: () => [mockConfigDir()],
 }));
 
 const { readTokens, writeTokens, clearTokens, isExpired, getTokenPath } = await import(
