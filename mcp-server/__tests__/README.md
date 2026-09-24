@@ -62,14 +62,14 @@ The test suite covers:
 
 ```javascript
 import {
-  createMockCallZephlyAPI,
+  createMockCallEzmodoAPI,
   createMockTask,
   createMockProject,
   createMockError,
 } from './test-utils.js';
 
 // Create mock API
-const mockCallZephlyAPI = createMockCallZephlyAPI();
+const mockCallEzmodoAPI = createMockCallEzmodoAPI();
 
 // Create mock task
 const task = createMockTask({
@@ -86,13 +86,13 @@ const error = createMockError('Not found', 404);
 
 ```javascript
 describe('Feature Name', () => {
-  let mockCallZephlyAPI;
+  let mockCallEzmodoAPI;
   let functionUnderTest;
 
   beforeEach(() => {
-    mockCallZephlyAPI = createMockCallZephlyAPI();
+    mockCallEzmodoAPI = createMockCallEzmodoAPI();
     functionUnderTest = async (args) => {
-      return mockCallZephlyAPI('endpoint', args);
+      return mockCallEzmodoAPI('endpoint', args);
     };
   });
 
@@ -104,7 +104,7 @@ describe('Feature Name', () => {
     const result = await functionUnderTest({ param: 'value' });
 
     expect(result.success).toBe(true);
-    expect(mockCallZephlyAPI).toHaveBeenCalledWith('endpoint', {
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('endpoint', {
       param: 'value',
     });
   });
@@ -114,7 +114,7 @@ describe('Feature Name', () => {
 ### Mocking Custom Responses
 
 ```javascript
-mockCallZephlyAPI.mockImplementationOnce(async (endpoint, args) => {
+mockCallEzmodoAPI.mockImplementationOnce(async (endpoint, args) => {
   return {
     success: true,
     data: { custom: 'response' },
