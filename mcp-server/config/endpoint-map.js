@@ -341,6 +341,12 @@ export const ENDPOINT_MAP = {
   'mcpListTodos': { route: 'mcp/v1/todos', method: 'GET' },
   'mcpCompleteTodo': { route: 'mcp/v1/todos/complete', method: 'POST' },
   'mcpMoveTodo': { route: 'mcp/v1/todos/move', method: 'POST' },
+  // E-265: due dates and reminders on todos
+  'mcpUpdateTodo': { route: 'mcp/v1/todos', method: 'PUT' },
+
+  // Personal reminders on tasks and todos (E-265). Always the caller's own.
+  'mcpTaskReminders': { route: 'mcp/v1/tasks/reminders', method: 'POST' },
+  'mcpListReminders': { route: 'mcp/v1/reminders', method: 'GET' },
 
   // Personal notes (E-204). Private to the calling user, cross-org; content is
   // markdown over MCP. `{param}` placeholders are filled by the http client.

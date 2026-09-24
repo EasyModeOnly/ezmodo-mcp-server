@@ -43,6 +43,7 @@ export async function manageTask(args) {
   case 'release': return claimTask(params, true);
   case 'list_suggested_edits': return suggestedEdits(params, false);
   case 'answer_suggested_edit': return suggestedEdits(params, true);
+  case 'reminders': return taskReminders(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -69,6 +70,30 @@ async function suggestedEdits({ taskId, editId, answer, note }, answering) {
 }
 
 /**
+ * Personal reminders (E-265). With a taskId, apply reminders.add / .remove to
+ * that task and return what the caller has on it; without one, list their
+ * upcoming reminders everywhere.
+ */
+async function taskReminders({ taskId, reminders = {} }) {
+  if (!taskId) {
+    if (reminders.add?.length || reminders.remove?.length) {
+      throw new Error('taskId is required to add or remove reminders');
+    }
+    return callEzmodoAPI('mcpListReminders', {});
+  }
+  return callEzmodoAPI('mcpTaskReminders', {
+    taskId,
+    add: reminders.add || [],
+    remove: reminders.remove || [],
+  });
+}
+
+/** True when a `reminders` argument actually asks for a change. */
+function hasReminderChanges(reminders) {
+  return Boolean(reminders && (reminders.add?.length || reminders.remove?.length));
+}
+
+/**
  * Bridge user terminology ("dashboard") to code locations by searching the
  * manifest for the task's own words. Best-effort: returns null when there is
  * too little to go on or the search fails.
@@ -92,7 +117,7 @@ async function resolveCodeContext({ projectId, title, description }) {
 async function createTask(args) {
   // `links` is applied by the MCP layer after the task exists (E-225), so it is
   // kept out of the create payload.
-  const { links, changedFiles, autolink = true, ...createArgs } = args;
+  const { links, changedFiles, autolink = true, reminders, ...createArgs } = args;
   const { projectId, title, description } = createArgs;
 
   // Resolve the task's code context BEFORE creating it, so the files go in with
@@ -202,6 +227,18 @@ async function createTask(args) {
     sourceId: result?.taskId,
     links: args.links,
   });
+
+  // Reminders (E-265) — applied once the task exists. A bad time is reported
+  // on the result rather than failing a create that already happened.
+  if (hasReminderChanges(reminders) && result?.taskId) {
+    try {
+      const rem = await taskReminders({ taskId: result.taskId, reminders });
+      result.reminders = rem?.reminders ?? rem;
+      if (rem?.timezoneNote) result.timezoneNote = rem.timezoneNote;
+    } catch (err) {
+      result.remindersError = `Task created, but the reminder was not set: ${err.message}`;
+    }
+  }
 
   // Enrich with web URL
   const webUrl = await buildTaskUrl(result?.taskNumber);
@@ -369,8 +406,23 @@ export async function reportUntrackedWork(args) {
   return createTask(createArgs);
 }
 
-async function updateTask(args) {
+async function updateTask(allArgs) {
+  const { reminders, ...args } = allArgs;
+  // A call that only changes reminders (E-265) is not a task update at all.
+  const onlyReminders = hasReminderChanges(reminders)
+    && Object.keys(args).every((k) => k === 'taskId');
+  if (onlyReminders) {
+    return taskReminders({ taskId: args.taskId, reminders });
+  }
+
   const result = await callEzmodoAPI('mcpUpdateTask', args);
+  if (hasReminderChanges(reminders) && !result?.blocked) {
+    const rem = await taskReminders({ taskId: args.taskId, reminders });
+    if (result && typeof result === 'object') {
+      result.reminders = rem?.reminders ?? rem;
+      if (rem?.timezoneNote) result.timezoneNote = rem.timezoneNote;
+    }
+  }
 
   // If the milestone is frozen and the operation was blocked, return guidance
   if (result?.blocked) {

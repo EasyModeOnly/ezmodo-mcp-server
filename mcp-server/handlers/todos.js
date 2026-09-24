@@ -2,7 +2,7 @@
  * Todo Handlers
  * Handler functions for personal todo MCP tools
  *
- * Consolidated: manageTodo dispatches create/complete/move_to_project.
+ * Consolidated: manageTodo dispatches create/update/complete/move_to_project.
  * listTodos is unchanged.
  *
  * Todos are lightweight personal tasks in the user's todo list.
@@ -18,6 +18,7 @@ export async function manageTodo(args) {
   const { action, ...params } = args;
   switch (action) {
   case 'create': return createTodo(params);
+  case 'update': return updateTodo(params);
   case 'complete': return completeTodo(params);
   case 'move_to_project': return moveTodoToProject(params);
   default: throw new Error(`Unknown action: ${action}`);
@@ -32,6 +33,11 @@ export async function listTodos(args) {
 
 async function createTodo(args) {
   return callEzmodoAPI('mcpCreateTodo', args);
+}
+
+async function updateTodo(args) {
+  if (!args.todoId) throw new Error('todoId is required to update a todo');
+  return callEzmodoAPI('mcpUpdateTodo', args);
 }
 
 async function completeTodo(args) {

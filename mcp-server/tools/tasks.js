@@ -38,7 +38,7 @@ export const TASK_TOOLS = [
           enum: [
             'create', 'update', 'complete', 'defer', 'link_commit', 'unlink_commit', 'get_commits',
             'generate_how_it_works', 'apply_how_it_works', 'claim', 'release',
-            'list_suggested_edits', 'answer_suggested_edit',
+            'list_suggested_edits', 'answer_suggested_edit', 'reminders',
           ],
           description: 'Action to perform. "claim" (taskId, optional claimNote) says you are working on ' +
             'this task, so other people\'s AIs on the same epic pick different work (E-259). Claim ' +
@@ -55,6 +55,11 @@ export const TASK_TOOLS = [
             'waiting on a task; "answer_suggested_edit" (taskId, editId, answer: accept|reject|withdraw, ' +
             'optional note) answers one — the claimer or whoever runs the epic accepts or rejects, the ' +
             'author withdraws. ' +
+            '"reminders" (E-265) manages YOUR personal reminders: with taskId it applies ' +
+            '`reminders.add`/`reminders.remove` to that task and lists what you have on it; without ' +
+            'taskId it lists your upcoming reminders everywhere. create and update also accept ' +
+            '`reminders`. A reminder notifies only you, once — for repeating work use ' +
+            'manage_recurring_task. ' +
             '"generate_how_it_works" (re)generates the task\'s ' +
             'grounded, source-attributed "how it works" living description from its reality — ' +
             'subtasks, comments, status history, commits plus a manifest pass over linked files ' +
@@ -75,6 +80,38 @@ export const TASK_TOOLS = [
         note: {
           type: 'string',
           description: 'answer_suggested_edit: what you want to say back, optional',
+        },
+        reminders: {
+          type: 'object',
+          description: 'Your own one-off reminders on the task (create, update, reminders). ' +
+            'Times without an offset are read in your timezone; the response names the zone used ' +
+            'and warns when UTC was assumed because none is set.',
+          properties: {
+            add: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  remindAt: {
+                    type: 'string',
+                    description: 'Local time "2026-10-02T09:00" or ISO instant "2026-10-02T07:00:00Z"',
+                  },
+                  relativeToDue: {
+                    type: 'string',
+                    description: 'Instead of remindAt: this long before the due date ("1d", "2h", "1w"). ' +
+                      'Follows the due date when it moves.',
+                  },
+                  timezone: { type: 'string', description: 'IANA zone for a local remindAt; omit for yours' },
+                  note: { type: 'string', description: 'Shown with the reminder' },
+                },
+              },
+            },
+            remove: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Reminder IDs to delete',
+            },
+          },
         },
         claimNote: {
           type: 'string',
