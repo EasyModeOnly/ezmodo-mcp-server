@@ -7,4 +7,4 @@
  *
  * Update this when bumping the version in package.json.
  */
-export const MCP_VERSION = '0.20.2';
+export const MCP_VERSION = '0.20.3';
