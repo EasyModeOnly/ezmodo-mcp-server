@@ -1,7 +1,7 @@
 /**
  * Environment-variable accessors. New code should call these helpers rather
- * than reading `process.env.EZMODO_*` directly. The pre-rebrand `ZEPHLY_*`
- * names are no longer read (#2843).
+ * than reading `process.env.EZMODO_*` directly. Pre-rebrand variable names
+ * are no longer read (#2843).
  */
 
 /** Resolve the API key from EZMODO_API_KEY. */

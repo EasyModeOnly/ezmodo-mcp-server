@@ -3,7 +3,7 @@
  *
  * Writes to ~/.ezmodo/logs/ezmodo-YYYY-MM-DD.log
  *
- * Moved from ~/.zephly/logs/zephly-*.log (#2655), matching the CLI's
+ * Moved from the pre-rebrand logs directory (#2655), matching the CLI's
  * getLogsDir() in cli/src/lib/user-paths.ts. The old directory is NOT
  * migrated or cleaned: these are diagnostics, safe to delete, and a server that
  * reaches into a directory it no longer owns to tidy it is a server that can

@@ -2,7 +2,7 @@
  * Helpers for locating an EzModo project's per-repo config directory,
  * `.ezmodo/`.
  *
- * The pre-rebrand `.zephly/` directory is no longer read (#2843). Run
+ * The pre-rebrand config directory is no longer read (#2843). Run
  * `ezmodo migrate-config` in a repo that still has one to move it.
  */
 

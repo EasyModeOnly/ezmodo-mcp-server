@@ -7,7 +7,7 @@
  * the reader produces a login that appears to succeed and then is never found
  * again.
  *
- * The pre-rebrand `.config/zephly` directory is no longer read (#2843).
+ * The pre-rebrand user config directory is no longer read (#2843).
  */
 
 import { homedir } from 'os';

@@ -14,7 +14,7 @@
  * that #2594 removed from every repo's CLAUDE.md, so it lives in exactly one.
  *
  * WHAT WAS REMOVED HERE, and why it is a fix rather than a loss. This module
- * used to serve `zephly-usage-guide` and `ai-workflow-automation`. Both were
+ * used to serve a usage-guide prompt and `ai-workflow-automation`. Both were
  * pre-rebrand in the user-visible prompt NAME, and both instructed agents to
  * open a session with `list_organizations()` and `list_projects()` — tools that
  * no longer exist in TOOLS. A prompt that names missing tools is not stale
