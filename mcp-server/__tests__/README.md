@@ -1,6 +1,6 @@
 # MCP Server Tests
 
-Comprehensive unit tests for the Zephly MCP server.
+Comprehensive unit tests for the ezmodo MCP server.
 
 ## Test Structure
 

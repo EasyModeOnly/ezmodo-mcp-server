@@ -237,12 +237,12 @@ When providing ezmodo URLs to users, **always use the actual orgSlug value** fro
 
 **❌ Wrong:**
 ```
-View in ezmodo: https://ezmodo.com/{orgSlug}/projects/zephly/epics
+View in ezmodo: https://ezmodo.com/{orgSlug}/projects/ezmodo/epics
 ```
 
 **✅ Correct:**
 ```
-View in ezmodo: https://ezmodo.com/emo/projects/zephly/epics
+View in ezmodo: https://ezmodo.com/emo/projects/ezmodo/epics
 ```
 
 **How to get the orgSlug:**
@@ -255,13 +255,13 @@ View in ezmodo: https://ezmodo.com/emo/projects/zephly/epics
 // Response from get_current_project_context():
 {
   "projectId": "axFzraDA4yCLgVyVBFoG",
-  "projectName": "zephly",
+  "projectName": "ezmodo",
   "orgSlug": "emo",  // <-- Use this actual value!
   "organizationId": "VByHaD78P7B8ky7X4NZf"
 }
 
 // Then provide URL like:
-"View your epic at: https://ezmodo.com/emo/projects/zephly/epics"
+"View your epic at: https://ezmodo.com/emo/projects/ezmodo/epics"
 ```
 
 This ensures users can click the link and go directly to the correct resource.
