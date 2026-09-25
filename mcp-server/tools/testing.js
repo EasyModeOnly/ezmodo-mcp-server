@@ -150,6 +150,14 @@ export const TESTING_TOOLS = [
           type: 'number',
           description: 'Duration of the test run in milliseconds (record_run only)',
         },
+        releaseCandidateId: {
+          type: 'string',
+          description: 'Release candidate that was tested, so readiness can count it (record_run only)',
+        },
+        commitSha: {
+          type: 'string',
+          description: 'Commit that was tested (record_run only)',
+        },
       },
       required: ['action', 'projectId'],
     },
@@ -157,13 +165,16 @@ export const TESTING_TOOLS = [
   {
     name: 'manage_test_suite',
     description: 'Create, update, delete test suites, or add/remove cases from a suite. ' +
-      'Suites are project-level groupings of test cases (e.g., regression, smoke, acceptance).',
+      'Suites are project-level groupings of test cases (e.g., regression, smoke, acceptance). ' +
+      'Run a suite with start_run (suiteId, environment, releaseCandidateId? — ties the run to the build under ' +
+      'test so release gates can read it), record_result (runId, caseId, overallStatus: pass|fail|skip|blocked) ' +
+      'for each case, then complete_run (runId).',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'add_cases', 'remove_cases'],
+          enum: ['create', 'update', 'delete', 'add_cases', 'remove_cases', 'start_run', 'record_result', 'complete_run'],
           description: 'Action to perform',
         },
         // --- Identifiers ---
@@ -217,6 +228,45 @@ export const TESTING_TOOLS = [
             required: ['caseId'],
           },
           description: 'Array of test case references (required for add_cases, remove_cases)',
+        },
+        // --- Suite run fields (start_run, record_result, complete_run) ---
+        runId: {
+          type: 'string',
+          description: 'Suite run ID (record_result, complete_run)',
+        },
+        environment: {
+          type: 'string',
+          description: 'Environment the run is in, e.g. "staging" (start_run)',
+        },
+        releaseCandidateId: {
+          type: 'string',
+          description: 'Release candidate under test (start_run). Its commit SHA is recorded too.',
+        },
+        commitSha: {
+          type: 'string',
+          description: 'Commit under test, when there is no candidate (start_run)',
+        },
+        notes: {
+          type: 'string',
+          description: 'Notes (start_run, record_result)',
+        },
+        caseId: {
+          type: 'string',
+          description: 'Test case ID (record_result)',
+        },
+        overallStatus: {
+          type: 'string',
+          enum: ['pass', 'fail', 'skip', 'blocked'],
+          description: 'Result (record_result)',
+        },
+        duration: {
+          type: 'number',
+          description: 'Milliseconds (record_result)',
+        },
+        status: {
+          type: 'string',
+          enum: ['completed', 'cancelled', 'in_progress'],
+          description: 'complete_run: the run\'s final status (default completed)',
         },
       },
       required: ['action', 'projectId'],

@@ -251,19 +251,23 @@ export const FEATURE_FLAG_TOOLS = [
   },
   {
     name: 'manage_environment',
-    description: 'Manage the configurable ENVIRONMENT registry (E-186): the named environments ' +
-      '(e.g. development/staging/production) a flag can be served differently in. Environments are ' +
-      'per-scope: org-wide (omit projectId) or project-scoped (set projectId). Exactly one per scope ' +
-      'is the default (used when an evaluation does not name an environment). To set a flag\'s value ' +
-      'IN an environment, use manage_feature_flag action "set_environment_config".',
+    description: 'Manage the ENVIRONMENT registry: the named environments (e.g. development/staging/' +
+      'production) that feature flags, test runs, deployments and release gates all key by. Environments ' +
+      'are per-scope: org-wide (omit projectId) or project-scoped (set projectId); a project with no set ' +
+      'of its own uses the org-wide one. Exactly one per scope is the default. Each environment can carry ' +
+      'aliases — other names pipelines report it under ("stage", "prod"). Use action "resolve" to find ' +
+      'which environment a reported name means. To set a flag\'s value IN an environment, use ' +
+      'manage_feature_flag action "set_environment_config".',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['list', 'create', 'update', 'delete', 'set_default'],
-          description: 'list (by organizationId [+projectId]); create; update (name/order); delete; ' +
-            'set_default (make this the scope\'s default environment).',
+          enum: ['list', 'create', 'update', 'delete', 'set_default', 'resolve'],
+          description: 'list (by organizationId [+projectId]); create; update (name/order/aliases); delete; ' +
+            'set_default (make this the scope\'s default environment); resolve (organizationId [+projectId] + ' +
+            'reportedName → the environment it means, matching key then alias, project before org-wide; ' +
+            'null when nothing matches).',
         },
         organizationId: {
           type: 'string',
@@ -292,6 +296,20 @@ export const FEATURE_FLAG_TOOLS = [
         isDefault: {
           type: 'boolean',
           description: 'Make this the scope\'s default environment on create (create)',
+        },
+        aliases: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Other names this environment is reported under, e.g. ["stage","stg"] (create, update). ' +
+            'On update this REPLACES the set; [] clears it. Stored lowercase; unique across the scope.',
+        },
+        effective: {
+          type: 'boolean',
+          description: 'list: return the set that APPLIES to projectId — its own if it has one, else the org-wide set.',
+        },
+        reportedName: {
+          type: 'string',
+          description: 'resolve: the name a pipeline or provider reported (e.g. "Production", "stage").',
         },
       },
       required: ['action'],

@@ -41,15 +41,26 @@ export async function manageEnvironment(args) {
   case 'update': return callEzmodoAPI('mcpUpdateEnvironment', params);
   case 'delete': return callEzmodoAPI('mcpDeleteEnvironment', { environmentId: params.environmentId });
   case 'set_default': return callEzmodoAPI('mcpSetDefaultEnvironment', { environmentId: params.environmentId });
+  case 'resolve': return resolveEnvironment(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected list, create, update, delete, or set_default.`);
+    throw new Error(`Unknown action: ${action}. Expected list, create, update, delete, set_default, or resolve.`);
   }
 }
 
-async function listEnvironments({ organizationId, projectId }) {
+async function listEnvironments({ organizationId, projectId, effective }) {
   const params = { organizationId };
   if (projectId) params.projectId = projectId;
+  if (effective) params.effective = 'true';
   return callEzmodoAPI('mcpListEnvironments', params);
+}
+
+async function resolveEnvironment({ organizationId, projectId, reportedName }) {
+  if (!organizationId || !reportedName) {
+    throw new Error('resolve needs organizationId and reportedName.');
+  }
+  const params = { organizationId, name: reportedName };
+  if (projectId) params.projectId = projectId;
+  return callEzmodoAPI('mcpResolveEnvironment', params);
 }
 
 async function setFeatureFlagEnvironmentConfig({ flagId, environmentId, enabled, rolloutPercentage, defaultVariantId }) {

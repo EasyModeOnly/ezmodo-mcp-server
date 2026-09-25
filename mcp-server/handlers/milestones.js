@@ -28,6 +28,9 @@ export async function manageMilestone(args) {
   case 'reorder_epics': return reorderMilestoneEpics(params);
   case 'link_suite': return linkSuiteToMilestone(params);
   case 'unlink_suite': return unlinkSuiteFromMilestone(params);
+  case 'release': return releaseMilestone(params);
+  case 'freeze': return setMilestoneFreeze(params, true);
+  case 'unfreeze': return setMilestoneFreeze(params, false);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -128,4 +131,39 @@ async function linkSuiteToMilestone(args) {
 
 async function unlinkSuiteFromMilestone(args) {
   return callEzmodoAPI('mcpUnlinkSuiteFromMilestone', args);
+}
+
+/**
+ * Release the milestone to an environment (E-262). The REST route existed but
+ * MCP could not reach it. A refusal by release gates comes back as an error
+ * naming each blocking gate and how to waive it.
+ */
+async function releaseMilestone(args) {
+  const { projectId, milestoneId, milestoneSlug, environment, candidateId, version, notes, confirmDeferred } = args;
+  if (!environment) throw new Error('release needs environment.');
+  const body = { projectId, environment };
+  if (milestoneId) body.milestoneId = milestoneId;
+  if (milestoneSlug) body.milestoneSlug = milestoneSlug;
+  if (candidateId) body.candidateId = candidateId;
+  if (version) body.version = version;
+  if (notes) body.notes = notes;
+  if (confirmDeferred) body.confirmDeferred = true;
+  return callEzmodoAPI('mcpReleaseMilestone', body);
+}
+
+/** Freeze or unfreeze the milestone through its freezeConfig. */
+async function setMilestoneFreeze(args, enabled) {
+  const { projectId, milestoneId, milestoneSlug, freezeType, reason } = args;
+  if (enabled && !freezeType) {
+    throw new Error('freeze needs freezeType: milestone-freeze, testing-only, stabilization or full-freeze.');
+  }
+  const body = {
+    projectId,
+    freezeConfig: enabled
+      ? { enabled: true, freezeType, reason: reason || '' }
+      : { enabled: false, freezeType: '' },
+  };
+  if (milestoneId) body.milestoneId = milestoneId;
+  if (milestoneSlug) body.milestoneSlug = milestoneSlug;
+  return callEzmodoAPI('mcpUpdateMilestone', body);
 }

@@ -37,6 +37,9 @@ export async function manageTestSuite(args) {
   case 'delete': return deleteTestSuite(params);
   case 'add_cases': return addCasesToSuite(params);
   case 'remove_cases': return removeCasesFromSuite(params);
+  case 'start_run': return startSuiteRun(params);
+  case 'record_result': return recordSuiteRunResult(params);
+  case 'complete_run': return completeSuiteRun(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -113,4 +116,38 @@ async function addCasesToSuite(args) {
 
 async function removeCasesFromSuite(args) {
   return callEzmodoAPI('mcpRemoveCasesFromSuite', args);
+}
+
+// --- Suite runs (E-262 #2818) ---
+
+function requireFields(args, keys, action) {
+  const missing = keys.filter((k) => !args[k]);
+  if (missing.length) throw new Error(`${action} needs ${missing.join(', ')}.`);
+}
+
+async function startSuiteRun(args) {
+  requireFields(args, ['projectId', 'suiteId'], 'start_run');
+  const body = { projectId: args.projectId, suiteId: args.suiteId };
+  for (const k of ['environment', 'releaseCandidateId', 'commitSha', 'notes', 'assigneeId', 'assigneeName']) {
+    if (args[k]) body[k] = args[k];
+  }
+  return callEzmodoAPI('mcpStartSuiteRun', body);
+}
+
+async function recordSuiteRunResult(args) {
+  requireFields(args, ['projectId', 'suiteId', 'runId', 'caseId', 'overallStatus'], 'record_result');
+  const body = {
+    projectId: args.projectId, suiteId: args.suiteId, runId: args.runId,
+    caseId: args.caseId, overallStatus: args.overallStatus,
+  };
+  if (args.notes) body.notes = args.notes;
+  if (args.duration) body.duration = args.duration;
+  return callEzmodoAPI('mcpRecordSuiteRunResult', body);
+}
+
+async function completeSuiteRun(args) {
+  requireFields(args, ['projectId', 'suiteId', 'runId'], 'complete_run');
+  return callEzmodoAPI('mcpUpdateSuiteRunStatus', {
+    projectId: args.projectId, suiteId: args.suiteId, runId: args.runId, status: args.status || 'completed',
+  });
 }

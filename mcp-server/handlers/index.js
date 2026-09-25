@@ -10,6 +10,7 @@ import * as organizationHandlers from './organizations.js';
 import * as projectHandlers from './projects.js';
 import * as epicHandlers from './epics.js';
 import * as milestoneHandlers from './milestones.js';
+import * as releaseHandlers from './releases.js';
 import * as featureHandlers from './features.js';
 import * as decisionHandlers from './decisions.js';
 import * as designHandlers from './designs.js';
@@ -70,6 +71,8 @@ export const HANDLERS = {
   // Milestones
   manage_milestone: milestoneHandlers.manageMilestone,
   get_milestone: milestoneHandlers.getMilestone,
+  get_release_readiness: releaseHandlers.getReleaseReadiness,
+  manage_release: releaseHandlers.manageRelease,
 
   // Features (Feature Compendium, E-162)
   manage_feature: featureHandlers.manageFeature,

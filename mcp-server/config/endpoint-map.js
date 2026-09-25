@@ -195,6 +195,30 @@ export const ENDPOINT_MAP = {
   // Suite-to-milestone linking
   'mcpLinkSuiteToMilestone': { route: 'mcp/v1/milestones/link-suite', method: 'POST' },
   'mcpUnlinkSuiteFromMilestone': { route: 'mcp/v1/milestones/unlink-suite', method: 'POST' },
+  'mcpReleaseMilestone': { route: 'mcp/v1/milestones/release', method: 'POST' },
+
+  // Release Readiness (E-262). The API serves these with the same handlers as
+  // the web app; {id} / {milestoneId} are filled from the request data.
+  'mcpReleaseGateTypes': { route: 'mcp/v1/releases/gate-types', method: 'GET' },
+  'mcpMilestoneRelease': { route: 'mcp/v1/releases/milestones/{milestoneId}', method: 'GET' },
+  'mcpCreateReleaseCandidate': { route: 'mcp/v1/releases/milestones/{milestoneId}/candidates', method: 'POST' },
+  'mcpAddReleaseChecklistItem': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist', method: 'POST' },
+  'mcpApplyReleaseChecklist': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist/apply', method: 'POST' },
+  'mcpUpdateReleaseChecklistItem': { route: 'mcp/v1/releases/checklist-items/{id}', method: 'PATCH' },
+  'mcpReleaseChecklistItemToTask': { route: 'mcp/v1/releases/checklist-items/{id}/task', method: 'POST' },
+  'mcpCreateReleaseGate': { route: 'mcp/v1/releases/gates', method: 'POST' },
+  'mcpAddRecommendedReleaseGates': { route: 'mcp/v1/releases/gates/recommended', method: 'POST' },
+  'mcpUpdateReleaseGate': { route: 'mcp/v1/releases/gates/{id}', method: 'PATCH' },
+  'mcpDeleteReleaseGate': { route: 'mcp/v1/releases/gates/{id}', method: 'DELETE' },
+  'mcpSaveReleaseTemplate': { route: 'mcp/v1/releases/templates', method: 'POST' },
+  'mcpCreateReleaseWaiver': { route: 'mcp/v1/releases/waivers', method: 'POST' },
+  'mcpRevokeReleaseWaiver': { route: 'mcp/v1/releases/waivers/{id}', method: 'DELETE' },
+  'mcpReportReleaseCheck': { route: 'mcp/v1/releases/checks', method: 'POST' },
+  'mcpReportReleaseDeployment': { route: 'mcp/v1/releases/deployments', method: 'POST' },
+  'mcpUpdateReleaseCandidate': { route: 'mcp/v1/release-candidates/{id}', method: 'PATCH' },
+  'mcpReleaseReadiness': { route: 'mcp/v1/release-candidates/{id}/readiness', method: 'GET' },
+  'mcpPromoteReleaseCandidate': { route: 'mcp/v1/release-candidates/{id}/promote', method: 'POST' },
+  'mcpSignOffReleaseCandidate': { route: 'mcp/v1/release-candidates/{id}/signoff', method: 'POST' },
 
   // Features (Feature Compendium, E-162) — org-level product capabilities
   'mcpCreateFeature': { route: 'mcp/v1/features', method: 'POST' },
@@ -306,6 +330,9 @@ export const ENDPOINT_MAP = {
   'mcpUpdateEnvironment': { route: 'mcp/v1/feature-flags/environments', method: 'PUT' },
   'mcpDeleteEnvironment': { route: 'mcp/v1/feature-flags/environments', method: 'DELETE' },
   'mcpSetDefaultEnvironment': { route: 'mcp/v1/feature-flags/environments/default', method: 'POST' },
+  // Neutral registry path (E-262 #2814). The CRUD entries above stay on the
+  // /feature-flags spelling until every deployed API has the neutral routes.
+  'mcpResolveEnvironment': { route: 'mcp/v1/environments/resolve', method: 'GET' },
   'mcpSetFlagEnvironmentConfig': { route: 'mcp/v1/feature-flags/flag-environment', method: 'PUT' },
 
   // Activity Timeline
@@ -378,4 +405,8 @@ export const ENDPOINT_MAP = {
   'mcpDeleteTestSuite': { route: 'mcp/v1/testing/suites', method: 'DELETE' },
   'mcpAddCasesToSuite': { route: 'mcp/v1/testing/suites/add-cases', method: 'POST' },
   'mcpRemoveCasesFromSuite': { route: 'mcp/v1/testing/suites/remove-cases', method: 'POST' },
+  // Suite runs (E-262 #2818): start one for a release candidate, record, complete.
+  'mcpStartSuiteRun': { route: 'mcp/v1/testing/suites/runs', method: 'POST' },
+  'mcpRecordSuiteRunResult': { route: 'mcp/v1/testing/suites/runs/results', method: 'POST' },
+  'mcpUpdateSuiteRunStatus': { route: 'mcp/v1/testing/suites/runs/status', method: 'POST' },
 };

@@ -16,7 +16,11 @@ export const MILESTONE_TOOLS = [
   {
     name: 'manage_milestone',
     description: 'Create, update, delete milestones, or manage epic/suite linking and changelog generation. ' +
-      'Milestones can be version releases or initiatives.',
+      'Milestones can be version releases or initiatives. ' +
+      '"release" releases the milestone to an environment: when that environment has release gates it needs a ' +
+      'release candidate (candidateId, else the newest active one) and is REFUSED while a required gate fails — ' +
+      'see get_release_readiness and manage_release. "freeze" / "unfreeze" set the milestone freeze ' +
+      '(freezeType: milestone-freeze | testing-only | stabilization | full-freeze).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -27,6 +31,7 @@ export const MILESTONE_TOOLS = [
             'link_epic', 'unlink_epic',
             'generate_changelog', 'reorder_epics',
             'link_suite', 'unlink_suite',
+            'release', 'freeze', 'unfreeze',
           ],
           description: 'Action to perform',
         },
@@ -127,6 +132,34 @@ export const MILESTONE_TOOLS = [
         suiteId: {
           type: 'string',
           description: 'Test suite ID to link/unlink (required for link_suite, unlink_suite)',
+        },
+        // --- release fields ---
+        environment: {
+          type: 'string',
+          description: 'Environment to release to: id, key or alias (release)',
+        },
+        candidateId: {
+          type: 'string',
+          description: 'Release candidate id or version label going out (release). Defaults to the newest active candidate.',
+        },
+        notes: {
+          type: 'string',
+          description: 'Release notes (release)',
+        },
+        confirmDeferred: {
+          type: 'boolean',
+          description: 'Release even though the deferred epic still has open tasks (release)',
+        },
+        // --- freeze fields ---
+        freezeType: {
+          type: 'string',
+          enum: ['milestone-freeze', 'testing-only', 'stabilization', 'full-freeze'],
+          description: 'What may still start inside the milestone while frozen (freeze). ' +
+            'stabilization = bugs and testing only; testing-only = testing only; full-freeze = nothing.',
+        },
+        reason: {
+          type: 'string',
+          description: 'Why the milestone is frozen (freeze)',
         },
       },
       required: ['action', 'projectId'],
