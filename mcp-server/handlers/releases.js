@@ -89,6 +89,18 @@ export async function manageRelease(args = {}) {
   case 'add_recommended_gates':
     need(args, ['projectId'], action);
     return callEzmodoAPI('mcpAddRecommendedReleaseGates', { projectId: args.projectId });
+  case 'list_gates':
+    need(args, ['projectId'], action);
+    return callEzmodoAPI('mcpListReleaseGates', pick(args, ['projectId', 'environment']));
+  case 'list_templates':
+    need(args, ['projectId'], action);
+    return callEzmodoAPI('mcpListReleaseTemplates', { projectId: args.projectId });
+  case 'get_settings':
+    need(args, ['projectId'], action);
+    return callEzmodoAPI('mcpGetReleaseSettings', { projectId: args.projectId });
+  case 'save_settings':
+    need(args, ['projectId', 'completeTasksOn'], action);
+    return callEzmodoAPI('mcpSaveReleaseSettings', pick(args, ['projectId', 'completeTasksOn']));
   case 'save_template':
     need(args, ['projectId', 'name', 'items'], action);
     return callEzmodoAPI('mcpSaveReleaseTemplate',

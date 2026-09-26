@@ -25,6 +25,7 @@ export async function manageMilestone(args) {
   case 'link_epic': return linkEpicToMilestone(params);
   case 'unlink_epic': return unlinkEpicFromMilestone(params);
   case 'generate_changelog': return generateMilestoneChangelog(params);
+  case 'draft_whats_new': return draftMilestoneWhatsNew(params);
   case 'reorder_epics': return reorderMilestoneEpics(params);
   case 'link_suite': return linkSuiteToMilestone(params);
   case 'unlink_suite': return unlinkSuiteFromMilestone(params);
@@ -107,6 +108,10 @@ async function unlinkEpicFromMilestone(args) {
 
 async function generateMilestoneChangelog(args) {
   return callEzmodoAPI('mcpGenerateMilestoneChangelog', args);
+}
+
+async function draftMilestoneWhatsNew(args) {
+  return callEzmodoAPI('mcpDraftMilestoneWhatsNew', args);
 }
 
 async function fetchMilestoneProgress(args) {

@@ -35,8 +35,8 @@ export const RELEASE_TOOLS = [
   },
   {
     name: 'manage_release',
-    description: 'Work a release through: cut candidates, promote them, tick the checklist, waive, sign off, ' +
-      'configure gates, and report checks/deployments from any pipeline. Promote is REFUSED while a required ' +
+    description: 'Work a release through: create release candidates, promote them, tick the checklist, waive, ' +
+      'sign off, configure gates, and report checks/deployments from any pipeline. Promote is REFUSED while a required ' +
       'gate fails (the error lists each blocking gate and how to waive it); there is no force — fix it or waive ' +
       'it with a reason. Actions: ' +
       'create_candidate (milestoneId, versionLabel, kind?, commitSha?, notes?); ' +
@@ -53,7 +53,14 @@ export const RELEASE_TOOLS = [
       'item_to_task (itemId — turns a checklist item into a task; completing the task ticks it); ' +
       'add_gate (projectId, environment, type, name?, params?, enforcement?: required|advisory); ' +
       'update_gate (gateId, name?, params?, enforcement?, enabled?); delete_gate (gateId); ' +
-      'add_recommended_gates (projectId — a sensible starter set for environments with none); ' +
+      'add_recommended_gates (projectId — adds the recommended checks each environment after the first is ' +
+      'missing; existing gates are left alone); ' +
+      'list_gates (projectId, environment? — every automatic check, with ids for update_gate/delete_gate; a ' +
+      'checklist_phase gate with params.phase is what makes that phase of steps block promotion); ' +
+      'list_templates (projectId — step templates: built-in, organization and project; the project\'s isDefault ' +
+      'one is its release process); ' +
+      'get_settings / save_settings (projectId, completeTasksOn: last_environment|milestone_released|' +
+      'any_environment — when a release completes the in-review tasks it ships); ' +
       'save_template (projectId, name, items[], templateId? to replace, isDefault?, orgWide?); ' +
       'report_check (projectId, name, status: pending|running|success|failure|cancelled|skipped, ' +
       'candidate? (id or version label), commitSha?, environment?, url?, source?, externalId?); ' +
@@ -68,12 +75,17 @@ export const RELEASE_TOOLS = [
           enum: [
             'create_candidate', 'update_candidate', 'promote', 'sign_off', 'waive', 'revoke_waiver',
             'apply_checklist', 'add_checklist_item', 'set_item_state', 'item_to_task',
-            'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'save_template',
+            'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
+            'list_templates', 'save_template', 'get_settings', 'save_settings',
             'report_check', 'report_deployment',
           ],
           description: 'Action to perform',
         },
-        projectId: { type: 'string', description: 'Project id (add_gate, add_recommended_gates, save_template, report_*)' },
+        projectId: {
+          type: 'string',
+          description: 'Project id (add_gate, add_recommended_gates, list_gates, list_templates, save_template, ' +
+            'get_settings, save_settings, report_*)',
+        },
         milestoneId: { type: 'string', description: 'Milestone id (create_candidate, apply_checklist, add_checklist_item)' },
         candidateId: { type: 'string', description: 'Release candidate id' },
         candidate: { type: 'string', description: 'Candidate id OR version label (report_check, report_deployment)' },
@@ -111,6 +123,11 @@ export const RELEASE_TOOLS = [
         params: { type: 'object', description: 'Gate params' },
         enforcement: { type: 'string', enum: ['required', 'advisory'] },
         enabled: { type: 'boolean' },
+        completeTasksOn: {
+          type: 'string',
+          enum: ['last_environment', 'milestone_released', 'any_environment'],
+          description: 'save_settings: when a release completes the in-review tasks it ships',
+        },
         items: { type: 'array', items: { type: 'object' }, description: 'save_template items: [{key?, title, phase, ownerId?, notes?, runbookUrl?, autoCheck?}]' },
         isDefault: { type: 'boolean' },
         orgWide: { type: 'boolean' },

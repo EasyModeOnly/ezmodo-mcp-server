@@ -8,6 +8,8 @@ jest.unstable_mockModule('../lib/http-client.js', () => ({
 }));
 
 const { manageMilestone, getMilestone } = await import('../handlers/milestones.js');
+const { ENDPOINT_MAP } = await import('../config/endpoint-map.js');
+const { MILESTONE_TOOLS } = await import('../tools/milestones.js');
 
 describe('Milestone Operations', () => {
   afterEach(() => {
@@ -99,6 +101,17 @@ describe('Milestone Operations', () => {
 
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
       expect(result.success).toBe(true);
+    });
+
+    it('passes whatsNew store copy through on update', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Milestone updated' });
+
+      const args = { projectId: 'proj-1', milestoneId: 'ms-1', whatsNew: 'Faster sync.' };
+      await manageMilestone({ action: 'update', ...args });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
+      const props = MILESTONE_TOOLS.find((t) => t.name === 'manage_milestone').inputSchema.properties;
+      expect(props.whatsNew.type).toBe('string');
     });
 
     it('should re-parent (or clear parent with "") via parentMilestoneId', async () => {
@@ -236,6 +249,24 @@ describe('Milestone Operations', () => {
     it('should handle server error', async () => {
       mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Internal server error', 500));
       await expect(manageMilestone({ action: 'generate_changelog', milestoneId: 'ms-1' })).rejects.toThrow('Internal server error');
+    });
+  });
+
+  describe('draft_whats_new (#2915)', () => {
+    it('drafts store copy through the draft-whats-new route', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ whatsNew: "What's new in 1.4.0:\n• Dark mode" });
+
+      const args = { projectId: 'proj-1', milestoneId: 'ms-1' };
+      const result = await manageMilestone({ action: 'draft_whats_new', ...args });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDraftMilestoneWhatsNew', args);
+      expect(result.whatsNew).toContain('Dark mode');
+      expect(ENDPOINT_MAP.mcpDraftMilestoneWhatsNew).toEqual({ route: 'mcp/v1/milestones/draft-whats-new', method: 'POST' });
+    });
+
+    it('is a listed manage_milestone action', () => {
+      const action = MILESTONE_TOOLS.find((t) => t.name === 'manage_milestone').inputSchema.properties.action;
+      expect(action.enum).toContain('draft_whats_new');
     });
   });
 

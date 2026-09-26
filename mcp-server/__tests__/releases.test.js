@@ -28,7 +28,8 @@ describe('Release Readiness tools (E-262)', () => {
       'mcpSaveReleaseTemplate', 'mcpCreateReleaseWaiver', 'mcpRevokeReleaseWaiver', 'mcpReportReleaseCheck',
       'mcpReportReleaseDeployment', 'mcpUpdateReleaseCandidate', 'mcpReleaseReadiness', 'mcpPromoteReleaseCandidate',
       'mcpSignOffReleaseCandidate', 'mcpReleaseMilestone', 'mcpStartSuiteRun', 'mcpRecordSuiteRunResult',
-      'mcpUpdateSuiteRunStatus',
+      'mcpUpdateSuiteRunStatus', 'mcpListReleaseGates', 'mcpListReleaseTemplates', 'mcpGetReleaseSettings',
+      'mcpSaveReleaseSettings',
     ];
     expect(used.filter((e) => !ENDPOINT_MAP[e])).toEqual([]);
   });
@@ -113,6 +114,22 @@ describe('Release Readiness tools (E-262)', () => {
       expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReportReleaseDeployment', {
         source: 'gitlab', projectId: 'p1', environment: 'stg', status: 'success', commitSha: 'abc',
       });
+    });
+
+    it('reads the release process back: gates, templates, settings (#2915)', async () => {
+      mockCallEzmodoAPI.mockResolvedValue({});
+      await manageRelease({ action: 'list_gates', projectId: 'p1', environment: 'production' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpListReleaseGates', { projectId: 'p1', environment: 'production' });
+      await manageRelease({ action: 'list_templates', projectId: 'p1' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpListReleaseTemplates', { projectId: 'p1' });
+      await manageRelease({ action: 'get_settings', projectId: 'p1' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetReleaseSettings', { projectId: 'p1' });
+      await manageRelease({ action: 'save_settings', projectId: 'p1', completeTasksOn: 'milestone_released' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', completeTasksOn: 'milestone_released' });
+    });
+
+    it('save_settings needs completeTasksOn', async () => {
+      await expect(manageRelease({ action: 'save_settings', projectId: 'p1' })).rejects.toThrow(/completeTasksOn/);
     });
 
     it('rejects an unknown action', async () => {

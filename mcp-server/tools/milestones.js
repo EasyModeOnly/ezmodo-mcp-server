@@ -16,6 +16,8 @@ export const MILESTONE_TOOLS = [
   {
     name: 'manage_milestone',
     description: 'Create, update, delete milestones, or manage epic/suite linking and changelog generation. ' +
+      '"draft_whats_new" returns short app-store "What\'s new" copy drafted from the milestone\'s epics ' +
+      '(within Google Play\'s 500 characters) WITHOUT saving it; save it with update whatsNew. ' +
       'Milestones can be version releases or initiatives. ' +
       '"release" releases the milestone to an environment: when that environment has release gates it needs a ' +
       'release candidate (candidateId, else the newest active one) and is REFUSED while a required gate fails — ' +
@@ -29,7 +31,7 @@ export const MILESTONE_TOOLS = [
           enum: [
             'create', 'update', 'delete',
             'link_epic', 'unlink_epic',
-            'generate_changelog', 'reorder_epics',
+            'generate_changelog', 'draft_whats_new', 'reorder_epics',
             'link_suite', 'unlink_suite',
             'release', 'freeze', 'unfreeze',
           ],
@@ -42,7 +44,8 @@ export const MILESTONE_TOOLS = [
         },
         milestoneId: {
           type: 'string',
-          description: 'Milestone ID (required for update, delete, link_epic, unlink_epic, generate_changelog, reorder_epics, link_suite, unlink_suite)',
+          description: 'Milestone ID (required for update, delete, link_epic, unlink_epic, generate_changelog, ' +
+            'draft_whats_new, reorder_epics, link_suite, unlink_suite)',
         },
         milestoneSlug: {
           type: 'string',
@@ -100,6 +103,11 @@ export const MILESTONE_TOOLS = [
         changelog: {
           type: 'string',
           description: 'Markdown changelog for version type milestones (create, update)',
+        },
+        whatsNew: {
+          type: 'string',
+          description: 'Short user-facing "What\'s new" text for app store listings, separate from the changelog. ' +
+            'Max 4000 characters (App Store); keep it within 500 for Google Play. Empty string clears it (update only)',
         },
         // --- Update-only fields ---
         releasedDate: {
