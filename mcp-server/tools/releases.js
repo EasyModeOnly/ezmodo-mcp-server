@@ -37,10 +37,13 @@ export const RELEASE_TOOLS = [
     name: 'manage_release',
     description: 'Work a release through: create release candidates, promote them, tick the checklist, waive, ' +
       'sign off, configure gates, and report checks/deployments from any pipeline. Promote is REFUSED while a required ' +
-      'gate fails (the error lists each blocking gate and how to waive it); there is no force — fix it or waive ' +
-      'it with a reason. Actions: ' +
+      'or reject gate fails (the error lists each blocking gate and how to waive it); there is no force — fix it or ' +
+      'waive it with a reason. Enforcement: required blocks promotion; advisory only warns; reject is like required, ' +
+      'and a definite failure (never pending) rejects the candidate; only gate types with canReject (suite_pass_rate, ' +
+      'external_check, deployed_to_previous, checklist_phase) accept it. A rejected candidate cannot be promoted. Actions: ' +
       'create_candidate (milestoneId, versionLabel, kind?, commitSha?, notes?); ' +
-      'update_candidate (candidateId, notes?, commitSha?, status: active|rejected|shipped); ' +
+      'update_candidate (candidateId, notes?, commitSha?, status: active|rejected|shipped, rejectionReason? — ' +
+      'recorded with a rejection; setting active again clears the rejection); ' +
       'promote (candidateId, environment, notes?); ' +
       'sign_off (candidateId, environment, note?); ' +
       'waive (candidateId, environment, targetType: gate|checklist_item|epic, targetId, reason, ' +
@@ -49,9 +52,12 @@ export const RELEASE_TOOLS = [
       'revoke_waiver (waiverId); ' +
       'apply_checklist (milestoneId, templateId? — default: the project\'s default, else the built-in one); ' +
       'add_checklist_item (milestoneId, title, phase, ownerId?, ownerName?, notes?, runbookUrl?, autoCheck?); ' +
-      'set_item_state (itemId, state: open|done|waived|n_a, note? — required for waived); ' +
+      'set_item_state (itemId, state: open|done|failed|waived|n_a, note? — required for waived, candidateId? — ' +
+      'failed means the step was done and did not pass: it fails its phase gate, and when that phase is set to ' +
+      'reject it rejects the candidate (a per-candidate step\'s own, else candidateId, else every active candidate ' +
+      'of the milestone)); ' +
       'item_to_task (itemId — turns a checklist item into a task; completing the task ticks it); ' +
-      'add_gate (projectId, environment, type, name?, params?, enforcement?: required|advisory); ' +
+      'add_gate (projectId, environment, type, name?, params?, enforcement?: required|advisory|reject); ' +
       'update_gate (gateId, name?, params?, enforcement?, enabled?); delete_gate (gateId); ' +
       'add_recommended_gates (projectId — adds the recommended checks each environment after the first is ' +
       'missing; existing gates are left alone); ' +
@@ -96,6 +102,7 @@ export const RELEASE_TOOLS = [
         notes: { type: 'string' },
         note: { type: 'string', description: 'sign_off note, or the reason when set_item_state waives or marks n_a' },
         status: { type: 'string', description: 'update_candidate / report_check / report_deployment status' },
+        rejectionReason: { type: 'string', description: 'update_candidate with status rejected: why it will not ship (reason also works)' },
         targetType: { type: 'string', enum: ['gate', 'checklist_item', 'epic'] },
         targetId: { type: 'string' },
         reason: { type: 'string', description: 'Why this is going out anyway (waive). Shown on the release record and changelog.' },
@@ -116,12 +123,16 @@ export const RELEASE_TOOLS = [
         ownerName: { type: 'string' },
         runbookUrl: { type: 'string' },
         autoCheck: { type: 'object', description: 'A gate expression {type, params}: the item counts as done while it passes' },
-        state: { type: 'string', enum: ['open', 'done', 'waived', 'n_a'] },
+        state: { type: 'string', enum: ['open', 'done', 'failed', 'waived', 'n_a'] },
         gateId: { type: 'string' },
         type: { type: 'string', description: 'Gate type (add_gate); see get_release_readiness listGateTypes' },
         name: { type: 'string', description: 'Gate / template / check name' },
         params: { type: 'object', description: 'Gate params' },
-        enforcement: { type: 'string', enum: ['required', 'advisory'] },
+        enforcement: {
+          type: 'string',
+          enum: ['required', 'advisory', 'reject'],
+          description: 'required blocks; advisory warns; reject: like required, and a definite failure rejects the candidate (only gate types with canReject)',
+        },
         enabled: { type: 'boolean' },
         completeTasksOn: {
           type: 'string',

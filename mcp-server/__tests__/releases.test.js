@@ -104,6 +104,24 @@ describe('Release Readiness tools (E-262)', () => {
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateReleaseChecklistItem', { id: 'i1', state: 'waived', stateNote: 'no support team yet' });
     });
 
+    it('set_item_state passes the candidate being worked on, for a failed step (#2916)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+      await manageRelease({ action: 'set_item_state', itemId: 'i1', state: 'failed', note: 'support not briefed', candidateId: 'c1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateReleaseChecklistItem', {
+        id: 'i1', state: 'failed', stateNote: 'support not briefed', candidateId: 'c1',
+      });
+    });
+
+    it('update_candidate sends the rejection reason, taking reason as an alias when rejecting (#2916)', async () => {
+      mockCallEzmodoAPI.mockResolvedValue({});
+      await manageRelease({ action: 'update_candidate', candidateId: 'c1', status: 'rejected', rejectionReason: 'login loop' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpUpdateReleaseCandidate', { id: 'c1', status: 'rejected', rejectionReason: 'login loop' });
+      await manageRelease({ action: 'update_candidate', candidateId: 'c1', status: 'rejected', reason: 'crash on start' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpUpdateReleaseCandidate', { id: 'c1', status: 'rejected', rejectionReason: 'crash on start' });
+      await manageRelease({ action: 'update_candidate', candidateId: 'c1', status: 'active', reason: 'ignored' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpUpdateReleaseCandidate', { id: 'c1', status: 'active' });
+    });
+
     it('report_check defaults the source to mcp but keeps an explicit one', async () => {
       mockCallEzmodoAPI.mockResolvedValue({});
       await manageRelease({ action: 'report_check', projectId: 'p1', name: 'build', status: 'success', candidate: '1.4.0-rc.1' });

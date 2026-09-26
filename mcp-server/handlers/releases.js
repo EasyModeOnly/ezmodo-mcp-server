@@ -44,9 +44,16 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpCreateReleaseCandidate', {
       milestoneId: args.milestoneId, ...pick(args, ['versionLabel', 'kind', 'commitSha', 'notes']),
     });
-  case 'update_candidate':
+  case 'update_candidate': {
     need(args, ['candidateId'], action);
-    return callEzmodoAPI('mcpUpdateReleaseCandidate', { id: args.candidateId, ...pick(args, ['notes', 'commitSha', 'status']) });
+    const body = { id: args.candidateId, ...pick(args, ['notes', 'commitSha', 'status', 'rejectionReason']) };
+    // Agents reach for `reason` (it is waive's word); take it as the
+    // rejection's reason when rejecting (#2916).
+    if (body.rejectionReason === undefined && args.status === 'rejected' && args.reason !== undefined) {
+      body.rejectionReason = args.reason;
+    }
+    return callEzmodoAPI('mcpUpdateReleaseCandidate', body);
+  }
   case 'promote':
     need(args, ['candidateId', 'environment'], action);
     return callEzmodoAPI('mcpPromoteReleaseCandidate', { id: args.candidateId, ...pick(args, ['environment', 'notes']), source: 'api' });
@@ -72,6 +79,9 @@ export async function manageRelease(args = {}) {
     need(args, ['itemId', 'state'], action);
     const body = { id: args.itemId, state: args.state };
     if (args.note !== undefined) body.stateNote = args.note;
+    // The candidate being worked on: a failed step whose phase is set to
+    // reject rejects it (#2916).
+    if (args.candidateId !== undefined) body.candidateId = args.candidateId;
     return callEzmodoAPI('mcpUpdateReleaseChecklistItem', body);
   }
   case 'item_to_task':
