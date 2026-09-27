@@ -71,6 +71,23 @@ export const ENDPOINT_MAP = {
   'mcpListWatched': { route: 'mcp/v1/watching', method: 'GET' },
   'mcpListNotifications': { route: 'mcp/v1/notifications', method: 'GET' },
 
+  // Public issue tracker (E-238 #2390). Same paths as the web app's REST
+  // routes; {projectId}, {number} and {feedbackId} are filled from the data.
+  'mcpListPublicIssues': { route: 'mcp/v1/projects/{projectId}/issues', method: 'GET' },
+  'mcpCreatePublicIssue': { route: 'mcp/v1/projects/{projectId}/issues', method: 'POST' },
+  'mcpGetPublicIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}', method: 'GET' },
+  'mcpUpdatePublicIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}', method: 'PATCH' },
+  'mcpPublishPublicIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}/publish', method: 'POST' },
+  'mcpHidePublicIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}/hide', method: 'POST' },
+  'mcpMergePublicIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}/merge', method: 'POST' },
+  'mcpResumePublicIssueAutoStatus': {
+    route: 'mcp/v1/projects/{projectId}/issues/{number}/resume-auto-status', method: 'POST',
+  },
+  'mcpListIssueIntake': { route: 'mcp/v1/projects/{projectId}/intake', method: 'GET' },
+  'mcpPublishIssueIntake': { route: 'mcp/v1/projects/{projectId}/intake/{feedbackId}/publish', method: 'POST' },
+  'mcpRejectIssueIntake': { route: 'mcp/v1/projects/{projectId}/intake/{feedbackId}/reject', method: 'POST' },
+  'mcpConvertIssueIntake': { route: 'mcp/v1/projects/{projectId}/intake/{feedbackId}/convert', method: 'POST' },
+
   // Documentation
   'mcpGetDocumentation': { route: 'mcp/v1/documents', method: 'GET' },
   'mcpGetDocument': { route: 'mcp/v1/documents/by-id', method: 'GET' },

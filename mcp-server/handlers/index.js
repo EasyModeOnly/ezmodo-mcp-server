@@ -27,6 +27,7 @@ import * as accessHandlers from './access.js';
 import * as graphHandlers from './graph.js';
 import * as tagHandlers from './tags.js';
 import * as watcherHandlers from './watchers.js';
+import * as publicIssueHandlers from './public-issues.js';
 import * as aiIntelligenceHandlers from './ai-intelligence.js';
 import * as gitContextHandlers from './git-context.js';
 import * as githubHandlers from './github.js';
@@ -146,6 +147,11 @@ export const HANDLERS = {
   manage_watch: watcherHandlers.manageWatch,
   list_watched: watcherHandlers.listWatched,
   list_notifications: watcherHandlers.listNotifications,
+
+  // Public issue tracker (E-238)
+  list_issues: publicIssueHandlers.listIssues,
+  get_issue: publicIssueHandlers.getIssue,
+  manage_issue: publicIssueHandlers.manageIssue,
 
   // Links (polymorphic entity_links — task/epic/project/document)
   manage_link: linkHandlers.manageLink,
