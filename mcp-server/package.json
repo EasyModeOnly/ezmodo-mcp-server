@@ -59,8 +59,8 @@
     "email": "help@ezmodo.com"
   },
   "dependencies": {
-    "@modelcontextprotocol/node": "^2.0.0",
-    "@modelcontextprotocol/server": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.1.0",
+    "@modelcontextprotocol/server": "^2.1.0",
     "hono": "^4.13.8",
     "node-fetch": "^3.3.2"
   },
