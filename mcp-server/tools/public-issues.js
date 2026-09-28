@@ -72,7 +72,9 @@ export const PUBLIC_ISSUE_TOOLS = [
   {
     name: 'get_issue',
     description: 'Get one public issue by its number in the project (e.g. 12 for issue #12): title, body, ' +
-      'type, labels, state, publicStatus, statusSource, closeReason, linked taskId, vote and comment counts. ' +
+      'type, labels (the names of its public tags) and tags (org tags with id, colour, and public false for one ' +
+      'since taken out of the project\'s public set), state, publicStatus, statusSource, closeReason, linked taskId, ' +
+      'vote and comment counts. ' +
       'Issue numbers are their own sequence, separate from task numbers.',
     inputSchema: {
       type: 'object',
@@ -124,7 +126,9 @@ export const PUBLIC_ISSUE_TOOLS = [
         labels: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Public label names (replaces the set on update)',
+          description: 'Public tag NAMES (E-276: tags are org tags the project has made public). Replaces ' +
+            'the issue\'s tags on update. When the project has public tags, names must be among them (or already ' +
+            'on the issue); a project with none yet makes any name public. The linked task gains the issue\'s tags.',
         },
         state: {
           type: 'string',
