@@ -280,7 +280,9 @@ export const TESTING_TOOLS = [
   {
     name: 'list_test_cases',
     description: 'List test cases or get a single test case. ' +
-      'Provide testCaseId (+ projectId) for single lookup, or projectId with optional filters for listing.',
+      'Provide testCaseId (+ projectId) for single lookup, or projectId with optional filters for listing. ' +
+      'A list response includes `total` (every case matching the filters) — read it before concluding a case ' +
+      'does not exist, since one page holds at most 200.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -330,13 +332,35 @@ export const TESTING_TOOLS = [
           enum: ['transient', 'persistent'],
           description: 'Filter by retention type',
         },
+        suiteId: {
+          type: 'string',
+          description: 'Filter to cases in this suite',
+        },
+        search: {
+          type: 'string',
+          description: 'Case-insensitive substring of the title or category',
+        },
+        sortBy: {
+          type: 'string',
+          enum: ['createdAt', 'title', 'priority', 'lastRun'],
+          description: 'Sort column (offset paging only; lastRun puts never-run cases last)',
+        },
+        sortDir: {
+          type: 'string',
+          enum: ['asc', 'desc'],
+          description: 'Sort direction (default asc)',
+        },
         limit: {
           type: 'number',
           description: 'Max results per page (default 50, max 200)',
         },
+        offset: {
+          type: 'number',
+          description: 'Skip this many matching cases (offset paging). Cannot be combined with cursor.',
+        },
         cursor: {
           type: 'string',
-          description: 'Pagination cursor from a previous response',
+          description: 'Pagination cursor from a previous response (created-at order; cannot be combined with sortBy)',
         },
       },
       required: ['projectId'],
