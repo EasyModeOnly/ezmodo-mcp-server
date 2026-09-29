@@ -168,7 +168,7 @@ export const TESTING_TOOLS = [
       'Suites are project-level groupings of test cases (e.g., regression, smoke, acceptance). ' +
       'Run a suite with start_run (suiteId, environment, releaseCandidateId? — ties the run to the build under ' +
       'test so release gates can read it), record_result (runId, caseId, overallStatus: pass|fail|skip|blocked) ' +
-      'for each case, then complete_run (runId).',
+      'for each case, then complete_run (runId; skipRemaining:true if some cases were not run).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -267,6 +267,11 @@ export const TESTING_TOOLS = [
           type: 'string',
           enum: ['completed', 'cancelled', 'in_progress'],
           description: 'complete_run: the run\'s final status (default completed)',
+        },
+        skipRemaining: {
+          type: 'boolean',
+          description: 'complete_run: mark every case without a result as skipped. Completing a run that still ' +
+            'has unrun cases is refused without it — record the missing results, or pass this to skip them.',
         },
       },
       required: ['action', 'projectId'],

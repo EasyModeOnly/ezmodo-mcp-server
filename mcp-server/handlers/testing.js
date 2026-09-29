@@ -149,5 +149,6 @@ async function completeSuiteRun(args) {
   requireFields(args, ['projectId', 'suiteId', 'runId'], 'complete_run');
   return callEzmodoAPI('mcpUpdateSuiteRunStatus', {
     projectId: args.projectId, suiteId: args.suiteId, runId: args.runId, status: args.status || 'completed',
+    ...(args.skipRemaining ? { skipRemaining: true } : {}),
   });
 }
