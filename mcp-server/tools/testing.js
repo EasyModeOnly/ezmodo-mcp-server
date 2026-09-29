@@ -336,6 +336,10 @@ export const TESTING_TOOLS = [
           type: 'string',
           description: 'Filter to cases in this suite',
         },
+        notInSuiteId: {
+          type: 'string',
+          description: 'Exclude cases already in this suite (e.g. to find cases to add to it)',
+        },
         search: {
           type: 'string',
           description: 'Case-insensitive substring of the title or category',
