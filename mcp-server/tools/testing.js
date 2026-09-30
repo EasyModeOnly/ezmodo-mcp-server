@@ -16,13 +16,14 @@ export const TESTING_TOOLS = [
   {
     name: 'manage_test_case',
     description: 'Create, update, delete test cases, or record a test run. ' +
-      'Test cases belong to projects and define verification criteria with optional structured steps.',
+      'Test cases belong to projects and define verification criteria with optional structured steps. ' +
+      'action "bulk" applies one bulkAction to many cases (caseIds or a filter, max 500); dryRun first.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'record_run'],
+          enum: ['create', 'update', 'delete', 'record_run', 'bulk'],
           description: 'Action to perform',
         },
         // --- Identifiers ---
@@ -71,7 +72,9 @@ export const TESTING_TOOLS = [
         },
         category: {
           type: 'string',
-          description: 'Test category (e.g., "functional", "regression", "edge-case"). Used by create and update.',
+          enum: ['functional', 'regression', 'edge_case', 'error_handling', 'performance', 'security', 'accessibility'],
+          description: 'Test category. Used by create, update and bulk set_category. Spelling variants such as ' +
+            '"Edge-case" are folded; anything else is rejected.',
         },
         links: LINKS_ARRAY_SCHEMA,
         environments: {
@@ -157,6 +160,30 @@ export const TESTING_TOOLS = [
         commitSha: {
           type: 'string',
           description: 'Commit that was tested (record_run only)',
+        },
+        // --- bulk ---
+        bulkAction: {
+          type: 'string',
+          enum: ['set_priority', 'set_category', 'set_lifecycle', 'add_to_suite', 'delete'],
+          description: 'bulk: what to do to every target case. Reads priority, category, lifecycleStatus or suiteId.',
+        },
+        caseIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'bulk: the cases to act on (max 500). Or give filter instead.',
+        },
+        filter: {
+          type: 'object',
+          description: 'bulk: act on every case matching this Cases-list filter: search, statuses, priorities, ' +
+            'categories, lifecycleStatuses, retentions, suiteIds, notInSuiteId. Refused if more than 500 match.',
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'bulk: only report how many cases match; change nothing. Use it before a delete.',
+        },
+        suiteId: {
+          type: 'string',
+          description: 'bulk add_to_suite: the suite to add the cases to',
         },
       },
       required: ['action', 'projectId'],

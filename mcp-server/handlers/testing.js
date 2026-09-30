@@ -22,6 +22,7 @@ export async function manageTestCase(args) {
   case 'update': return updateTestCase(params);
   case 'delete': return deleteTestCase(params);
   case 'record_run': return recordTestRun(params);
+  case 'bulk': return bulkTestCases(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -166,5 +167,17 @@ async function completeSuiteRun(args) {
   return callEzmodoAPI('mcpUpdateSuiteRunStatus', {
     projectId: args.projectId, suiteId: args.suiteId, runId: args.runId, status: args.status || 'completed',
     ...(args.skipRemaining ? { skipRemaining: true } : {}),
+  });
+}
+
+/**
+ * Apply one action to many cases (E-278 #3031). Targets are caseIds or a
+ * Cases-list filter; dryRun only counts them.
+ */
+async function bulkTestCases(args) {
+  requireFields(args, ['projectId', 'bulkAction'], 'bulk');
+  const { bulkAction, projectId, caseIds, filter, dryRun, priority, category, lifecycleStatus, suiteId } = args;
+  return callEzmodoAPI('mcpBulkTestCases', {
+    projectId, action: bulkAction, caseIds, filter, dryRun, priority, category, lifecycleStatus, suiteId,
   });
 }

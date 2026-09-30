@@ -414,6 +414,7 @@ export const ENDPOINT_MAP = {
   'mcpListTestCases': { route: 'mcp/v1/testing/cases', method: 'GET' },
   'mcpListTestCaseRuns': { route: 'mcp/v1/testing/case/runs', method: 'GET' },
   'mcpGroupTestCases': { route: 'mcp/v1/testing/cases/groups', method: 'GET' },
+  'mcpBulkTestCases': { route: 'mcp/v1/testing/cases/bulk', method: 'POST' },
   'mcpGetTestCase': { route: 'mcp/v1/testing/case', method: 'GET' },
   'mcpCreateTestCase': { route: 'mcp/v1/testing/cases', method: 'POST' },
   'mcpUpdateTestCase': { route: 'mcp/v1/testing/cases', method: 'PUT' },

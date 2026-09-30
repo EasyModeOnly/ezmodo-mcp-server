@@ -40,3 +40,23 @@ describe('list_test_cases countBy', () => {
     expect(ENDPOINT_MAP.mcpGroupTestCases).toEqual({ route: 'mcp/v1/testing/cases/groups', method: 'GET' });
   });
 });
+
+describe('manage_test_case bulk', () => {
+  it('sends the bulk request to the bulk endpoint', async () => {
+    const { manageTestCase } = await import('../handlers/testing.js');
+    await manageTestCase({
+      action: 'bulk', projectId: 'p1', bulkAction: 'set_lifecycle', lifecycleStatus: 'deprecated',
+      filter: { statuses: ['not_run'] }, dryRun: true,
+    });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpBulkTestCases', expect.objectContaining({
+      projectId: 'p1', action: 'set_lifecycle', lifecycleStatus: 'deprecated', filter: { statuses: ['not_run'] }, dryRun: true,
+    }));
+    expect(ENDPOINT_MAP.mcpBulkTestCases).toEqual({ route: 'mcp/v1/testing/cases/bulk', method: 'POST' });
+  });
+
+  it('offers only canonical categories', () => {
+    const tool = TESTING_TOOLS.find((t) => t.name === 'manage_test_case');
+    expect(tool.inputSchema.properties.category.enum).toContain('edge_case');
+    expect(tool.inputSchema.properties.category.enum).not.toContain('edge-case');
+  });
+});
