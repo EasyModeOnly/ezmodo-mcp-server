@@ -48,6 +48,16 @@ export async function manageTestSuite(args) {
  * Unified get/list handler for test cases
  */
 export async function listTestCases(args) {
+  // Run history for one case, paged newest first
+  if (args.testCaseId && args.runHistory) {
+    return callEzmodoAPI('mcpListTestCaseRuns', {
+      projectId: args.projectId,
+      caseId: args.testCaseId,
+      ...(args.limit ? { limit: args.limit } : {}),
+      ...(args.before ? { before: args.before } : {}),
+    });
+  }
+
   // Single test case lookup
   if (args.testCaseId) {
     return callEzmodoAPI('mcpGetTestCase', {

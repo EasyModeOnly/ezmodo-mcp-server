@@ -295,6 +295,15 @@ export const TESTING_TOOLS = [
           type: 'string',
           description: 'Test case ID for single lookup',
         },
+        runHistory: {
+          type: 'boolean',
+          description: 'With testCaseId: return that case\'s run history instead, newest first, with suite and ' +
+            'release candidate per run. Pages with limit and before (the previous page\'s nextCursor).',
+        },
+        before: {
+          type: 'string',
+          description: 'runHistory paging: nextCursor from the previous page',
+        },
         // --- List filters ---
         originTaskId: {
           type: 'string',
