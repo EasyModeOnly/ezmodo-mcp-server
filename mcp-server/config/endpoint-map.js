@@ -432,6 +432,10 @@ export const ENDPOINT_MAP = {
   'mcpRemoveCasesFromSuite': { route: 'mcp/v1/testing/suites/remove-cases', method: 'POST' },
   // Suite runs (E-262 #2818): start one for a release candidate, record, complete.
   'mcpStartSuiteRun': { route: 'mcp/v1/testing/suites/runs', method: 'POST' },
+  // Project-level runs (E-278 #3032): plan and ad-hoc runs, list across suites
+  'mcpStartProjectRun': { route: 'mcp/v1/testing/runs', method: 'POST' },
+  'mcpListTestRuns': { route: 'mcp/v1/testing/runs', method: 'GET' },
+  'mcpGetTestRun': { route: 'mcp/v1/testing/runs/by-id', method: 'GET' },
   'mcpRecordSuiteRunResult': { route: 'mcp/v1/testing/suites/runs/results', method: 'POST' },
   'mcpUpdateSuiteRunStatus': { route: 'mcp/v1/testing/suites/runs/status', method: 'POST' },
 };

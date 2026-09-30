@@ -182,7 +182,8 @@ describe('Release Readiness tools (E-262)', () => {
     it('start_run → record_result → complete_run', async () => {
       mockCallEzmodoAPI.mockResolvedValue({ runId: 'r1' });
       await manageTestSuite({ action: 'start_run', projectId: 'p1', suiteId: 's1', environment: 'staging', releaseCandidateId: 'c1' });
-      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpStartSuiteRun', { projectId: 'p1', suiteId: 's1', environment: 'staging', releaseCandidateId: 'c1' });
+      // One suite starts through the project runs endpoint since E-278 #3032.
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpStartProjectRun', { projectId: 'p1', suiteIds: ['s1'], environment: 'staging', releaseCandidateId: 'c1' });
       await manageTestSuite({ action: 'record_result', projectId: 'p1', suiteId: 's1', runId: 'r1', caseId: 'tc1', overallStatus: 'pass' });
       expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpRecordSuiteRunResult', { projectId: 'p1', suiteId: 's1', runId: 'r1', caseId: 'tc1', overallStatus: 'pass' });
       await manageTestSuite({ action: 'complete_run', projectId: 'p1', suiteId: 's1', runId: 'r1' });

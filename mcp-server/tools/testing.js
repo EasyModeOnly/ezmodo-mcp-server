@@ -193,9 +193,12 @@ export const TESTING_TOOLS = [
     name: 'manage_test_suite',
     description: 'Create, update, delete test suites, or add/remove cases from a suite. ' +
       'Suites are project-level groupings of test cases (e.g., regression, smoke, acceptance). ' +
-      'Run a suite with start_run (suiteId, environment, releaseCandidateId? — ties the run to the build under ' +
-      'test so release gates can read it), record_result (runId, caseId, overallStatus: pass|fail|skip|blocked) ' +
-      'for each case, then complete_run (runId; skipRemaining:true if some cases were not run).',
+      'Start a run with start_run: suiteId for one suite, suiteIds for a plan run over several (a case in two ' +
+      'suites runs once), or caseIds / filter for an ad-hoc run with no suite; plus environment and ' +
+      'releaseCandidateId? (ties the run to the build under test so release gates can read it) and assignments ' +
+      'to split the cases between people. Then record_result (runId, caseId, overallStatus: pass|fail|skip|blocked) ' +
+      'for each case, and complete_run (runId; skipRemaining:true if some cases were not run). suiteId is not ' +
+      'needed on record_result or complete_run. List runs with list_test_suites runs:true.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -211,7 +214,7 @@ export const TESTING_TOOLS = [
         },
         suiteId: {
           type: 'string',
-          description: 'Test suite ID (required for update, delete, add_cases, remove_cases)',
+          description: 'Test suite ID (required for update, delete, add_cases, remove_cases; start_run for one suite)',
         },
         // --- Create/update fields ---
         title: {
@@ -257,6 +260,44 @@ export const TESTING_TOOLS = [
           description: 'Array of test case references (required for add_cases, remove_cases)',
         },
         // --- Suite run fields (start_run, record_result, complete_run) ---
+        suiteIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'start_run: several suites make one plan run (max 20). ' +
+            'Give suiteId, suiteIds, caseIds or filter — one of them.',
+        },
+        caseIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'start_run: run exactly these cases, with no suite (max 500)',
+        },
+        filter: {
+          type: 'object',
+          description: 'start_run: run every case matching this Cases-list filter (search, statuses, priorities, ' +
+            'categories, lifecycleStatuses, retentions, suiteIds, notInSuiteId). Refused if more than 500 match.',
+        },
+        runTitle: {
+          type: 'string',
+          description: 'start_run: a name for a plan or ad-hoc run, e.g. "v0.22 regression"',
+        },
+        assignments: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              assigneeId: { type: 'string', description: 'User id, or an AI agent id such as "claude"' },
+              suiteId: { type: 'string', description: 'Every case the run took from this suite' },
+              caseIds: { type: 'array', items: { type: 'string' }, description: 'These cases' },
+            },
+            required: ['assigneeId'],
+          },
+          description: 'start_run: who runs which cases. Give suiteId or caseIds per entry; case-level entries win. ' +
+            'Unassigned cases stay open to anyone on the run.',
+        },
+        assigneeId: {
+          type: 'string',
+          description: 'start_run: who owns the run (defaults to you)',
+        },
         runId: {
           type: 'string',
           description: 'Suite run ID (record_result, complete_run)',
@@ -264,6 +305,10 @@ export const TESTING_TOOLS = [
         environment: {
           type: 'string',
           description: 'Environment the run is in, e.g. "staging" (start_run)',
+        },
+        environmentId: {
+          type: 'string',
+          description: 'Environment registry id, instead of environment (start_run)',
         },
         releaseCandidateId: {
           type: 'string',
@@ -415,7 +460,10 @@ export const TESTING_TOOLS = [
   {
     name: 'list_test_suites',
     description: 'List test suites or get a single test suite. ' +
-      'Provide testSuiteId (+ projectId) for single lookup, or projectId with optional filters for listing.',
+      'Provide testSuiteId (+ projectId) for single lookup, or projectId with optional filters for listing. ' +
+      'With runs:true, list test runs across the project instead — every suite, plan and ad-hoc run, newest ' +
+      'first — filtered by runStatus, suiteId, environment, releaseCandidateId, assigneeId and trigger; the ' +
+      'response has `total`. With runs:true and runId, get one run with its cases, assignees and results.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -441,6 +489,41 @@ export const TESTING_TOOLS = [
         cursor: {
           type: 'string',
           description: 'Pagination cursor from a previous response',
+        },
+        // --- Runs (runs:true) ---
+        runs: {
+          type: 'boolean',
+          description: 'List test runs across the project instead of suites',
+        },
+        runId: {
+          type: 'string',
+          description: 'runs:true — get this one run in full',
+        },
+        runStatus: {
+          type: 'string',
+          description: 'runs:true — active (pending + in_progress), pending, in_progress, completed or cancelled; ' +
+            'comma-separate several',
+        },
+        suiteId: {
+          type: 'string',
+          description: 'runs:true — runs of this suite, including plan runs that took cases from it',
+        },
+        environment: {
+          type: 'string',
+          description: 'runs:true — environment name or registry id',
+        },
+        releaseCandidateId: {
+          type: 'string',
+          description: 'runs:true — runs of this build',
+        },
+        assigneeId: {
+          type: 'string',
+          description: 'runs:true — runs this person owns or has cases assigned in',
+        },
+        trigger: {
+          type: 'string',
+          enum: ['manual', 'release'],
+          description: 'runs:true — what started the run',
         },
       },
       required: ['projectId'],

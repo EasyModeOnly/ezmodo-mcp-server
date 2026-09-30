@@ -81,6 +81,8 @@ export async function listTestCases(args) {
  * Unified get/list handler for test suites
  */
 export async function listTestSuites(args) {
+  if (args.runs) return listTestRuns(args);
+
   // Single test suite lookup
   if (args.testSuiteId) {
     return callEzmodoAPI('mcpGetTestSuite', {
@@ -142,30 +144,63 @@ function requireFields(args, keys, action) {
   if (missing.length) throw new Error(`${action} needs ${missing.join(', ')}.`);
 }
 
+/**
+ * Start a run (E-278 #3032): one suite, several (a plan run), explicit cases
+ * or a Cases filter (an ad-hoc run). Always the project-level endpoint; one
+ * suite there is an ordinary suite run.
+ */
 async function startSuiteRun(args) {
-  requireFields(args, ['projectId', 'suiteId'], 'start_run');
-  const body = { projectId: args.projectId, suiteId: args.suiteId };
-  for (const k of ['environment', 'releaseCandidateId', 'commitSha', 'notes', 'assigneeId', 'assigneeName']) {
+  requireFields(args, ['projectId'], 'start_run');
+  const body = { projectId: args.projectId };
+  if (args.suiteIds?.length) body.suiteIds = args.suiteIds;
+  else if (args.suiteId) body.suiteIds = [args.suiteId];
+  if (args.caseIds?.length) body.caseIds = args.caseIds;
+  if (args.filter) body.filter = args.filter;
+  if (!body.suiteIds && !body.caseIds && !body.filter) {
+    throw new Error('start_run needs suiteId, suiteIds, caseIds or filter.');
+  }
+  if (args.runTitle) body.title = args.runTitle;
+  if (args.assignments?.length) body.assignments = args.assignments;
+  const passThrough = ['environment', 'environmentId', 'releaseCandidateId', 'commitSha', 'notes', 'assigneeId', 'assigneeName'];
+  for (const k of passThrough) {
     if (args[k]) body[k] = args[k];
   }
-  return callEzmodoAPI('mcpStartSuiteRun', body);
+  return callEzmodoAPI('mcpStartProjectRun', body);
+}
+
+/**
+ * List runs across the project, or get one (runId).
+ */
+async function listTestRuns(args) {
+  requireFields(args, ['projectId'], 'list_test_suites runs');
+  if (args.runId) {
+    return callEzmodoAPI('mcpGetTestRun', { projectId: args.projectId, runId: args.runId });
+  }
+  const query = { projectId: args.projectId };
+  if (args.runStatus) query.status = args.runStatus;
+  for (const k of ['suiteId', 'environment', 'releaseCandidateId', 'assigneeId', 'trigger', 'cursor', 'limit']) {
+    if (args[k]) query[k] = args[k];
+  }
+  return callEzmodoAPI('mcpListTestRuns', query);
 }
 
 async function recordSuiteRunResult(args) {
-  requireFields(args, ['projectId', 'suiteId', 'runId', 'caseId', 'overallStatus'], 'record_result');
+  requireFields(args, ['projectId', 'runId', 'caseId', 'overallStatus'], 'record_result');
   const body = {
-    projectId: args.projectId, suiteId: args.suiteId, runId: args.runId,
+    projectId: args.projectId, runId: args.runId,
     caseId: args.caseId, overallStatus: args.overallStatus,
   };
+  if (args.suiteId) body.suiteId = args.suiteId;
   if (args.notes) body.notes = args.notes;
   if (args.duration) body.duration = args.duration;
   return callEzmodoAPI('mcpRecordSuiteRunResult', body);
 }
 
 async function completeSuiteRun(args) {
-  requireFields(args, ['projectId', 'suiteId', 'runId'], 'complete_run');
+  requireFields(args, ['projectId', 'runId'], 'complete_run');
   return callEzmodoAPI('mcpUpdateSuiteRunStatus', {
-    projectId: args.projectId, suiteId: args.suiteId, runId: args.runId, status: args.status || 'completed',
+    projectId: args.projectId, runId: args.runId, status: args.status || 'completed',
+    ...(args.suiteId ? { suiteId: args.suiteId } : {}),
     ...(args.skipRemaining ? { skipRemaining: true } : {}),
   });
 }
