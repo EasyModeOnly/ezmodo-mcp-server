@@ -32,3 +32,11 @@ describe('list_test_cases runHistory', () => {
     expect(ENDPOINT_MAP.mcpListTestCaseRuns).toEqual({ route: 'mcp/v1/testing/case/runs', method: 'GET' });
   });
 });
+
+describe('list_test_cases countBy', () => {
+  it('asks for group counts with the same filters', async () => {
+    await listTestCases({ projectId: 'p1', countBy: 'suite', status: 'fail' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGroupTestCases', { projectId: 'p1', status: 'fail', by: 'suite' });
+    expect(ENDPOINT_MAP.mcpGroupTestCases).toEqual({ route: 'mcp/v1/testing/cases/groups', method: 'GET' });
+  });
+});

@@ -66,6 +66,12 @@ export async function listTestCases(args) {
     });
   }
 
+  // Counts per group (suite, category, priority or status) instead of cases
+  if (args.countBy) {
+    const { countBy, ...filters } = args;
+    return callEzmodoAPI('mcpGroupTestCases', { ...filters, by: countBy });
+  }
+
   // List with filters
   return callEzmodoAPI('mcpListTestCases', args);
 }

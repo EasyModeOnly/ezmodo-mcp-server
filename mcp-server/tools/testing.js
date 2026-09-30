@@ -349,6 +349,12 @@ export const TESTING_TOOLS = [
           type: 'string',
           description: 'Exclude cases already in this suite (e.g. to find cases to add to it)',
         },
+        countBy: {
+          type: 'string',
+          enum: ['suite', 'category', 'priority', 'status'],
+          description: 'Return per-group counts (total and pass/fail/skip/blocked/not run) under the same filters ' +
+            'instead of cases. A case in two suites counts in both suite groups; key "" is the none group.',
+        },
         search: {
           type: 'string',
           description: 'Case-insensitive substring of the title or category',
