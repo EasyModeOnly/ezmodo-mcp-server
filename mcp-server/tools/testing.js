@@ -533,7 +533,11 @@ export const TESTING_TOOLS = [
     name: 'get_testing_summary',
     description: 'Get aggregate test statistics for a project (or a specific task) ' +
       'including pass/fail counts, coverage, recent run history, and ' +
-      'per-environment breakdowns.',
+      'per-environment breakdowns. The project summary also has caseCount (real cases; ' +
+      'totalCases counts case x environment), flakyCount/flakyCases and medianRunAgeDays. ' +
+      'view "confidence" returns shipping confidence for a release candidate per environment ' +
+      '(pass rate, suites run and not run, suite_pass_rate gate status); view "trend" returns ' +
+      'daily pass/fail/skip/blocked counts.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -543,7 +547,20 @@ export const TESTING_TOOLS = [
         },
         taskId: {
           type: 'string',
-          description: 'Optional: filter summary to a specific task',
+          description: 'Optional: filter summary to a specific task (view "summary" only)',
+        },
+        view: {
+          type: 'string',
+          enum: ['summary', 'confidence', 'trend'],
+          description: 'What to return (default "summary")',
+        },
+        candidateId: {
+          type: 'string',
+          description: 'view "confidence": release candidate id; default the newest active candidate',
+        },
+        days: {
+          type: 'number',
+          description: 'view "trend": days of history, 1-90 (default 30)',
         },
       },
       required: ['projectId'],

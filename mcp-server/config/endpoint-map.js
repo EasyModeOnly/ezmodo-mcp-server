@@ -421,6 +421,8 @@ export const ENDPOINT_MAP = {
   'mcpDeleteTestCase': { route: 'mcp/v1/testing/cases', method: 'DELETE' },
   'mcpRecordTestRun': { route: 'mcp/v1/testing/runs', method: 'POST' },
   'mcpGetTestingSummary': { route: 'mcp/v1/testing/summary', method: 'GET' },
+  'mcpGetTestingConfidence': { route: 'mcp/v1/testing/confidence', method: 'GET' },
+  'mcpGetTestingTrend': { route: 'mcp/v1/testing/trend', method: 'GET' },
 
   // Test Suites (project-level test case grouping)
   'mcpListTestSuites': { route: 'mcp/v1/testing/suites', method: 'GET' },

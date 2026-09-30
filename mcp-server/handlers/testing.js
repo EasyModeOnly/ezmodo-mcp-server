@@ -96,7 +96,15 @@ export async function listTestSuites(args) {
 }
 
 export async function getTestingSummary(args) {
-  return callEzmodoAPI('mcpGetTestingSummary', args);
+  const { view, ...params } = args;
+  // E-278 #3036: the Testing Overview's other two reads.
+  if (view === 'confidence') {
+    return callEzmodoAPI('mcpGetTestingConfidence', params);
+  }
+  if (view === 'trend') {
+    return callEzmodoAPI('mcpGetTestingTrend', params);
+  }
+  return callEzmodoAPI('mcpGetTestingSummary', params);
 }
 
 // --- Private helpers ---
