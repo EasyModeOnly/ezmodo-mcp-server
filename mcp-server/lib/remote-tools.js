@@ -36,7 +36,9 @@
  * manage_task writes `.ezmodo/active-session.json`, and lib/active-session.js
  * already skips that when no config directory exists — which is exactly the
  * case in a container. Likewise get_context and resolve_concepts read a local
- * manifest when there is one and fall back to the API when there is not.
+ * manifest when there is one and fall back to the API when there is not. And
+ * get_document / get_design write content to `.ezmodo/` locally, returning it
+ * inline when there is no such directory.
  */
 
 /** Tools that operate on the local machine and are never served remotely. */

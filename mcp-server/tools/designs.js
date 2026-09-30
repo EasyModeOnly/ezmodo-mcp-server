@@ -22,7 +22,9 @@ export const DESIGN_TOOLS = [
       'design system: kind theme|component|page, name, html, css, status), or link/unlink it to ' +
       'existing artifacts. Designs are org-level and LINK to features/epics/tasks/milestones/etc., ' +
       'they do not contain them. Before authoring a new design, call get_design_system first to ' +
-      'learn the established house style.',
+      'learn the established house style. To change an existing design, send `edits` ' +
+      '(find-and-replace) rather than the whole html/css, plus expectedUpdatedAt. Create and ' +
+      'update return the design\'s summary and new updatedAt, not its markup.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -83,6 +85,38 @@ export const DESIGN_TOOLS = [
           description: 'Scope the design to a project. Omit/empty = cross-project / org-wide ' +
             '(create, update)',
         },
+        fromFiles: {
+          type: 'boolean',
+          description: 'Push the design\'s local files (update): the html, css and description that ' +
+            'get_design wrote to .ezmodo/designs/<slug>/ and you edited there. Only edited fields are ' +
+            'sent, conditional on the version you downloaded. Do not also send html/css/description/' +
+            'edits. On a conflict the files are refreshed to the current version and yours are kept ' +
+            'beside them as *.mine.*. Local checkouts only.',
+        },
+        edits: {
+          type: 'array',
+          maxItems: 50,
+          description: 'Change html, css or description by find-and-replace instead of resending the ' +
+            'whole field (update). Prefer this for any change smaller than a rewrite. Applied in ' +
+            'order; each oldString must occur exactly once (copy it exactly, whitespace included, and ' +
+            'add surrounding text if it is not unique). If any edit fails, nothing is written.',
+          items: {
+            type: 'object',
+            properties: {
+              field: { type: 'string', enum: ['html', 'css', 'description'] },
+              oldString: { type: 'string', description: 'Exact text to replace; must match once' },
+              newString: { type: 'string', description: 'Replacement text' },
+            },
+            required: ['field', 'oldString', 'newString'],
+          },
+        },
+        expectedUpdatedAt: {
+          type: 'string',
+          description: 'The updatedAt you read the design at, copied exactly (update). When set, ' +
+            'the update is refused with a 409 if the design changed since, instead of silently ' +
+            'overwriting someone else\'s edit. On a 409, fetch it again, reapply your change and ' +
+            'retry with the new updatedAt. Always send it when updating a design you read earlier.',
+        },
         // --- link / unlink fields ---
         targetType: {
           type: 'string',
@@ -111,15 +145,26 @@ export const DESIGN_TOOLS = [
   },
   {
     name: 'get_design',
-    description: 'Retrieve a single Design, or list the designs linked to a given entity (e.g. all ' +
-      'designs on a feature). Provide designId for a single lookup; provide linkedType + linkedId to ' +
-      'list designs linked to that entity.',
+    description: 'Retrieve Designs in full (html, css, description). Pass designId for one, designIds ' +
+      'for up to 10 in one call (e.g. the components you picked from get_design_system\'s index), ' +
+      'or linkedType + linkedId to list the designs linked to an entity such as a feature (summaries ' +
+      'unless includeContent is true). In a local checkout the content is WRITTEN to ' +
+      '.ezmodo/designs/<slug>/ (index.html, styles.css, notes.md) and the response gives the paths ' +
+      'instead: read the files you need, edit them, and push with manage_design update fromFiles:true. ' +
+      'Elsewhere (or with inline:true) it is returned inline; then keep the updatedAt of any design ' +
+      'you intend to change and send it as expectedUpdatedAt.',
     inputSchema: {
       type: 'object',
       properties: {
         designId: {
           type: 'string',
           description: 'Design ID for a single lookup',
+        },
+        designIds: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 10,
+          description: 'Up to 10 design IDs to fetch in full in one call',
         },
         organizationId: {
           type: 'string',
@@ -138,6 +183,21 @@ export const DESIGN_TOOLS = [
         includeLinks: {
           type: 'boolean',
           description: 'If true (single lookup), also return the design\'s linked artifacts',
+        },
+        inline: {
+          type: 'boolean',
+          description: 'Return the content in the response instead of writing local files ' +
+            '(designId / designIds). Default false.',
+        },
+        overwriteLocal: {
+          type: 'boolean',
+          description: 'Replace local files that hold edits never pushed (designId / designIds). ' +
+            'Default false: such files are left alone and the response says so.',
+        },
+        includeContent: {
+          type: 'boolean',
+          description: 'linkedType mode: return full html/css/description instead of summaries ' +
+            '(default false). Prefer fetching the few you need by designIds.',
         },
         // --- List filters (linkedType mode) ---
         projectId: {
@@ -164,7 +224,8 @@ export const DESIGN_TOOLS = [
   {
     name: 'list_designs',
     description: 'List an organization\'s Designs, optionally filtered by project, kind, or status. ' +
-      'Returns the design artifacts (theme/component/page) in the living design system.',
+      'Returns one summary row per design (id, name, kind, status, summary, size, updatedAt), not ' +
+      'its markup: fetch the ones you need with get_design designIds.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -190,6 +251,11 @@ export const DESIGN_TOOLS = [
           type: 'boolean',
           description: 'When filtering by projectId, also include org-wide (project-less) designs',
         },
+        includeContent: {
+          type: 'boolean',
+          description: 'Return full html/css/description for every design instead of summaries ' +
+            '(default false). This can be very large; prefer get_design designIds.',
+        },
         limit: {
           type: 'number',
           description: 'Maximum number of results',
@@ -200,10 +266,12 @@ export const DESIGN_TOOLS = [
   },
   {
     name: 'get_design_system',
-    description: 'ALWAYS CALL THIS FIRST before authoring or designing any new UI, page, or component. ' +
-      'Returns the established house style — the design system\'s theme plus its component designs ' +
-      '(Tailwind-classed HTML/CSS) — for the given org/project. Read it to learn the existing visual ' +
-      'language so any new designs you create match the established style instead of inventing a new one.',
+    description: 'Call this before authoring or designing any new UI, page, or component. Returns ' +
+      'the house style as an INDEX: the chosen theme with its CSS tokens, plus one short row per ' +
+      'component and other theme (id, name, status, summary, size, updatedAt). Drafts are included ' +
+      'and labelled; deprecated designs are left out. It does not include component markup: pick the ' +
+      'components relevant to what you are building and fetch them with get_design designIds. Pass ' +
+      'projectId, or you get every project\'s designs and a theme that may belong to another project.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -213,7 +281,8 @@ export const DESIGN_TOOLS = [
         },
         projectId: {
           type: 'string',
-          description: 'Scope the design system to a project (optional; org-wide if omitted)',
+          description: 'Scope the design system to a project: its own designs plus org-wide ones. ' +
+            'Recommended; omitting it spans every project in the org.',
         },
       },
       required: ['organizationId'],

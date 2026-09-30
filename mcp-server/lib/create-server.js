@@ -78,6 +78,15 @@ function isEmailAlreadyRegistered(error) {
   return error?.code === EMAIL_ALREADY_REGISTERED;
 }
 
+/**
+ * Serialize a tool result for the model. Compact, never indented (E-279
+ * #3049): the reader is an agent paying per token, and two-space indentation
+ * plus a newline per key is pure overhead on every call to every tool.
+ */
+function toText(value) {
+  return JSON.stringify(value);
+}
+
 export function createServer({ surface = 'local', startSignIn = defaultStartSignIn } = {}) {
   const log = getLogger();
 
@@ -129,7 +138,7 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
       const result = await handler(args || {});
       log.debug('Tool call succeeded', { tool: name, durationMs: Date.now() - start });
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: toText(result) }],
       };
     } catch (error) {
       const errMsg = error.message || String(error);
@@ -160,10 +169,10 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
       if (surface !== 'remote' && isAuthFailure(error)) {
         if (getApiKey()) {
           return {
-            content: [{ type: 'text', text: JSON.stringify(signInRequired({
+            content: [{ type: 'text', text: toText(signInRequired({
               reason: `EZMODO_API_KEY was rejected (${errMsg}). It takes precedence over a browser ` +
                 'sign-in, so fix or unset it — signing in will not help while it is set.',
-            }), null, 2) }],
+            })) }],
             isError: true,
           };
         }
@@ -174,7 +183,7 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
           log.warn('Could not start sign-in from the dispatch funnel', { error: signInError.message });
           payload = signInRequired({ reason: errMsg });
         }
-        return { content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }] };
+        return { content: [{ type: 'text', text: toText(payload) }] };
       }
       // Answered on EVERY surface, unlike the sign-in prompt above. Sign-in
       // advice is surface-specific because over the connector Claude owns the
@@ -183,7 +192,7 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
       if (isNoOrganization(error)) {
         return {
           content: [
-            { type: 'text', text: JSON.stringify(organizationRequired({ reason: errMsg }), null, 2) },
+            { type: 'text', text: toText(organizationRequired({ reason: errMsg })) },
           ],
           isError: true,
         };
@@ -193,7 +202,7 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
       if (isEmailAlreadyRegistered(error)) {
         return {
           content: [
-            { type: 'text', text: JSON.stringify(emailAlreadyRegistered({ reason: errMsg }), null, 2) },
+            { type: 'text', text: toText(emailAlreadyRegistered({ reason: errMsg })) },
           ],
           isError: true,
         };
@@ -201,7 +210,7 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
       // Returned as content rather than thrown: a tool that fails is a result
       // the model can read and act on, not a transport error.
       return {
-        content: [{ type: 'text', text: JSON.stringify({ error: errMsg }, null, 2) }],
+        content: [{ type: 'text', text: toText({ error: errMsg }) }],
         isError: true,
       };
     }
