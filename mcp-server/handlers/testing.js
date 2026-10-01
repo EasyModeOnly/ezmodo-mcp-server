@@ -10,7 +10,12 @@
  * - getTestingSummary unchanged
  */
 
+import fs from 'fs/promises';
+import path from 'path';
 import { callEzmodoAPI } from '../lib/http-client.js';
+
+/** The API refuses results files over 10 MB; refuse them here before reading. */
+export const MAX_RESULTS_FILE_BYTES = 10 * 1024 * 1024;
 
 /**
  * Dispatch manage_test_case actions to the appropriate handler
@@ -41,6 +46,7 @@ export async function manageTestSuite(args) {
   case 'start_run': return startSuiteRun(params);
   case 'record_result': return recordSuiteRunResult(params);
   case 'complete_run': return completeSuiteRun(params);
+  case 'import_results': return importTestResults(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -222,5 +228,42 @@ async function bulkTestCases(args) {
   const { bulkAction, projectId, caseIds, filter, dryRun, priority, category, lifecycleStatus, suiteId } = args;
   return callEzmodoAPI('mcpBulkTestCases', {
     projectId, action: bulkAction, caseIds, filter, dryRun, priority, category, lifecycleStatus, suiteId,
+  });
+}
+
+/**
+ * Record a CI results file as a completed run with trigger "ci" (E-278 #3043).
+ * The file comes from filePath (read here, so it never passes through the
+ * model) or inline content. It travels base64-encoded so XML with any
+ * encoding survives JSON.
+ */
+export async function importTestResults(args, readFile = fs.readFile, stat = fs.stat) {
+  requireFields(args, ['projectId'], 'import_results');
+  const { projectId, filePath, content, format, suite, suiteId, environment, commitSha, releaseCandidateId } = args;
+  if (!filePath && !content) {
+    throw new Error('import_results needs filePath or content');
+  }
+  let body;
+  let fileName = args.fileName;
+  if (filePath) {
+    const info = await stat(filePath);
+    if (info.size > MAX_RESULTS_FILE_BYTES) {
+      throw new Error(`${filePath} is ${info.size} bytes; the limit is ${MAX_RESULTS_FILE_BYTES}`);
+    }
+    const data = await readFile(filePath);
+    body = { contentBase64: Buffer.from(data).toString('base64') };
+    fileName = fileName || path.basename(filePath);
+  } else {
+    body = { content };
+  }
+  return callEzmodoAPI('mcpImportTestResults', {
+    projectId,
+    ...body,
+    ...(format ? { format } : {}),
+    ...((suite || suiteId) ? { suite: suite || suiteId } : {}),
+    ...(environment ? { environment } : {}),
+    ...(commitSha ? { commitSha } : {}),
+    ...(releaseCandidateId ? { releaseCandidateId } : {}),
+    ...(fileName ? { fileName } : {}),
   });
 }

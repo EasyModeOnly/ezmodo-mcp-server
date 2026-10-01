@@ -92,6 +92,11 @@ export const TESTING_TOOLS = [
           enum: ['transient', 'persistent'],
           description: 'Retention type: transient (auto-cleaned) or persistent. Used by create and update.',
         },
+        externalKey: {
+          type: 'string',
+          description: 'The id a test runner reports for this case (JUnit classname.name), which CI results ' +
+            'match on; unique per project. "" clears it. Update only.',
+        },
         // --- Create-only fields ---
         originTaskId: {
           type: 'string',
@@ -198,13 +203,22 @@ export const TESTING_TOOLS = [
       'releaseCandidateId? (ties the run to the build under test so release gates can read it) and assignments ' +
       'to split the cases between people. Then record_result (runId, caseId, overallStatus: pass|fail|skip|blocked) ' +
       'for each case, and complete_run (runId; skipRemaining:true if some cases were not run). suiteId is not ' +
-      'needed on record_result or complete_run. List runs with list_test_suites runs:true.',
+      'needed on record_result or complete_run. List runs with list_test_suites runs:true. ' +
+      'import_results records a CI results file (JUnit XML, xUnit v2 XML, or JSON ' +
+      '{results:[{key,name,status,durationMs,message}]}) as one completed run with trigger "ci": give filePath ' +
+      '(a local file) or content, plus suite (id or slug, optional), environment and commitSha. Each result ' +
+      'matches the case whose externalKey equals JUnit classname.name (set it with manage_test_case update ' +
+      'externalKey). Unmatched results are returned and kept 30 days. Repeating the same file for the same ' +
+      'suite, commit and environment returns the first import (duplicate:true).',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'add_cases', 'remove_cases', 'start_run', 'record_result', 'complete_run'],
+          enum: [
+            'create', 'update', 'delete', 'add_cases', 'remove_cases',
+            'start_run', 'record_result', 'complete_run', 'import_results',
+          ],
           description: 'Action to perform',
         },
         // --- Identifiers ---
@@ -344,6 +358,28 @@ export const TESTING_TOOLS = [
           type: 'boolean',
           description: 'complete_run: mark every case without a result as skipped. Completing a run that still ' +
             'has unrun cases is refused without it — record the missing results, or pass this to skip them.',
+        },
+        // --- import_results (E-278 #3043) ---
+        filePath: {
+          type: 'string',
+          description: 'import_results: path to the results file on this machine (max 10 MB)',
+        },
+        content: {
+          type: 'string',
+          description: 'import_results: the results file content, instead of filePath',
+        },
+        format: {
+          type: 'string',
+          enum: ['junit', 'xunit', 'json'],
+          description: 'import_results: file format; detected from the content when omitted',
+        },
+        suite: {
+          type: 'string',
+          description: 'import_results: suite id or slug (e.g. "smoke-core-navigation"); omit for a run with no suite',
+        },
+        fileName: {
+          type: 'string',
+          description: 'import_results: name shown for the upload (defaults to the file\'s name)',
         },
       },
       required: ['action', 'projectId'],
@@ -522,8 +558,8 @@ export const TESTING_TOOLS = [
         },
         trigger: {
           type: 'string',
-          enum: ['manual', 'release'],
-          description: 'runs:true — what started the run',
+          enum: ['manual', 'release', 'ci'],
+          description: 'runs:true — what started the run (ci = a results import)',
         },
       },
       required: ['projectId'],

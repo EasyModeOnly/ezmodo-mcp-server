@@ -32,4 +32,7 @@ export const LINKABLE_TYPES = [
   // One row of git_pull_requests (E-233). A PR is linked to the work it
   // implements, rather than the PR table carrying task/epic columns.
   'pull_request',
+  // One test_cases row (E-278 #3039): a case links to the features it
+  // protects, derived from its origin task and suites or asserted by hand.
+  'test_case',
 ];
