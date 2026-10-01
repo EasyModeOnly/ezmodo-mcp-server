@@ -48,6 +48,8 @@ export async function manageTestSuite(args) {
   case 'complete_run': return completeSuiteRun(params);
   case 'import_results': return importTestResults(params);
   case 'map_unmatched': return mapUnmatchedResult(params);
+  case 'preview_rule': return previewSuiteRule(params);
+  case 'reorder_cases': return reorderSuiteCases(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -100,6 +102,18 @@ export async function listTestCases(args) {
  */
 export async function listTestSuites(args) {
   if (args.runs) return listTestRuns(args);
+
+  // One suite's case order or results matrix (E-278 #3060)
+  if (args.testSuiteId && args.caseOrder) {
+    return callEzmodoAPI('mcpGetSuiteCaseOrder', { projectId: args.projectId, suiteId: args.testSuiteId });
+  }
+  if (args.testSuiteId && args.matrix) {
+    return callEzmodoAPI('mcpGetSuiteMatrix', {
+      projectId: args.projectId,
+      suiteId: args.testSuiteId,
+      ...(args.matrixRuns ? { runs: args.matrixRuns } : {}),
+    });
+  }
 
   // Single test suite lookup
   if (args.testSuiteId) {
@@ -293,5 +307,37 @@ async function mapUnmatchedResult(params) {
     key: params.key,
     caseId: params.caseId,
     ...(params.userName ? { userName: params.userName } : {}),
+  });
+}
+
+/**
+ * Preview a membership rule (E-278 #3038, MCP #3060): match count, a sample,
+ * and with suiteId what saving it would add and remove.
+ */
+async function previewSuiteRule(params) {
+  const rule = params.rule || params.membershipRule;
+  if (!rule) throw new Error('preview_rule needs rule.');
+  return callEzmodoAPI('mcpPreviewSuiteRule', {
+    projectId: params.projectId,
+    rule,
+    ...(params.suiteId ? { suiteId: params.suiteId } : {}),
+    ...(params.previewLimit ? { limit: params.previewLimit } : {}),
+  });
+}
+
+/** Set the order and sections of some or all of a suite's cases (E-278 #3037, MCP #3060). */
+async function reorderSuiteCases(params) {
+  requireFields(params, ['suiteId'], 'reorder_cases');
+  if (!Array.isArray(params.cases) || params.cases.length === 0) {
+    throw new Error('reorder_cases needs cases: [{caseId, position, section?}].');
+  }
+  return callEzmodoAPI('mcpReorderSuiteCases', {
+    projectId: params.projectId,
+    suiteId: params.suiteId,
+    cases: params.cases.map(({ caseId, position, section }) => ({
+      caseId,
+      position,
+      ...(section !== undefined ? { section } : {}),
+    })),
   });
 }

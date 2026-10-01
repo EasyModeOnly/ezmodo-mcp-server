@@ -211,7 +211,13 @@ export const TESTING_TOOLS = [
       'externalKey). Unmatched results are returned and kept 30 days. Repeating the same file for the same ' +
       'suite, commit and environment returns the first import (duplicate:true). ' +
       'map_unmatched (key, caseId) maps an unmatched key to a case: it sets the case\'s externalKey and records ' +
-      'the results still kept for that key on the case, each at the time it was uploaded.',
+      'the results still kept for that key on the case, each at the time it was uploaded. ' +
+      'Dynamic suites: create/update with membershipRule ({search?, priorities?, categories?, lifecycleStatuses?, ' +
+      'retentions?, excludeCaseIds?}; conditions AND, values within one OR) keeps the matching cases as rule members ' +
+      'automatically; update with membershipRule:{} clears the rule (hand-added cases stay). preview_rule (rule, ' +
+      'suiteId?) shows the match count and sample, and with suiteId what saving would add and remove. ' +
+      'reorder_cases (suiteId, cases:[{caseId, position, section?}]) sets order and sections; unlisted cases keep ' +
+      'their place. update also takes milestoneId + milestonePriority to gate the suite on a milestone ("" clears).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -220,6 +226,7 @@ export const TESTING_TOOLS = [
           enum: [
             'create', 'update', 'delete', 'add_cases', 'remove_cases',
             'start_run', 'record_result', 'complete_run', 'import_results', 'map_unmatched',
+            'preview_rule', 'reorder_cases',
           ],
           description: 'Action to perform',
         },
@@ -270,10 +277,52 @@ export const TESTING_TOOLS = [
                 type: 'string',
                 description: 'Optional: the task ID the test case is linked to',
               },
+              position: {
+                type: 'number',
+                description: 'reorder_cases: 0-based position in the suite',
+              },
+              section: {
+                type: 'string',
+                description: 'reorder_cases: section heading the case sits under ("" for none)',
+              },
             },
             required: ['caseId'],
           },
-          description: 'Array of test case references (required for add_cases, remove_cases)',
+          description: 'Array of test case references (required for add_cases, remove_cases, reorder_cases)',
+        },
+        // --- Dynamic suites and gating (E-278 #3038, #3037; MCP #3060) ---
+        membershipRule: {
+          type: 'object',
+          properties: {
+            search: { type: 'string', description: 'Substring of title or category' },
+            priorities: { type: 'array', items: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] } },
+            categories: { type: 'array', items: { type: 'string' } },
+            lifecycleStatuses: {
+              type: 'array', items: { type: 'string', enum: ['active', 'needs_review', 'stale', 'deprecated'] },
+            },
+            retentions: { type: 'array', items: { type: 'string', enum: ['transient', 'persistent'] } },
+            excludeCaseIds: {
+              type: 'array', items: { type: 'string' }, description: 'Keep these out even when they match',
+            },
+          },
+          description: 'create/update: the suite\'s membership rule; {} on update clears it',
+        },
+        rule: {
+          type: 'object',
+          description: 'preview_rule: the rule to preview (same shape as membershipRule)',
+        },
+        previewLimit: {
+          type: 'number',
+          description: 'preview_rule: how many matching cases to return (default 10, max 50)',
+        },
+        milestoneId: {
+          type: 'string',
+          description: 'update: gate the suite on this milestone ("" clears)',
+        },
+        milestonePriority: {
+          type: 'string',
+          enum: ['critical', 'high', 'medium', 'low', ''],
+          description: 'update: how much the suite gates the milestone ("" clears)',
         },
         // --- Suite run fields (start_run, record_result, complete_run) ---
         suiteIds: {
@@ -421,7 +470,8 @@ export const TESTING_TOOLS = [
         },
         fixPrompt: {
           type: 'boolean',
-          description: 'With testCaseId: return a ready-to-use prompt for fixing a FAILED run of that case — the repro ' +
+          description: 'With testCaseId: return a ready-to-use prompt for fixing a FAILED run of that case — ' +
+            'the repro ' +
             '(steps through the first failure, expected vs actual, screenshots, environment, release candidate, ' +
             'commit), the task and features it belongs to, any fix task already filed, and the EzModo calls that ' +
             'record the fix. Describes the newest failed run unless runId, testRunId or environment narrows it. ' +
@@ -526,7 +576,10 @@ export const TESTING_TOOLS = [
       'Provide testSuiteId (+ projectId) for single lookup, or projectId with optional filters for listing. ' +
       'With runs:true, list test runs across the project instead — every suite, plan and ad-hoc run, newest ' +
       'first — filtered by runStatus, suiteId, environment, releaseCandidateId, assigneeId and trigger; the ' +
-      'response has `total`. With runs:true and runId, get one run with its cases, assignees and results.',
+      'response has `total`. With runs:true and runId, get one run with its cases, assignees and results. ' +
+      'With testSuiteId and caseOrder:true, get the suite\'s cases in order with sections and source ' +
+      '(manual or rule). ' +
+      'With testSuiteId and matrix:true, get each case\'s result in the suite\'s latest matrixRuns runs (default 10).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -552,6 +605,19 @@ export const TESTING_TOOLS = [
         cursor: {
           type: 'string',
           description: 'Pagination cursor from a previous response',
+        },
+        // --- One suite's order and matrix (E-278 #3037, MCP #3060) ---
+        caseOrder: {
+          type: 'boolean',
+          description: 'With testSuiteId: the suite\'s case order, sections and membership source',
+        },
+        matrix: {
+          type: 'boolean',
+          description: 'With testSuiteId: the case × run results matrix of the suite\'s latest runs',
+        },
+        matrixRuns: {
+          type: 'number',
+          description: 'matrix:true — how many latest runs (1-20, default 10)',
         },
         // --- Runs (runs:true) ---
         runs: {
