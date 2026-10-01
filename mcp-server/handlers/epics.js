@@ -64,11 +64,28 @@ export async function manageEpic(args) {
   case 'apply_how_it_works': return applyEpicHowItWorks(params);
   case 'add_editor': return manageEpicEditor('add', params);
   case 'remove_editor': return manageEpicEditor('remove', params);
+  case 'release': return releaseEpic(params);
   default: throw new Error(
     `Unknown action: ${action}. Expected create, update, generate_how_it_works, apply_how_it_works, ` +
-    'add_editor or remove_editor.',
+    'add_editor, remove_editor or release.',
   );
   }
+}
+
+// Release this epic (E-262 #3067): a version milestone for the epic, the epic
+// in it and, unless newCandidate is false, its first candidate — one call
+// instead of three. An epic already in an unshipped milestone is refused with
+// that milestone (409), because the next build of it is a new candidate there,
+// not a second milestone.
+async function releaseEpic({ epicId, version, name, parentMilestoneId, newCandidate, kind }) {
+  if (!epicId) throw new Error('epicId is required to release an epic');
+  const body = { id: epicId };
+  if (version !== undefined) body.version = version;
+  if (name !== undefined) body.name = name;
+  if (parentMilestoneId !== undefined) body.parentMilestoneId = parentMilestoneId;
+  if (newCandidate !== undefined) body.newCandidate = newCandidate;
+  if (kind !== undefined) body.kind = kind;
+  return callEzmodoAPI('mcpReleaseEpic', body);
 }
 
 // Choose who else may change an epic's plan (E-259 #2802). The server decides

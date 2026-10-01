@@ -45,6 +45,9 @@ export const ENDPOINT_MAP = {
   // E-237 #2382: the epic is the fifth consumer of the grounding engine.
   'mcpGenerateEpicHowItWorks': { route: 'mcp/v1/epics/generate-how-it-works', method: 'POST' },
   'mcpApplyEpicHowItWorks': { route: 'mcp/v1/epics/apply-how-it-works', method: 'POST' },
+  // Release this epic (E-262 #3067): milestone + epic + first candidate in
+  // one call. {id} is the epic id.
+  'mcpReleaseEpic': { route: 'mcp/v1/epics/{id}/release', method: 'POST' },
 
   // Tasks
   'mcpCreateTask': { route: 'mcp/v1/tasks', method: 'POST' },

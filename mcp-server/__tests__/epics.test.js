@@ -377,6 +377,38 @@ describe('epic discussion (E-259)', () => {
     await expect(manageEpic({ action: 'add_editor', epicId: 'e1' })).rejects.toThrow('editorUserId is required');
   });
 
+  // E-262 #3067: one call ships one epic — milestone, epic, first candidate.
+  describe('release (E-262 #3067)', () => {
+    it('posts the release to the epic route with only the fields given', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ milestone: { id: 'm1' }, candidate: { versionLabel: '1.4.0-rc.1' } });
+      const result = await manageEpic({
+        action: 'release', epicId: 'e1', version: '1.4.0', parentMilestoneId: 'p1', newCandidate: false,
+      });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReleaseEpic',
+        { id: 'e1', version: '1.4.0', parentMilestoneId: 'p1', newCandidate: false });
+      expect(result.milestone.id).toBe('m1');
+
+      mockCallEzmodoAPI.mockResolvedValueOnce({ milestone: { id: 'm2' } });
+      await manageEpic({ action: 'release', epicId: 'e2', name: 'Spring', kind: 'beta' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReleaseEpic', { id: 'e2', name: 'Spring', kind: 'beta' });
+    });
+
+    it('requires an epic', async () => {
+      await expect(manageEpic({ action: 'release', version: '1.0.0' })).rejects.toThrow('epicId is required');
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+    });
+
+    it('maps to the epic release route and exposes the action', async () => {
+      const { ENDPOINT_MAP } = await import('../config/endpoint-map.js');
+      expect(ENDPOINT_MAP.mcpReleaseEpic).toEqual({ route: 'mcp/v1/epics/{id}/release', method: 'POST' });
+      const { EPIC_TOOLS } = await import('../tools/epics.js');
+      const props = EPIC_TOOLS.find((t) => t.name === 'manage_epic').inputSchema.properties;
+      expect(props.action.enum).toContain('release');
+      expect(props.kind.enum).toEqual(['alpha', 'beta', 'rc', 'ga']);
+      expect(props.newCandidate.type).toBe('boolean');
+    });
+  });
+
   it('describes the comment kinds on the tool itself', async () => {
     const { EPIC_TOOLS } = await import('../tools/epics.js');
     const add = EPIC_TOOLS.find((t) => t.name === 'add_epic_comment');

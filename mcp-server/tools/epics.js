@@ -57,8 +57,17 @@ export const EPIC_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'generate_how_it_works', 'apply_how_it_works', 'add_editor', 'remove_editor'],
-          description: 'Action to perform. "add_editor" / "remove_editor" (epicId + editorUserId) choose who ' +
+          enum: [
+            'create', 'update', 'generate_how_it_works', 'apply_how_it_works', 'add_editor', 'remove_editor', 'release',
+          ],
+          description: 'Action to perform. "release" (epicId, version) ships one epic on its own: it ' +
+            'creates a version milestone, adds the epic to it and, unless newCandidate is false, its first ' +
+            'candidate (<version>-rc.1) — in one call, instead of manage_milestone + link + manage_release. ' +
+            'Omit version to take the suggestion (the patch after the highest shipped version, else 0.1.0). ' +
+            'If the epic is already in a milestone that has not shipped, it is refused with that milestone ' +
+            '(existingMilestone): the next build is a new candidate there (manage_release), not a second ' +
+            'milestone. A regression after ship belongs in a new milestone. ' +
+            '"add_editor" / "remove_editor" (epicId + editorUserId) choose who ' +
             'else may change the epic\'s plan, decide its questions and answer suggested changes (E-259). ' +
             'Only the owner, the creator or an org admin may choose; an editor may remove themselves. ' +
             'get_epic lists the current editors. ' +
@@ -74,7 +83,29 @@ export const EPIC_TOOLS = [
         epicId: {
           type: 'string',
           description: 'Epic ID (required for update, generate_how_it_works, apply_how_it_works, ' +
-            'add_editor, remove_editor)',
+            'add_editor, remove_editor, release)',
+        },
+        // --- release ---
+        version: {
+          type: 'string',
+          description: 'release: the milestone\'s version, e.g. "1.4.0". Omit to take the suggested next version.',
+        },
+        name: {
+          type: 'string',
+          description: 'release: the milestone\'s name (default: the version)',
+        },
+        parentMilestoneId: {
+          type: 'string',
+          description: 'release: nest the new milestone under this one (grouping only; depth and cycles are checked)',
+        },
+        newCandidate: {
+          type: 'boolean',
+          description: 'release: also create the first candidate (default true)',
+        },
+        kind: {
+          type: 'string',
+          enum: ['alpha', 'beta', 'rc', 'ga'],
+          description: 'release: the first candidate\'s kind (default rc → <version>-rc.1; ga → <version>)',
         },
         editorUserId: {
           type: 'string',
