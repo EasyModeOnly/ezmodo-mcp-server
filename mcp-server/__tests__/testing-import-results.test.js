@@ -57,3 +57,20 @@ describe('manage_test_suite import_results (E-278 #3043)', () => {
     expect(ENDPOINT_MAP.mcpImportTestResults).toEqual({ route: 'mcp/v1/testing/results', method: 'POST' });
   });
 });
+
+describe('manage_test_suite map_unmatched (E-278 #3057)', () => {
+  it('maps a key to a case through the mapping endpoint', async () => {
+    const { manageTestSuite } = await import('../handlers/testing.js');
+    const { ENDPOINT_MAP } = await import('../config/endpoint-map.js');
+    await manageTestSuite({ action: 'map_unmatched', projectId: 'p1', key: 'billing.TestPlanLimits', caseId: 'c1' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpMapUnmatchedResult', {
+      projectId: 'p1', key: 'billing.TestPlanLimits', caseId: 'c1',
+    });
+    expect(ENDPOINT_MAP.mcpMapUnmatchedResult).toEqual({ route: 'mcp/v1/testing/results/unmatched/map', method: 'POST' });
+  });
+
+  it('refuses without key and caseId', async () => {
+    const { manageTestSuite } = await import('../handlers/testing.js');
+    await expect(manageTestSuite({ action: 'map_unmatched', projectId: 'p1', key: 'x' })).rejects.toThrow(/key and caseId/);
+  });
+});

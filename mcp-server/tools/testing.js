@@ -209,7 +209,9 @@ export const TESTING_TOOLS = [
       '(a local file) or content, plus suite (id or slug, optional), environment and commitSha. Each result ' +
       'matches the case whose externalKey equals JUnit classname.name (set it with manage_test_case update ' +
       'externalKey). Unmatched results are returned and kept 30 days. Repeating the same file for the same ' +
-      'suite, commit and environment returns the first import (duplicate:true).',
+      'suite, commit and environment returns the first import (duplicate:true). ' +
+      'map_unmatched (key, caseId) maps an unmatched key to a case: it sets the case\'s externalKey and records ' +
+      'the results still kept for that key on the case, each at the time it was uploaded.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -217,7 +219,7 @@ export const TESTING_TOOLS = [
           type: 'string',
           enum: [
             'create', 'update', 'delete', 'add_cases', 'remove_cases',
-            'start_run', 'record_result', 'complete_run', 'import_results',
+            'start_run', 'record_result', 'complete_run', 'import_results', 'map_unmatched',
           ],
           description: 'Action to perform',
         },
@@ -338,7 +340,11 @@ export const TESTING_TOOLS = [
         },
         caseId: {
           type: 'string',
-          description: 'Test case ID (record_result)',
+          description: 'Test case ID (record_result, map_unmatched)',
+        },
+        key: {
+          type: 'string',
+          description: 'map_unmatched: the unmatched result key (JUnit classname.name) to map to caseId',
         },
         overallStatus: {
           type: 'string',

@@ -47,6 +47,7 @@ export async function manageTestSuite(args) {
   case 'record_result': return recordSuiteRunResult(params);
   case 'complete_run': return completeSuiteRun(params);
   case 'import_results': return importTestResults(params);
+  case 'map_unmatched': return mapUnmatchedResult(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -276,5 +277,21 @@ export async function importTestResults(args, readFile = fs.readFile, stat = fs.
     ...(commitSha ? { commitSha } : {}),
     ...(releaseCandidateId ? { releaseCandidateId } : {}),
     ...(fileName ? { fileName } : {}),
+  });
+}
+
+/**
+ * Map an unmatched CI result key to a case and record its retained results
+ * on the case (E-278 #3057).
+ */
+async function mapUnmatchedResult(params) {
+  if (!params.key || !params.caseId) {
+    throw new Error('map_unmatched needs key and caseId');
+  }
+  return callEzmodoAPI('mcpMapUnmatchedResult', {
+    projectId: params.projectId,
+    key: params.key,
+    caseId: params.caseId,
+    ...(params.userName ? { userName: params.userName } : {}),
   });
 }

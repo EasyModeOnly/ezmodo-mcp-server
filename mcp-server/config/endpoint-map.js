@@ -443,4 +443,5 @@ export const ENDPOINT_MAP = {
   'mcpUpdateSuiteRunStatus': { route: 'mcp/v1/testing/suites/runs/status', method: 'POST' },
   // CI result import (E-278 #3043): manage_test_suite action import_results
   'mcpImportTestResults': { route: 'mcp/v1/testing/results', method: 'POST' },
+  'mcpMapUnmatchedResult': { route: 'mcp/v1/testing/results/unmatched/map', method: 'POST' },
 };
