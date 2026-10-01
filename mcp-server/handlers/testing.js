@@ -55,6 +55,17 @@ export async function manageTestSuite(args) {
  * Unified get/list handler for test cases
  */
 export async function listTestCases(args) {
+  // Prompt for fixing a failed run of one case (E-278 #3065)
+  if (args.testCaseId && args.fixPrompt) {
+    return callEzmodoAPI('mcpGetFixPrompt', {
+      projectId: args.projectId,
+      caseId: args.testCaseId,
+      ...(args.runId ? { runId: args.runId } : {}),
+      ...(args.testRunId ? { testRunId: args.testRunId } : {}),
+      ...(args.environment ? { environment: args.environment } : {}),
+    });
+  }
+
   // Run history for one case, paged newest first
   if (args.testCaseId && args.runHistory) {
     return callEzmodoAPI('mcpListTestCaseRuns', {

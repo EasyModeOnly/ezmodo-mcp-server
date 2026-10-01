@@ -389,6 +389,7 @@ export const TESTING_TOOLS = [
     name: 'list_test_cases',
     description: 'List test cases or get a single test case. ' +
       'Provide testCaseId (+ projectId) for single lookup, or projectId with optional filters for listing. ' +
+      'With testCaseId and fixPrompt:true, get the prompt for fixing that case\'s failure. ' +
       'A list response includes `total` (every case matching the filters) — read it before concluding a case ' +
       'does not exist, since one page holds at most 200.',
     inputSchema: {
@@ -411,6 +412,26 @@ export const TESTING_TOOLS = [
         before: {
           type: 'string',
           description: 'runHistory paging: nextCursor from the previous page',
+        },
+        fixPrompt: {
+          type: 'boolean',
+          description: 'With testCaseId: return a ready-to-use prompt for fixing a FAILED run of that case — the repro ' +
+            '(steps through the first failure, expected vs actual, screenshots, environment, release candidate, ' +
+            'commit), the task and features it belongs to, any fix task already filed, and the EzModo calls that ' +
+            'record the fix. Describes the newest failed run unless runId, testRunId or environment narrows it. ' +
+            'Errors when the case has no failed run.',
+        },
+        runId: {
+          type: 'string',
+          description: 'fixPrompt: the case\'s failed result in this suite/project run',
+        },
+        testRunId: {
+          type: 'string',
+          description: 'fixPrompt: this specific test run (from runHistory)',
+        },
+        environment: {
+          type: 'string',
+          description: 'fixPrompt: the newest failed run in this environment',
         },
         // --- List filters ---
         originTaskId: {

@@ -413,6 +413,7 @@ export const ENDPOINT_MAP = {
   // Testing (project test cases)
   'mcpListTestCases': { route: 'mcp/v1/testing/cases', method: 'GET' },
   'mcpListTestCaseRuns': { route: 'mcp/v1/testing/case/runs', method: 'GET' },
+  'mcpGetFixPrompt': { route: 'mcp/v1/testing/case/fix-prompt', method: 'GET' },
   'mcpGroupTestCases': { route: 'mcp/v1/testing/cases/groups', method: 'GET' },
   'mcpBulkTestCases': { route: 'mcp/v1/testing/cases/bulk', method: 'POST' },
   'mcpGetTestCase': { route: 'mcp/v1/testing/case', method: 'GET' },
