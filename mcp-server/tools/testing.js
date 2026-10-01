@@ -212,6 +212,12 @@ export const TESTING_TOOLS = [
       'suite, commit and environment returns the first import (duplicate:true). ' +
       'map_unmatched (key, caseId) maps an unmatched key to a case: it sets the case\'s externalKey and records ' +
       'the results still kept for that key on the case, each at the time it was uploaded. ' +
+      'create_case_from_unmatched (key, name?, caseTitle?, casePriority?, caseCategory?, suiteId?) creates a case ' +
+      'for an unmatched key instead (title from the test name when caseTitle is omitted; category regression, ' +
+      'persistent), adds it to suiteId (id or slug) if given, then maps the key and records its kept results. ' +
+      'import_results with runId records into that open (pending/in_progress) run\'s cases instead of a new ci ' +
+      'run: the run\'s environment/commit/candidate are used, matched cases not in the run come back in skipped. ' +
+      'unmatched:"failures" keeps only failing unmatched results for mapping (unmatchedSkipped counts the rest). ' +
       'Dynamic suites: create/update with membershipRule ({search?, priorities?, categories?, lifecycleStatuses?, ' +
       'retentions?, excludeCaseIds?}; conditions AND, values within one OR) keeps the matching cases as rule members ' +
       'automatically; update with membershipRule:{} clears the rule (hand-added cases stay). preview_rule (rule, ' +
@@ -226,7 +232,7 @@ export const TESTING_TOOLS = [
           enum: [
             'create', 'update', 'delete', 'add_cases', 'remove_cases',
             'start_run', 'record_result', 'complete_run', 'import_results', 'map_unmatched',
-            'preview_rule', 'reorder_cases',
+            'create_case_from_unmatched', 'preview_rule', 'reorder_cases',
           ],
           description: 'Action to perform',
         },
@@ -246,7 +252,7 @@ export const TESTING_TOOLS = [
         },
         description: {
           type: 'string',
-          description: 'Suite description. Used by create and update.',
+          description: 'Suite description. Used by create and update (create_case_from_unmatched: the case\'s).',
         },
         category: {
           type: 'string',
@@ -365,7 +371,7 @@ export const TESTING_TOOLS = [
         },
         runId: {
           type: 'string',
-          description: 'Suite run ID (record_result, complete_run)',
+          description: 'Suite run ID (record_result, complete_run; import_results: record into this open run)',
         },
         environment: {
           type: 'string',
@@ -393,7 +399,26 @@ export const TESTING_TOOLS = [
         },
         key: {
           type: 'string',
-          description: 'map_unmatched: the unmatched result key (JUnit classname.name) to map to caseId',
+          description: 'map_unmatched, create_case_from_unmatched: the unmatched result key (JUnit classname.name)',
+        },
+        // --- create_case_from_unmatched (E-278 #3062) ---
+        name: {
+          type: 'string',
+          description: 'create_case_from_unmatched: the test name from the results, used for the title',
+        },
+        caseTitle: {
+          type: 'string',
+          description: 'create_case_from_unmatched: case title (defaults to one made from the test name or key)',
+        },
+        casePriority: {
+          type: 'string',
+          enum: ['critical', 'high', 'medium', 'low'],
+          description: 'create_case_from_unmatched: case priority (default medium)',
+        },
+        caseCategory: {
+          type: 'string',
+          enum: ['functional', 'regression', 'edge_case', 'error_handling', 'performance', 'security', 'accessibility'],
+          description: 'create_case_from_unmatched: case category (default regression)',
         },
         overallStatus: {
           type: 'string',
@@ -435,6 +460,12 @@ export const TESTING_TOOLS = [
         fileName: {
           type: 'string',
           description: 'import_results: name shown for the upload (defaults to the file\'s name)',
+        },
+        unmatched: {
+          type: 'string',
+          enum: ['all', 'failures'],
+          description: 'import_results: which unmatched results to keep for mapping (default all; failures = ' +
+            'fail/blocked only). Matched results are recorded either way.',
         },
       },
       required: ['action', 'projectId'],

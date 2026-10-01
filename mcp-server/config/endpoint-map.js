@@ -444,6 +444,7 @@ export const ENDPOINT_MAP = {
   // CI result import (E-278 #3043): manage_test_suite action import_results
   'mcpImportTestResults': { route: 'mcp/v1/testing/results', method: 'POST' },
   'mcpMapUnmatchedResult': { route: 'mcp/v1/testing/results/unmatched/map', method: 'POST' },
+  'mcpCreateCaseFromUnmatched': { route: 'mcp/v1/testing/results/unmatched/create-case', method: 'POST' },
   'mcpPreviewSuiteRule': { route: 'mcp/v1/testing/suites/rule-preview', method: 'POST' },
   'mcpGetSuiteCaseOrder': { route: 'mcp/v1/testing/suites/cases/order', method: 'GET' },
   'mcpReorderSuiteCases': { route: 'mcp/v1/testing/suites/cases/order', method: 'PUT' },

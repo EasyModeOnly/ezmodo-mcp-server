@@ -74,3 +74,43 @@ describe('manage_test_suite map_unmatched (E-278 #3057)', () => {
     await expect(manageTestSuite({ action: 'map_unmatched', projectId: 'p1', key: 'x' })).rejects.toThrow(/key and caseId/);
   });
 });
+
+describe('manage_test_suite create_case_from_unmatched and import_results runId/unmatched (E-278 #3062)', () => {
+  it('creates a case from a key with only the fields given', async () => {
+    await manageTestSuite({
+      action: 'create_case_from_unmatched', projectId: 'p1', key: 'nav.TestSidebar', name: 'TestSidebar',
+      caseTitle: 'Sidebar', casePriority: 'high', suiteId: 'smoke',
+    });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpCreateCaseFromUnmatched', {
+      projectId: 'p1', key: 'nav.TestSidebar', name: 'TestSidebar', title: 'Sidebar', priority: 'high',
+      suiteId: 'smoke',
+    });
+    expect(ENDPOINT_MAP.mcpCreateCaseFromUnmatched).toEqual({
+      route: 'mcp/v1/testing/results/unmatched/create-case', method: 'POST',
+    });
+  });
+
+  it('refuses without a key', async () => {
+    await expect(manageTestSuite({ action: 'create_case_from_unmatched', projectId: 'p1' }))
+      .rejects.toThrow(/needs key/);
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+  });
+
+  it('passes runId and unmatched through on import_results', async () => {
+    await manageTestSuite({
+      action: 'import_results', projectId: 'p1', content: '<testsuite/>', runId: 'run-9', unmatched: 'failures',
+    });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpImportTestResults', {
+      projectId: 'p1', content: '<testsuite/>', runId: 'run-9', unmatched: 'failures',
+    });
+  });
+
+  it('declares the action and params', () => {
+    const suiteTool = TESTING_TOOLS.find((t) => t.name === 'manage_test_suite');
+    const props = suiteTool.inputSchema.properties;
+    expect(props.action.enum).toContain('create_case_from_unmatched');
+    expect(props.unmatched.enum).toEqual(['all', 'failures']);
+    expect(props.caseCategory.enum).toContain('regression');
+    expect(props.casePriority.enum).toContain('medium');
+  });
+});

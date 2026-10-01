@@ -48,6 +48,7 @@ export async function manageTestSuite(args) {
   case 'complete_run': return completeSuiteRun(params);
   case 'import_results': return importTestResults(params);
   case 'map_unmatched': return mapUnmatchedResult(params);
+  case 'create_case_from_unmatched': return createCaseFromUnmatched(params);
   case 'preview_rule': return previewSuiteRule(params);
   case 'reorder_cases': return reorderSuiteCases(params);
   default: throw new Error(`Unknown action: ${action}`);
@@ -265,7 +266,9 @@ async function bulkTestCases(args) {
  */
 export async function importTestResults(args, readFile = fs.readFile, stat = fs.stat) {
   requireFields(args, ['projectId'], 'import_results');
-  const { projectId, filePath, content, format, suite, suiteId, environment, commitSha, releaseCandidateId } = args;
+  const {
+    projectId, filePath, content, format, suite, suiteId, environment, commitSha, releaseCandidateId, runId, unmatched,
+  } = args;
   if (!filePath && !content) {
     throw new Error('import_results needs filePath or content');
   }
@@ -290,7 +293,33 @@ export async function importTestResults(args, readFile = fs.readFile, stat = fs.
     ...(environment ? { environment } : {}),
     ...(commitSha ? { commitSha } : {}),
     ...(releaseCandidateId ? { releaseCandidateId } : {}),
+    ...(runId ? { runId } : {}),
+    ...(unmatched ? { unmatched } : {}),
     ...(fileName ? { fileName } : {}),
+  });
+}
+
+/**
+ * Create a case for an unmatched CI key, optionally in a suite, then map the
+ * key to it and record the key's retained results on it (E-278 #3062).
+ */
+async function createCaseFromUnmatched(params) {
+  if (!params.key) {
+    throw new Error('create_case_from_unmatched needs key');
+  }
+  const optional = {
+    name: params.name,
+    title: params.caseTitle,
+    description: params.description,
+    priority: params.casePriority,
+    category: params.caseCategory,
+    suiteId: params.suiteId,
+    userName: params.userName,
+  };
+  return callEzmodoAPI('mcpCreateCaseFromUnmatched', {
+    projectId: params.projectId,
+    key: params.key,
+    ...Object.fromEntries(Object.entries(optional).filter(([, v]) => v)),
   });
 }
 
