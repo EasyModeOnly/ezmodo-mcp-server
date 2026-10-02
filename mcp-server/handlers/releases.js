@@ -4,6 +4,7 @@
  */
 
 import { callEzmodoAPI } from '../lib/http-client.js';
+import { projectIdFor } from './deliverables.js';
 
 /** Keep only the keys that were given, so the API sees omitted as omitted. */
 function pick(args, keys) {
@@ -21,29 +22,84 @@ function need(args, keys, action) {
   }
 }
 
+/**
+ * The candidate a deliverable + version names (E-280): that release's newest
+ * candidate that was not rejected, or the one labelled `candidate` within it.
+ * deliverable may be omitted: the API then uses the project's default one.
+ */
+async function lookupCandidate(args, action) {
+  return callEzmodoAPI('mcpLookupReleaseCandidate', {
+    projectId: await projectIdFor(args, action),
+    version: args.version,
+    ...pick(args, ['deliverable', 'candidate']),
+  });
+}
+
+/** A release's id: releaseId, else the release at deliverable + version. */
+async function releaseIdFor(args, action) {
+  if (args.releaseId) return args.releaseId;
+  if (!args.version) throw new Error(`${action} needs releaseId, or version (+ deliverable).`);
+  const found = await callEzmodoAPI('mcpLookupRelease', {
+    projectId: await projectIdFor(args, action), version: args.version, ...pick(args, ['deliverable']),
+  });
+  const id = found?.release?.id;
+  if (!id) throw new Error(`No release ${args.deliverable ? `${args.deliverable} ` : ''}${args.version}.`);
+  return id;
+}
+
 export async function getReleaseReadiness(args = {}) {
   if (args.listGateTypes) {
     return callEzmodoAPI('mcpReleaseGateTypes', {});
   }
-  if (args.candidateId) {
-    const params = { id: args.candidateId };
+  let candidateId = args.candidateId;
+  if (!candidateId && args.version) {
+    // deliverable + version (E-280): resolve the candidate the same way
+    // `ezmodo release check --deliverable --version` does.
+    candidateId = (await lookupCandidate(args, 'get_release_readiness'))?.id;
+    if (!candidateId) {
+      throw new Error(`No candidate found for ${args.deliverable ? `${args.deliverable} ` : ''}${args.version}.`);
+    }
+  }
+  if (candidateId) {
+    const params = { id: candidateId };
     if (args.environment) params.environment = args.environment;
     return callEzmodoAPI('mcpReleaseReadiness', params);
   }
-  if (args.milestoneId) {
-    return callEzmodoAPI('mcpMilestoneRelease', { milestoneId: args.milestoneId });
+  if (args.releaseId) {
+    return callEzmodoAPI('mcpGetRelease', { id: args.releaseId });
   }
-  throw new Error('Give candidateId (+ environment), or milestoneId, or listGateTypes: true.');
+  if (args.milestoneId) {
+    return callEzmodoAPI('mcpMilestoneRelease', { milestoneId: args.milestoneId, ...pick(args, ['deliverable']) });
+  }
+  throw new Error('Give candidateId (+ environment), or deliverable + version (+ environment), or releaseId, ' +
+    'or milestoneId, or listGateTypes: true.');
 }
 
 export async function manageRelease(args = {}) {
   const { action } = args;
   switch (action) {
-  case 'create_candidate':
-    need(args, ['milestoneId', 'versionLabel'], action);
-    return callEzmodoAPI('mcpCreateReleaseCandidate', {
-      milestoneId: args.milestoneId, ...pick(args, ['versionLabel', 'kind', 'commitSha', 'notes']),
-    });
+  case 'create_candidate': {
+    const fields = pick(args, ['versionLabel', 'kind', 'commitSha', 'notes']);
+    if (args.milestoneId) {
+      need(args, ['versionLabel'], action);
+      return callEzmodoAPI('mcpCreateReleaseCandidate', {
+        milestoneId: args.milestoneId, ...fields, ...pick(args, ['deliverable']),
+      });
+    }
+    // A release is a deliverable at a version (E-280): name it by id, or by
+    // deliverable + version (started if new). The label defaults to the version.
+    let releaseId = args.releaseId;
+    if (!releaseId) {
+      if (!args.version) {
+        throw new Error('create_candidate needs releaseId, or version (+ deliverable), or milestoneId + versionLabel.');
+      }
+      const rel = await callEzmodoAPI('mcpCreateRelease', {
+        projectId: await projectIdFor(args, action), version: args.version, ...pick(args, ['deliverable']),
+      });
+      releaseId = rel?.id;
+    }
+    return callEzmodoAPI('mcpCreateReleaseCandidateForRelease', { id: releaseId, ...fields });
+  }
   case 'update_candidate': {
     need(args, ['candidateId'], action);
     const body = { id: args.candidateId, ...pick(args, ['notes', 'commitSha', 'status', 'rejectionReason']) };
@@ -68,13 +124,24 @@ export async function manageRelease(args = {}) {
     need(args, ['waiverId'], action);
     return callEzmodoAPI('mcpRevokeReleaseWaiver', { id: args.waiverId });
   case 'apply_checklist':
+    if (args.releaseId) {
+      return callEzmodoAPI('mcpApplyReleaseChecklistForRelease', { id: args.releaseId, ...pick(args, ['templateId']) });
+    }
     need(args, ['milestoneId'], action);
-    return callEzmodoAPI('mcpApplyReleaseChecklist', { milestoneId: args.milestoneId, ...pick(args, ['templateId']) });
-  case 'add_checklist_item':
+    return callEzmodoAPI('mcpApplyReleaseChecklist', {
+      milestoneId: args.milestoneId, ...pick(args, ['templateId', 'deliverable']),
+    });
+  case 'add_checklist_item': {
+    const item = pick(args, ['title', 'phase', 'ownerId', 'ownerName', 'notes', 'runbookUrl', 'autoCheck']);
+    if (args.releaseId) {
+      need(args, ['title', 'phase'], action);
+      return callEzmodoAPI('mcpAddReleaseChecklistItemForRelease', { id: args.releaseId, ...item });
+    }
     need(args, ['milestoneId', 'title', 'phase'], action);
     return callEzmodoAPI('mcpAddReleaseChecklistItem', {
-      milestoneId: args.milestoneId, ...pick(args, ['title', 'phase', 'ownerId', 'ownerName', 'notes', 'runbookUrl', 'autoCheck']),
+      milestoneId: args.milestoneId, ...item, ...pick(args, ['deliverable']),
     });
+  }
   case 'set_item_state': {
     need(args, ['itemId', 'state'], action);
     const body = { id: args.itemId, state: args.state };
@@ -106,7 +173,8 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpReleaseChecklistItemToTask', { id: args.itemId });
   case 'add_gate':
     need(args, ['projectId', 'environment', 'type'], action);
-    return callEzmodoAPI('mcpCreateReleaseGate', pick(args, ['projectId', 'environment', 'type', 'name', 'params', 'enforcement']));
+    return callEzmodoAPI('mcpCreateReleaseGate',
+      pick(args, ['projectId', 'environment', 'type', 'name', 'params', 'enforcement', 'deliverable']));
   case 'update_gate':
     need(args, ['gateId'], action);
     return callEzmodoAPI('mcpUpdateReleaseGate', { id: args.gateId, ...pick(args, ['name', 'params', 'enforcement', 'enabled']) });
@@ -118,31 +186,82 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpAddRecommendedReleaseGates', { projectId: args.projectId });
   case 'list_gates':
     need(args, ['projectId'], action);
-    return callEzmodoAPI('mcpListReleaseGates', pick(args, ['projectId', 'environment']));
+    return callEzmodoAPI('mcpListReleaseGates', pick(args, ['projectId', 'environment', 'deliverable']));
   case 'list_templates':
     need(args, ['projectId'], action);
     return callEzmodoAPI('mcpListReleaseTemplates', { projectId: args.projectId });
   case 'get_settings':
     need(args, ['projectId'], action);
-    return callEzmodoAPI('mcpGetReleaseSettings', { projectId: args.projectId });
+    return callEzmodoAPI('mcpGetReleaseSettings', pick(args, ['projectId', 'deliverable']));
   case 'save_settings':
-    need(args, ['projectId', 'completeTasksOn'], action);
-    return callEzmodoAPI('mcpSaveReleaseSettings', pick(args, ['projectId', 'completeTasksOn']));
+    // For a deliverable, completeTasksOn "" removes its override (E-280).
+    need(args, args.deliverable ? ['projectId'] : ['projectId', 'completeTasksOn'], action);
+    if (args.deliverable && args.completeTasksOn == null) need(args, ['completeTasksOn'], action);
+    return callEzmodoAPI('mcpSaveReleaseSettings', pick(args, ['projectId', 'completeTasksOn', 'deliverable']));
   case 'save_template':
     need(args, ['projectId', 'name', 'items'], action);
     return callEzmodoAPI('mcpSaveReleaseTemplate',
-      pick(args, ['projectId', 'templateId', 'name', 'description', 'items', 'isDefault', 'orgWide']));
+      pick(args, ['projectId', 'templateId', 'name', 'description', 'items', 'isDefault', 'orgWide', 'deliverable']));
   case 'report_check':
     need(args, ['projectId', 'name', 'status'], action);
     return callEzmodoAPI('mcpReportReleaseCheck', {
       source: 'mcp',
-      ...pick(args, ['projectId', 'name', 'status', 'candidate', 'commitSha', 'environment', 'url', 'summary', 'source', 'externalId']),
+      ...pick(args, [
+        'projectId', 'name', 'status', 'deliverable', 'version', 'candidate', 'commitSha', 'environment', 'url',
+        'summary', 'source', 'externalId',
+      ]),
     });
   case 'report_deployment':
     need(args, ['projectId', 'environment', 'status'], action);
     return callEzmodoAPI('mcpReportReleaseDeployment', {
       source: 'mcp',
-      ...pick(args, ['projectId', 'environment', 'status', 'candidate', 'commitSha', 'url', 'source', 'externalId']),
+      ...pick(args, [
+        'projectId', 'environment', 'status', 'deliverable', 'version', 'candidate', 'commitSha', 'url', 'source',
+        'externalId',
+      ]),
+    });
+
+  // ── Releases: a deliverable at a version (E-280) ──────────────────────────
+  case 'list_releases':
+    return callEzmodoAPI('mcpListReleases', {
+      projectId: await projectIdFor(args, action), ...pick(args, ['deliverable', 'milestoneId', 'limit']),
+    });
+  case 'create_release':
+    need(args, ['version'], action);
+    return callEzmodoAPI('mcpCreateRelease', {
+      projectId: await projectIdFor(args, action), ...pick(args, ['deliverable', 'version', 'milestoneId', 'notes']),
+    });
+  case 'get_release':
+    if (args.releaseId) return callEzmodoAPI('mcpGetRelease', { id: args.releaseId });
+    need(args, ['version'], action);
+    return callEzmodoAPI('mcpLookupRelease', {
+      projectId: await projectIdFor(args, action), version: args.version, ...pick(args, ['deliverable']),
+    });
+  case 'update_release': {
+    // milestoneId "" detaches the milestone, so it is sent when given at all.
+    const body = pick(args, ['status', 'milestoneId', 'notes']);
+    if (Object.keys(body).length === 0) {
+      throw new Error('update_release needs at least one of status, milestoneId, notes.');
+    }
+    return callEzmodoAPI('mcpUpdateRelease', { id: await releaseIdFor(args, action), ...body });
+  }
+  case 'get_contents':
+    return callEzmodoAPI('mcpGetReleaseContents', { id: await releaseIdFor(args, action) });
+  case 'derive_contents':
+    return callEzmodoAPI('mcpDeriveReleaseContents', { id: await releaseIdFor(args, action) });
+  case 'add_content':
+  case 'remove_content': {
+    need(args, ['entityType', 'entityId'], action);
+    const id = await releaseIdFor(args, action);
+    return callEzmodoAPI(action === 'add_content' ? 'mcpAddReleaseContent' : 'mcpRemoveReleaseContent',
+      { id, entityType: args.entityType, entityId: args.entityId });
+  }
+  case 'release_changelog':
+    return callEzmodoAPI('mcpReleaseChangelog', { id: await releaseIdFor(args, action) });
+  case 'task_shipping':
+    need(args, ['taskId'], action);
+    return callEzmodoAPI('mcpReleaseTaskShipping', {
+      taskId: args.taskId, projectId: await projectIdFor(args, action),
     });
   default:
     throw new Error(`Unknown action: ${action}`);

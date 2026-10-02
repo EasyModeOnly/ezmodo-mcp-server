@@ -7,6 +7,12 @@
  * environment; READINESS combines them into go / no_go / go_with_waivers with a
  * reason on every row. A WAIVER is how a release goes out incomplete on purpose.
  *
+ * E-280: a RELEASE is a DELIVERABLE (api, web, desktop — what the project
+ * ships on its own version line) at a version. Candidates are builds of a
+ * release. A milestone is optional planning the release can point at. Every
+ * project has a default deliverable, so the milestone-first actions keep
+ * working. Deliverables are a release axis only: work is never linked to them.
+ *
  * Nothing here assumes a CI provider: pipelines report checks and deployments
  * with manage_release report_check / report_deployment (or `ezmodo release
  * report`), and GitHub data is read automatically when a candidate has a SHA.
@@ -15,20 +21,37 @@
 export const RELEASE_TOOLS = [
   {
     name: 'get_release_readiness',
-    description: 'Answer "what is blocking this release?". Three modes: ' +
+    description: 'Answer "what is blocking this release?". Modes: ' +
       '(1) candidateId + environment → the go/no-go for that candidate in that environment: verdict ' +
       '(go | go_with_waivers | no_go), every gate with status and reason, the checklist, waivers, and nextAction ' +
       '(the single next step). Blocking rows carry howToWaive. ' +
-      '(2) candidateId alone → the readiness matrix: the same for every environment in order. ' +
-      '(3) milestoneId → the release overview: environments, candidates with their promotions, the checklist ' +
-      'and the project\'s gates. Set listGateTypes to get the gate types and their params instead. ' +
+      '(2) candidateId alone → the readiness matrix: the same for every environment on its deliverable\'s route. ' +
+      'Instead of candidateId, name the build as deliverable + version (+ candidate label): the release\'s newest ' +
+      'candidate that was not rejected, or the one with that label (deliverable omitted = the project\'s default; ' +
+      'projectId defaults to .ezmodo/config.json). ' +
+      '(3) releaseId → the release page: route environments, candidates, checklist, contents and effective gates. ' +
+      '(4) milestoneId (+ deliverable?) → the milestone\'s release overview: environments, candidates with their ' +
+      'promotions, the checklist and the gates. Set listGateTypes to get the gate types and their params instead. ' +
       'Environment accepts an id, key or alias ("prod", "stage").',
     inputSchema: {
       type: 'object',
       properties: {
         candidateId: { type: 'string', description: 'Release candidate id (modes 1 and 2)' },
         environment: { type: 'string', description: 'Environment id, key or alias (mode 1)' },
-        milestoneId: { type: 'string', description: 'Milestone id (mode 3)' },
+        deliverable: {
+          type: 'string', description: 'Deliverable key or id (modes 1, 2 and 4); omitted = the project\'s default',
+        },
+        version: {
+          type: 'string', description: 'Release version, e.g. "0.23.0" — with deliverable, names the build (modes 1 and 2)',
+        },
+        candidate: {
+          type: 'string', description: 'Candidate label or id within that release (default: its newest active one)',
+        },
+        projectId: {
+          type: 'string', description: 'Project id for the deliverable + version lookup (default: .ezmodo/config.json)',
+        },
+        releaseId: { type: 'string', description: 'Release id (mode 3)' },
+        milestoneId: { type: 'string', description: 'Milestone id (mode 4)' },
         listGateTypes: { type: 'boolean', description: 'Return the available gate types and their params' },
       },
     },
@@ -41,7 +64,8 @@ export const RELEASE_TOOLS = [
       'waive it with a reason. Enforcement: required blocks promotion; advisory only warns; reject is like required, ' +
       'and a definite failure (never pending) rejects the candidate; only gate types with canReject (suite_pass_rate, ' +
       'external_check, deployed_to_previous, checklist_phase) accept it. A rejected candidate cannot be promoted. Actions: ' +
-      'create_candidate (milestoneId, versionLabel, kind?, commitSha?, notes?); ' +
+      'create_candidate (releaseId, or version + deliverable? — the release is started if new and the label ' +
+      'defaults to the version — or milestoneId + versionLabel + deliverable?; kind?, commitSha?, notes?); ' +
       'update_candidate (candidateId, notes?, commitSha?, status: active|rejected|shipped, rejectionReason? — ' +
       'recorded with a rejection; setting active again clears the rejection); ' +
       'promote (candidateId, environment, notes?); ' +
@@ -77,7 +101,24 @@ export const RELEASE_TOOLS = [
       'candidate? (id or version label), commitSha?, environment?, url?, source?, externalId?); ' +
       'report_deployment (projectId, environment, status: pending|in_progress|success|failure|cancelled, ' +
       'candidate?, commitSha?, url?, source?, externalId?). Reports are idempotent: sending the same one again ' +
-      'updates it.',
+      'updates it. Both reports also take deliverable + version to name the build (with candidate? as a label ' +
+      'within that release). ' +
+      'RELEASES (E-280) — a release is a deliverable (see manage_deliverable) at a version; projectId defaults to ' +
+      '.ezmodo/config.json, and deliverable omitted means the project\'s default one. A release is named by ' +
+      'releaseId or by deliverable + version: ' +
+      'list_releases (projectId?, deliverable?, milestoneId?, limit? — each with its candidates and the furthest ' +
+      'environment it reached); ' +
+      'create_release (version, deliverable?, milestoneId?, notes? — returns the existing release at that version ' +
+      'if there is one); ' +
+      'get_release (the release page: route environments, candidates, checklist, contents, effective gates); ' +
+      'update_release (status?: planned|in_progress|shipped|abandoned, milestoneId? ("" detaches), notes?); ' +
+      'get_contents / derive_contents (the tasks and epics this release ships, derived from the newest candidate\'s ' +
+      'commits; derive keeps manual edits); add_content / remove_content (entityType: task|epic, entityId — a ' +
+      'removed item stays out on re-derive); release_changelog (markdown); ' +
+      'task_shipping (taskId, projectId? — which deliverables have shipped the task: "API shipped, Web pending"). ' +
+      'apply_checklist and add_checklist_item also take releaseId instead of milestoneId; add_gate, list_gates, ' +
+      'get_settings, save_settings and save_template take deliverable for that deliverable\'s own gates, settings ' +
+      'and templates (save_settings with deliverable and completeTasksOn "" removes its override).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -90,6 +131,8 @@ export const RELEASE_TOOLS = [
             'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
             'list_templates', 'save_template', 'get_settings', 'save_settings',
             'report_check', 'report_deployment',
+            'list_releases', 'create_release', 'get_release', 'update_release', 'get_contents', 'derive_contents',
+            'add_content', 'remove_content', 'release_changelog', 'task_shipping',
           ],
           description: 'Action to perform',
         },
@@ -155,6 +198,64 @@ export const RELEASE_TOOLS = [
         source: { type: 'string', description: 'Who is reporting: github, gitlab, jenkins, cli, manual… (report_*)' },
         externalId: { type: 'string', description: 'The pipeline\'s own id for this check/deployment; makes repeat reports update one row' },
         summary: { type: 'string' },
+        deliverable: {
+          type: 'string',
+          description: 'Deliverable key or id (E-280). Omitted = the project\'s default deliverable',
+        },
+        version: { type: 'string', description: 'Release version, e.g. "0.23.0": with deliverable, names a release' },
+        releaseId: { type: 'string', description: 'Release id (a deliverable at a version)' },
+        limit: { type: 'number', description: 'list_releases: how many' },
+        entityType: { type: 'string', enum: ['task', 'epic'], description: 'add_content / remove_content' },
+        entityId: { type: 'string', description: 'add_content / remove_content: the task or epic id' },
+        taskId: { type: 'string', description: 'task_shipping: the task' },
+      },
+      required: ['action'],
+    },
+  },
+  {
+    name: 'manage_deliverable',
+    description: 'Deliverables (E-280): what a project ships on its own version line — api, web, desktop. A ' +
+      'release is a deliverable at a version (manage_release create_release / list_releases). HARD RULE: ' +
+      'deliverables are a release axis only. Work is NEVER linked to a deliverable and a deliverable has no ' +
+      'progress figure; work reaches a deliverable only through a release\'s contents. To say what a task or epic ' +
+      'advances, link a feature instead. Every project has one default deliverable (created automatically), and ' +
+      'everything deliverable-specific stays hidden while it is the only one (multi: false). ' +
+      'projectId defaults to .ezmodo/config.json. A deliverable is named by key or id. Actions: ' +
+      'list (→ {deliverables, multi}); ' +
+      'create (name, key? — the name CI uses, ^[a-z0-9][a-z0-9._-]{0,62}$, route?, paths?); ' +
+      'update (deliverable, name?, key?, position?, makeDefault?, route?, paths?); ' +
+      'paths (deliverable, paths: repo-relative folders whose commits belong to it, mode?: add|remove|replace ' +
+      '(default replace)) — used to derive a release\'s contents; the default deliverable with no paths is the ' +
+      'whole repo; ' +
+      'route (deliverable, route: environment ids or keys it is promoted through; [] = every environment); ' +
+      'delete (deliverable — refused for the default and for any deliverable with releases).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: {
+          type: 'string',
+          enum: ['list', 'create', 'update', 'paths', 'route', 'delete'],
+          description: 'Action to perform',
+        },
+        projectId: { type: 'string', description: 'Project id (default: .ezmodo/config.json)' },
+        deliverable: { type: 'string', description: 'Deliverable key or id (update, paths, route, delete)' },
+        key: { type: 'string', description: 'The name CI uses, e.g. "api" (create, update)' },
+        name: { type: 'string', description: 'Display name, e.g. "API" (create, update)' },
+        position: { type: 'number', description: 'update: sort position' },
+        makeDefault: { type: 'boolean', description: 'update: make this the project\'s default deliverable' },
+        route: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Environment ids or keys it is promoted through; [] = every environment (create, update, route)',
+        },
+        paths: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Repo-relative folders whose commits belong to it (create, update, paths)',
+        },
+        mode: {
+          type: 'string', enum: ['add', 'remove', 'replace'], description: 'paths: how to apply them (default replace)',
+        },
       },
       required: ['action'],
     },

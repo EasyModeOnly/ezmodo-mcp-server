@@ -122,6 +122,7 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'manage_access',
   'manage_catalog',
   'manage_decision',
+  'manage_deliverable',
   'manage_design',
   'manage_document',
   'manage_document_template',
