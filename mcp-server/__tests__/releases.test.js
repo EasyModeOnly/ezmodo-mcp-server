@@ -23,7 +23,7 @@ describe('Release Readiness tools (E-262)', () => {
   it('every endpoint the release handlers call is mapped', () => {
     const used = [
       'mcpReleaseGateTypes', 'mcpMilestoneRelease', 'mcpCreateReleaseCandidate', 'mcpAddReleaseChecklistItem',
-      'mcpApplyReleaseChecklist', 'mcpUpdateReleaseChecklistItem', 'mcpReleaseChecklistItemToTask',
+      'mcpApplyReleaseChecklist', 'mcpUpdateReleaseChecklistItem', 'mcpDeleteReleaseChecklistItem', 'mcpReleaseChecklistItemToTask',
       'mcpCreateReleaseGate', 'mcpAddRecommendedReleaseGates', 'mcpUpdateReleaseGate', 'mcpDeleteReleaseGate',
       'mcpSaveReleaseTemplate', 'mcpCreateReleaseWaiver', 'mcpRevokeReleaseWaiver', 'mcpReportReleaseCheck',
       'mcpReportReleaseDeployment', 'mcpUpdateReleaseCandidate', 'mcpReleaseReadiness', 'mcpPromoteReleaseCandidate',
@@ -110,6 +110,29 @@ describe('Release Readiness tools (E-262)', () => {
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateReleaseChecklistItem', {
         id: 'i1', state: 'failed', stateNote: 'support not briefed', candidateId: 'c1',
       });
+    });
+
+    it('update_checklist_item edits the step, never its state (#3080)', async () => {
+      mockCallEzmodoAPI.mockResolvedValue({});
+      await manageRelease({
+        action: 'update_checklist_item', itemId: 'i1', title: 'Create a candidate per component',
+        notes: 'api-0.22.0', position: 0, state: 'done', clearAutoCheck: true,
+      });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateReleaseChecklistItem', {
+        id: 'i1', title: 'Create a candidate per component', notes: 'api-0.22.0', position: 0, clearAutoCheck: true,
+      });
+    });
+
+    it('update_checklist_item refuses a call that changes nothing', async () => {
+      await expect(manageRelease({ action: 'update_checklist_item', itemId: 'i1' })).rejects.toThrow(/at least one of/);
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+    });
+
+    it('delete_checklist_item deletes by id (#3080)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+      await manageRelease({ action: 'delete_checklist_item', itemId: 'i1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeleteReleaseChecklistItem', { id: 'i1' });
+      await expect(manageRelease({ action: 'delete_checklist_item' })).rejects.toThrow(/needs itemId/);
     });
 
     it('update_candidate sends the rejection reason, taking reason as an alias when rejecting (#2916)', async () => {

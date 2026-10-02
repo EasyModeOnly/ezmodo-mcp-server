@@ -84,6 +84,23 @@ export async function manageRelease(args = {}) {
     if (args.candidateId !== undefined) body.candidateId = args.candidateId;
     return callEzmodoAPI('mcpUpdateReleaseChecklistItem', body);
   }
+  case 'update_checklist_item': {
+    // Edits the step itself; its state goes through set_item_state, so a
+    // waiver can't skip the reason that action asks for (#3080).
+    need(args, ['itemId'], action);
+    const body = {
+      id: args.itemId,
+      ...pick(args, ['title', 'notes', 'ownerId', 'ownerName', 'runbookUrl', 'position', 'autoCheck']),
+    };
+    if (args.clearAutoCheck) body.clearAutoCheck = true;
+    if (Object.keys(body).length === 1) {
+      throw new Error('update_checklist_item needs at least one of title, notes, ownerId, ownerName, runbookUrl, position, autoCheck, clearAutoCheck.');
+    }
+    return callEzmodoAPI('mcpUpdateReleaseChecklistItem', body);
+  }
+  case 'delete_checklist_item':
+    need(args, ['itemId'], action);
+    return callEzmodoAPI('mcpDeleteReleaseChecklistItem', { id: args.itemId });
   case 'item_to_task':
     need(args, ['itemId'], action);
     return callEzmodoAPI('mcpReleaseChecklistItemToTask', { id: args.itemId });

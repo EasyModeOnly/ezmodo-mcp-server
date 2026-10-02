@@ -226,6 +226,7 @@ export const ENDPOINT_MAP = {
   'mcpAddReleaseChecklistItem': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist', method: 'POST' },
   'mcpApplyReleaseChecklist': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist/apply', method: 'POST' },
   'mcpUpdateReleaseChecklistItem': { route: 'mcp/v1/releases/checklist-items/{id}', method: 'PATCH' },
+  'mcpDeleteReleaseChecklistItem': { route: 'mcp/v1/releases/checklist-items/{id}', method: 'DELETE' },
   'mcpReleaseChecklistItemToTask': { route: 'mcp/v1/releases/checklist-items/{id}/task', method: 'POST' },
   'mcpCreateReleaseGate': { route: 'mcp/v1/releases/gates', method: 'POST' },
   'mcpAddRecommendedReleaseGates': { route: 'mcp/v1/releases/gates/recommended', method: 'POST' },

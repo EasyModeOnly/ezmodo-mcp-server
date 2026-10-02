@@ -56,6 +56,11 @@ export const RELEASE_TOOLS = [
       'failed means the step was done and did not pass: it fails its phase gate, and when that phase is set to ' +
       'reject it rejects the candidate (a per-candidate step\'s own, else candidateId, else every active candidate ' +
       'of the milestone)); ' +
+      'update_checklist_item (itemId, title?, notes?, ownerId?, ownerName?, runbookUrl?, position?, autoCheck?, ' +
+      'clearAutoCheck? — edits one milestone\'s step; its state goes through set_item_state. The project\'s ' +
+      'process lives in its template, so change that with save_template); ' +
+      'delete_checklist_item (itemId — removes a step from the milestone; a per-candidate step takes its ' +
+      'candidates\' copies with it); ' +
       'item_to_task (itemId — turns a checklist item into a task; completing the task ticks it); ' +
       'add_gate (projectId, environment, type, name?, params?, enforcement?: required|advisory|reject); ' +
       'update_gate (gateId, name?, params?, enforcement?, enabled?); delete_gate (gateId); ' +
@@ -80,7 +85,8 @@ export const RELEASE_TOOLS = [
           type: 'string',
           enum: [
             'create_candidate', 'update_candidate', 'promote', 'sign_off', 'waive', 'revoke_waiver',
-            'apply_checklist', 'add_checklist_item', 'set_item_state', 'item_to_task',
+            'apply_checklist', 'add_checklist_item', 'set_item_state', 'update_checklist_item',
+            'delete_checklist_item', 'item_to_task',
             'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
             'list_templates', 'save_template', 'get_settings', 'save_settings',
             'report_check', 'report_deployment',
@@ -123,6 +129,8 @@ export const RELEASE_TOOLS = [
         ownerName: { type: 'string' },
         runbookUrl: { type: 'string' },
         autoCheck: { type: 'object', description: 'A gate expression {type, params}: the item counts as done while it passes' },
+        clearAutoCheck: { type: 'boolean', description: 'update_checklist_item: remove the step\'s auto-check' },
+        position: { type: 'number', description: 'update_checklist_item: sort position on the milestone\'s checklist (lower comes first)' },
         state: { type: 'string', enum: ['open', 'done', 'failed', 'waived', 'n_a'] },
         gateId: { type: 'string' },
         type: { type: 'string', description: 'Gate type (add_gate); see get_release_readiness listGateTypes' },
