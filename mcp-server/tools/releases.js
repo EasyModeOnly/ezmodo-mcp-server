@@ -94,8 +94,10 @@ export const RELEASE_TOOLS = [
       'checklist_phase gate with params.phase is what makes that phase of steps block promotion); ' +
       'list_templates (projectId — step templates: built-in, organization and project; the project\'s isDefault ' +
       'one is its release process); ' +
-      'get_settings / save_settings (projectId, completeTasksOn: last_environment|milestone_released|' +
-      'any_environment — when a release completes the in-review tasks it ships); ' +
+      'get_settings / save_settings (projectId, completeTasksOn?: last_environment|milestone_released|' +
+      'any_environment — when a release completes the in-review tasks it ships; holdDeploys?: whether a no-go ' +
+      'from the CI release gate (POST /api/v1/releases/gate) holds the deploy, off by default so CI only warns; ' +
+      'a field left out is unchanged); ' +
       'save_template (projectId, name, items[], templateId? to replace, isDefault?, orgWide?); ' +
       'report_check (projectId, name, status: pending|running|success|failure|cancelled|skipped, ' +
       'candidate? (id or version label), commitSha?, environment?, url?, source?, externalId?); ' +
@@ -118,7 +120,8 @@ export const RELEASE_TOOLS = [
       'task_shipping (taskId, projectId? — which deliverables have shipped the task: "API shipped, Web pending"). ' +
       'apply_checklist and add_checklist_item also take releaseId instead of milestoneId; add_gate, list_gates, ' +
       'get_settings, save_settings and save_template take deliverable for that deliverable\'s own gates, settings ' +
-      'and templates (save_settings with deliverable and completeTasksOn "" removes its override).',
+      'and templates (save_settings with deliverable: completeTasksOn "" or inheritHoldDeploys: true go back to the ' +
+      'project\'s).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -189,6 +192,14 @@ export const RELEASE_TOOLS = [
           type: 'string',
           enum: ['last_environment', 'milestone_released', 'any_environment'],
           description: 'save_settings: when a release completes the in-review tasks it ships',
+        },
+        holdDeploys: {
+          type: 'boolean',
+          description: 'save_settings: true = a no-go from the CI release gate holds the deploy; false = CI reports it and deploys anyway (the default)',
+        },
+        inheritHoldDeploys: {
+          type: 'boolean',
+          description: 'save_settings with deliverable: drop its own holdDeploys and use the project\'s',
         },
         items: { type: 'array', items: { type: 'object' }, description: 'save_template items: [{key?, title, phase, ownerId?, notes?, runbookUrl?, autoCheck?}]' },
         isDefault: { type: 'boolean' },

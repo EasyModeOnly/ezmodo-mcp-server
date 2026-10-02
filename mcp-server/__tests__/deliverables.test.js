@@ -255,6 +255,14 @@ describe('manage_release with deliverables (E-280)', () => {
     expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', completeTasksOn: '', deliverable: 'api' });
     await expect(manageRelease({ action: 'save_settings', projectId: 'p1', completeTasksOn: '' })).rejects.toThrow(/completeTasksOn/);
     await expect(manageRelease({ action: 'save_settings', projectId: 'p1', deliverable: 'api' })).rejects.toThrow(/completeTasksOn/);
+    // #3091: holding CI deploys is a setting of its own, inherited separately.
+    await manageRelease({ action: 'save_settings', projectId: 'p1', deliverable: 'cli', holdDeploys: true });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', holdDeploys: true, deliverable: 'cli' });
+    await manageRelease({ action: 'save_settings', projectId: 'p1', deliverable: 'cli', inheritHoldDeploys: true });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', inheritHoldDeploys: true, deliverable: 'cli' });
+    await manageRelease({ action: 'save_settings', projectId: 'p1', holdDeploys: false });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', holdDeploys: false });
+    await expect(manageRelease({ action: 'save_settings', projectId: 'p1', inheritHoldDeploys: true })).rejects.toThrow(/holdDeploys/);
   });
 });
 

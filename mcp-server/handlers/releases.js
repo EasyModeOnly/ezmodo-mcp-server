@@ -193,11 +193,18 @@ export async function manageRelease(args = {}) {
   case 'get_settings':
     need(args, ['projectId'], action);
     return callEzmodoAPI('mcpGetReleaseSettings', pick(args, ['projectId', 'deliverable']));
-  case 'save_settings':
-    // For a deliverable, completeTasksOn "" removes its override (E-280).
-    need(args, args.deliverable ? ['projectId'] : ['projectId', 'completeTasksOn'], action);
-    if (args.deliverable && args.completeTasksOn == null) need(args, ['completeTasksOn'], action);
-    return callEzmodoAPI('mcpSaveReleaseSettings', pick(args, ['projectId', 'completeTasksOn', 'deliverable']));
+  case 'save_settings': {
+    // A field left out is unchanged. For a deliverable, completeTasksOn ""
+    // and inheritHoldDeploys go back to the project's (E-280 #3084, #3091).
+    need(args, ['projectId'], action);
+    const hold = typeof args.holdDeploys === 'boolean' || (args.deliverable && args.inheritHoldDeploys === true);
+    const mode = args.deliverable ? args.completeTasksOn != null : !!args.completeTasksOn;
+    if (!hold && !mode) {
+      throw new Error(`${action} needs completeTasksOn or holdDeploys.`);
+    }
+    return callEzmodoAPI('mcpSaveReleaseSettings',
+      pick(args, ['projectId', 'completeTasksOn', 'holdDeploys', 'inheritHoldDeploys', 'deliverable']));
+  }
   case 'save_template':
     need(args, ['projectId', 'name', 'items'], action);
     return callEzmodoAPI('mcpSaveReleaseTemplate',
