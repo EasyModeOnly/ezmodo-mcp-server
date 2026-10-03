@@ -186,21 +186,49 @@ describe('callEzmodoAPI error classification', () => {
     expect(thrown.message).toContain('invalid or revoked API key');
   });
 
-  it('regression: a plain-text body is what produced the phantom "Unauthorized"', async () => {
+  it('regression: keeps a plain-text body instead of the status line', async () => {
     // Exactly what the API sent before #2282 — http.Error writes text/plain, so
     // JSON.parse threw and the client fell back to `response.statusText`. The
     // word "Unauthorized" in every wedge report came from HERE, not from the
     // server, and it hid a database outage behind an auth error for a week.
+    // #3095 hit the same hole with a scope refusal ("Forbidden"), so the
+    // client now keeps whatever text the API sent.
     mockFetch.mockResolvedValueOnce(
       errorResponse(401, 'Unauthorized', 'API key validation failed: database capacity temporarily exhausted\n')
     );
 
     const thrown = await callEzmodoAPI('mcpSearchEpics', { query: 'x' }).catch((e) => e);
 
-    expect(thrown.message).toBe('Unauthorized');
-    // The true cause was on the wire the whole time and the client discarded
-    // it. Nothing asserts a fix here — the fix is that the API no longer sends
-    // plain text — but this documents the failure mode so it is recognisable
-    // if any endpoint regresses to http.Error.
+    expect(thrown.message).toBe('API key validation failed: database capacity temporarily exhausted');
+    expect(thrown.status).toBe(401);
+  });
+
+  it('falls back to the status line only for an empty body', async () => {
+    mockFetch.mockResolvedValueOnce(errorResponse(403, 'Forbidden', '  '));
+    const thrown = await callEzmodoAPI('mcpSearchEpics', { query: 'x' }).catch((e) => e);
+    expect(thrown.message).toBe('Forbidden');
+  });
+
+  it('carries a missing_scope refusal\'s code and scopes (#3095)', async () => {
+    mockFetch.mockResolvedValueOnce(
+      errorResponse(
+        403,
+        'Forbidden',
+        JSON.stringify({
+          error: "This needs the 'delete:projects' permission, which this sign-in wasn't granted.",
+          code: 'missing_scope',
+          requiredScope: 'delete:projects',
+          consentScope: 'ezmodo:delete',
+        })
+      )
+    );
+    const thrown = await callEzmodoAPI('mcpSearchEpics', { query: 'x' }).catch((e) => e);
+    expect(thrown).toMatchObject({
+      status: 403,
+      code: 'missing_scope',
+      requiredScope: 'delete:projects',
+      consentScope: 'ezmodo:delete',
+    });
+    expect(thrown.message).toContain('delete:projects');
   });
 });

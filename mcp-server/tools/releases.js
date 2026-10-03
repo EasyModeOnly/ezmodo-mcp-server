@@ -74,7 +74,10 @@ export const RELEASE_TOOLS = [
       'evidenceType?: none|link|note|feature_flag, evidence?: {url}|{text}|{flagKey}) — feature_flag evidence is ' +
       'verified: the flag must be served OFF in that environment, or the waiver does not hold; ' +
       'revoke_waiver (waiverId); ' +
-      'apply_checklist (milestoneId, templateId? — default: the project\'s default, else the built-in one); ' +
+      'apply_checklist (milestoneId, templateId? — default: the deliverable\'s default, else the project\'s, else the ' +
+      'built-in one; adds only missing steps. A new release already starts with it. sync: true also brings OPEN steps ' +
+      'in line with the template (title, notes, order), leaves done/failed/waived/N/A steps as recorded, and lists ' +
+      'steps the template lacks in notInTemplate without removing them); ' +
       'add_checklist_item (milestoneId, title, phase, ownerId?, ownerName?, notes?, runbookUrl?, autoCheck?); ' +
       'set_item_state (itemId, state: open|done|failed|waived|n_a, note? — required for waived, candidateId? — ' +
       'failed means the step was done and did not pass: it fails its phase gate, and when that phase is set to ' +
@@ -84,7 +87,8 @@ export const RELEASE_TOOLS = [
       'clearAutoCheck? — edits one milestone\'s step; its state goes through set_item_state. The project\'s ' +
       'process lives in its template, so change that with save_template); ' +
       'delete_checklist_item (itemId — removes a step from the milestone; a per-candidate step takes its ' +
-      'candidates\' copies with it); ' +
+      'candidates\' copies with it. Needs the delete permission, which a default plugin sign-in lacks; to retire a ' +
+      'step without it, set_item_state n_a with a note, or apply_checklist sync for template changes); ' +
       'item_to_task (itemId — turns a checklist item into a task; completing the task ticks it); ' +
       'add_gate (projectId, environment, type, name?, params?, enforcement?: required|advisory|reject); ' +
       'update_gate (gateId, name?, params?, enforcement?, enabled?); delete_gate (gateId); ' +
@@ -145,6 +149,10 @@ export const RELEASE_TOOLS = [
             'get_settings, save_settings, report_*)',
         },
         milestoneId: { type: 'string', description: 'Milestone id (create_candidate, apply_checklist, add_checklist_item)' },
+        sync: {
+          type: 'boolean',
+          description: 'apply_checklist: also update OPEN steps to match the template; never removes a step',
+        },
         candidateId: { type: 'string', description: 'Release candidate id' },
         candidate: { type: 'string', description: 'Candidate id OR version label (report_check, report_deployment)' },
         environment: { type: 'string', description: 'Environment id, key or alias' },

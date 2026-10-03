@@ -25,7 +25,7 @@ jest.unstable_mockModule('../lib/env.js', () => ({
 }));
 
 const { createServer } = await import('../lib/create-server.js');
-const { NOT_AUTHENTICATED, NO_ORGANIZATION, EMAIL_ALREADY_REGISTERED } =
+const { NOT_AUTHENTICATED, NO_ORGANIZATION, EMAIL_ALREADY_REGISTERED, MISSING_SCOPE } =
   await import('../lib/auth-guidance.js');
 
 const { InMemoryTransport } = await import('@modelcontextprotocol/server');
@@ -174,6 +174,37 @@ describe('local surface', () => {
     expect(payload.onboardingUrl).toMatch(/\/onboarding$/);
     // Must NOT tell them to sign in again — that is the mistake this replaces.
     expect(payload.action_required).not.toMatch(/sign in|authenticate/i);
+  });
+
+  it('explains a missing scope instead of a bare Forbidden (#3095)', async () => {
+    const error = new Error("This needs the 'delete:projects' permission, which this sign-in wasn't granted.");
+    error.status = 403;
+    error.code = MISSING_SCOPE;
+    error.requiredScope = 'delete:projects';
+    error.consentScope = 'ezmodo:delete';
+    mockHandler.mockRejectedValue(error);
+    mockGetApiKey.mockReturnValue(undefined);
+
+    const payload = parse(await dispatcher(createServer())('get_task'));
+
+    expect(payload.permitted).toBe(false);
+    expect(payload.consentScope).toBe('ezmodo:delete');
+    expect(payload.action_required).toContain('EZMODO_OAUTH_SCOPES');
+    expect(payload.action_required).toContain('ezmodo:delete');
+  });
+
+  it('tells an API-key caller to add the scope to the key, not to sign in', async () => {
+    const error = new Error("This needs the 'delete:projects' scope, which this API key doesn't have.");
+    error.status = 403;
+    error.code = MISSING_SCOPE;
+    error.requiredScope = 'delete:projects';
+    mockHandler.mockRejectedValue(error);
+    mockGetApiKey.mockReturnValue('ezm_key');
+
+    const payload = parse(await dispatcher(createServer())('get_task'));
+
+    expect(payload.action_required).toContain("lacks 'delete:projects'");
+    expect(payload.action_required).not.toContain('EZMODO_OAUTH_SCOPES');
   });
 
   it('answers an email collision differently from a missing workspace', async () => {

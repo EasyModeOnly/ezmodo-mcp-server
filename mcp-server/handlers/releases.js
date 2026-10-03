@@ -125,11 +125,11 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpRevokeReleaseWaiver', { id: args.waiverId });
   case 'apply_checklist':
     if (args.releaseId) {
-      return callEzmodoAPI('mcpApplyReleaseChecklistForRelease', { id: args.releaseId, ...pick(args, ['templateId']) });
+      return callEzmodoAPI('mcpApplyReleaseChecklistForRelease', { id: args.releaseId, ...pick(args, ['templateId', 'sync']) });
     }
     need(args, ['milestoneId'], action);
     return callEzmodoAPI('mcpApplyReleaseChecklist', {
-      milestoneId: args.milestoneId, ...pick(args, ['templateId', 'deliverable']),
+      milestoneId: args.milestoneId, ...pick(args, ['templateId', 'deliverable', 'sync']),
     });
   case 'add_checklist_item': {
     const item = pick(args, ['title', 'phase', 'ownerId', 'ownerName', 'notes', 'runbookUrl', 'autoCheck']);

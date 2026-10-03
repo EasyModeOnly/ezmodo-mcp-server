@@ -245,6 +245,11 @@ describe('manage_release with deliverables (E-280)', () => {
     });
     await manageRelease({ action: 'apply_checklist', milestoneId: 'm1' });
     expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpApplyReleaseChecklist', { milestoneId: 'm1' });
+    // #3096: sync brings open steps in line with the template, never deleting.
+    await manageRelease({ action: 'apply_checklist', releaseId: 'r1', sync: true });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpApplyReleaseChecklistForRelease', { id: 'r1', sync: true });
+    await manageRelease({ action: 'apply_checklist', milestoneId: 'm1', deliverable: 'api', sync: true });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpApplyReleaseChecklist', { milestoneId: 'm1', deliverable: 'api', sync: true });
   });
 
   it('settings: a deliverable override, and "" removes it', async () => {

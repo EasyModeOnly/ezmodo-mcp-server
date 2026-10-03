@@ -171,7 +171,12 @@ export async function callEzmodoAPI(endpoint, data) {
     try {
       error = JSON.parse(errorText);
     } catch {
-      error = { error: response.statusText };
+      // A plain-text body is still the API's own explanation; keep it rather
+      // than replacing it with the status line. Falling back to statusText is
+      // what turned a database outage into a phantom "Unauthorized" (#2282)
+      // and a missing delete scope into a bare "Forbidden" (#3095).
+      const text = errorText.trim().slice(0, 500);
+      error = { error: text || response.statusText };
     }
 
     // Keep the API's own diagnosis on the error rather than flattening the
@@ -202,6 +207,14 @@ export async function callEzmodoAPI(endpoint, data) {
     // is exactly what the agent needs to redo its edit.
     if (error.details && typeof error.details === 'object') {
       thrown.details = error.details;
+    }
+    // Which permission a missing_scope refusal wanted, and the consent scope
+    // that grants it to an OAuth sign-in (#3095).
+    if (typeof error.requiredScope === 'string') {
+      thrown.requiredScope = error.requiredScope;
+    }
+    if (typeof error.consentScope === 'string') {
+      thrown.consentScope = error.consentScope;
     }
     throw thrown;
   }

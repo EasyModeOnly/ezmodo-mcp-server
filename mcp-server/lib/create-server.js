@@ -23,10 +23,12 @@ import { isRemoteSafe } from './remote-tools.js';
 import { annotate } from './tool-annotations.js';
 import {
   EMAIL_ALREADY_REGISTERED,
+  MISSING_SCOPE,
   NOT_AUTHENTICATED,
   NO_ORGANIZATION,
   emailAlreadyRegistered,
   organizationRequired,
+  permissionRequired,
   signInRequired,
 } from './auth-guidance.js';
 import { getInstructions } from './instructions.js';
@@ -203,6 +205,25 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
         return {
           content: [
             { type: 'text', text: toText(emailAlreadyRegistered({ reason: errMsg })) },
+          ],
+          isError: true,
+        };
+      }
+      // A permission the credential lacks (#3095). Keyed on the API's code like
+      // the two above; it used to reach the agent as a bare "Forbidden".
+      if (error?.code === MISSING_SCOPE) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: toText(permissionRequired({
+                reason: errMsg,
+                requiredScope: error.requiredScope,
+                consentScope: error.consentScope,
+                surface,
+                usingApiKey: surface !== 'remote' && Boolean(getApiKey()),
+              })),
+            },
           ],
           isError: true,
         };

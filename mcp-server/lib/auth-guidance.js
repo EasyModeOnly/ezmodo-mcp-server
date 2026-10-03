@@ -40,6 +40,14 @@ export const NO_ORGANIZATION = 'NO_ORGANIZATION';
 export const EMAIL_ALREADY_REGISTERED = 'EMAIL_ALREADY_REGISTERED';
 
 /**
+ * The API's code for "this credential lacks a scope the call needs" (#3095).
+ *
+ * Must match middleware.CodeMissingScope in
+ * api/internal/api/middleware/apikey_auth.go.
+ */
+export const MISSING_SCOPE = 'missing_scope';
+
+/**
  * The two things a user cannot guess, and will otherwise hit as bare failures.
  *
  * Stated on every sign-in prompt on purpose. Both are consequences of decisions
@@ -177,6 +185,56 @@ export function emailAlreadyRegistered({ reason } = {}) {
         'again through the same provider. Nothing is wrong with the sign-in; ' +
         'the account simply could not be created.',
       `You can check which address is in use at ${CONFIG.webUrl}/settings.`,
+    ],
+  };
+}
+
+/**
+ * The payload returned when a call needs a permission this credential was not
+ * given (#3095) — most often a delete, since the local server's sign-in asks
+ * for read and write only (lib/oauth-config.js DEFAULT_SCOPES).
+ *
+ * Not a sign-in prompt: signing in again with the same scopes gets the same
+ * token and the same refusal. What changes the answer is asking for the
+ * permission, and that is a decision for the person, so this explains how
+ * rather than doing it.
+ *
+ * @param {object} options
+ * @param {string} [options.reason]        What the API said.
+ * @param {string} [options.requiredScope] e.g. "delete:projects".
+ * @param {string} [options.consentScope]  e.g. "ezmodo:delete"; set for OAuth sign-ins.
+ * @param {'local'|'remote'} [options.surface]
+ * @param {boolean} [options.usingApiKey]  EZMODO_API_KEY is the credential.
+ */
+export function permissionRequired({ reason, requiredScope, consentScope, surface = 'local', usingApiKey = false } = {}) {
+  const needed = consentScope || requiredScope || 'a permission this credential does not have';
+  let action;
+  if (usingApiKey) {
+    action =
+      `EZMODO_API_KEY is the credential in use and it lacks '${requiredScope || needed}'. ` +
+      `Add that scope to the key at ${CONFIG.settingsUrl}, or use a key that has it.`;
+  } else if (surface === 'remote') {
+    action =
+      `This connection was not granted '${needed}'. Ask the user to do this in the web app ` +
+      `(${CONFIG.webUrl}), or to reconnect the connector and approve '${needed}' if the consent screen offers it.`;
+  } else {
+    const scopes = `openid email profile offline_access ezmodo:read ezmodo:write${consentScope && !['ezmodo:read', 'ezmodo:write'].includes(consentScope) ? ` ${consentScope}` : ''}`;
+    action =
+      `Tell the user this needs '${needed}', which this server does not ask for by default. ` +
+      `To allow it: start the editor with EZMODO_OAUTH_SCOPES="${scopes}" in its environment, ` +
+      "then call `authenticate` with action \"sign_out\" and again with action \"login\", and approve " +
+      `'${needed}' on the consent screen. Or do this one change in the web app (${CONFIG.webUrl}).`;
+  }
+  return {
+    permitted: false,
+    reason: reason || `This call needs '${needed}'.`,
+    ...(requiredScope ? { requiredScope } : {}),
+    ...(consentScope ? { consentScope } : {}),
+    action_required: action,
+    notes: [
+      'Signing in again with the same permissions will not change this: the token would carry the same scopes.',
+      'Delete permission is left out of the default sign-in on purpose, so that agreeing to install the ' +
+        'server is not also agreeing to let it permanently delete data.',
     ],
   };
 }
