@@ -59,7 +59,7 @@ export const MILESTONE_TOOLS = [
         type: {
           type: 'string',
           enum: ['version', 'initiative'],
-          description: 'Milestone type (required for create): "version" for releases, "initiative" for initiatives',
+          description: 'Milestone type (required for create; update changes it): "version" for releases, "initiative" for initiatives',
         },
         description: {
           type: 'string',
