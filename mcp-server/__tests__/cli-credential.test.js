@@ -83,6 +83,34 @@ describe('readCliCredential — credentials file', () => {
   });
 });
 
+// #3126: the CLI now writes this file on Windows too. It used to store with
+// cmdkey, which nothing can read back, so this fallback never found a key.
+describe('readCliCredential — Windows', () => {
+  const realAppData = process.env.APPDATA;
+  afterEach(() => {
+    if (realAppData === undefined) delete process.env.APPDATA;
+    else process.env.APPDATA = realAppData;
+  });
+
+  it('reads %APPDATA%\\ezmodo\\credentials, where the CLI writes it', () => {
+    setPlatform('win32');
+    process.env.APPDATA = 'C:\\Users\\tester\\AppData\\Roaming';
+    mockExistsSync.mockImplementation((p) => /AppData.Roaming.ezmodo.credentials$/.test(p));
+    mockReadFileSync.mockReturnValue(JSON.stringify({ apiKey: 'ezm_sk_windows' }));
+
+    expect(readCliCredential()).toEqual({
+      key: 'ezm_sk_windows',
+      source: 'ezmodo CLI credentials file',
+    });
+  });
+
+  it('never shells out on Windows', () => {
+    setPlatform('win32');
+    readCliCredential();
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+});
+
 describe('readCliCredential — macOS Keychain', () => {
   it('reads from the Keychain when there is no file', () => {
     setPlatform('darwin');

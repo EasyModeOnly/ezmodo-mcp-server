@@ -28,7 +28,11 @@ import { join } from 'path';
 // ezmodo config directory is — they write files side by side there.
 import { configDir } from './user-paths.js';
 
-/** The Linux/Windows path: a 0600 JSON file written by `ezmodo auth login`. */
+/**
+ * The Linux/Windows path: `{ apiKey }` in the config directory, written by
+ * `ezmodo auth login --use-api-key` (0600 on Linux, a user-only ACL on
+ * Windows). The CLI wrote nothing here on Windows until #3126.
+ */
 function fromCredentialsFile() {
   const path = join(configDir(), 'credentials');
   if (!existsSync(path)) return null;
