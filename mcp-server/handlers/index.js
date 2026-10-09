@@ -56,7 +56,6 @@ export const HANDLERS = {
   // Projects
   manage_project: projectHandlers.manageProject,
   get_project: projectHandlers.getProject,
-  get_project_story: projectHandlers.getProjectStory,
 
   // Epics
   manage_epic: epicHandlers.manageEpic,

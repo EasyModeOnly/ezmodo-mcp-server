@@ -16,7 +16,6 @@ export const ENDPOINT_MAP = {
   'mcpListProjects': { route: 'mcp/v1/projects', method: 'GET' },
   'mcpSearchProjects': { route: 'mcp/v1/projects/search', method: 'POST' },
   'mcpGetProjectContext': { route: 'mcp/v1/projects/context', method: 'GET' },
-  'mcpGetProjectStory': { route: 'mcp/v1/projects/story', method: 'POST' },
   'mcpCreateProject': { route: 'mcp/v1/projects', method: 'POST' },
   'mcpUpdateProject': { route: 'mcp/v1/projects', method: 'PUT' },
   'mcpGenerateProjectHowItWorks': { route: 'mcp/v1/projects/generate-how-it-works', method: 'POST' },

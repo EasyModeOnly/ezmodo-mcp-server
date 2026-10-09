@@ -15,7 +15,7 @@
  *
  * Membership was verified by tracing each handler to the endpoints it calls
  * (config/endpoint-map.js): all GETs, or POSTs to query routes the API mounts
- * behind OptionalReadScopeMiddleware (projects/story, organization/analyze,
+ * behind OptionalReadScopeMiddleware (organization/analyze,
  * graph/*, tags/suggest, links/preview, attachments/download-url). Some have
  * local side effects that change no EzModo data, and those count as reads:
  * get_document caches the content into .ezmodo/docs, get_current_project_context
@@ -58,7 +58,6 @@ export const READ_ONLY_TOOLS = new Set([
   'get_organization',
   'get_project',
   'get_project_changes',
-  'get_project_story',
   'get_release_readiness',
   'get_task',
   'get_testing_summary',

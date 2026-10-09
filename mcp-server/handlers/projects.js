@@ -63,13 +63,6 @@ async function applyProjectHowItWorks({ projectId, markdown, sources }) {
   return callEzmodoAPI('mcpApplyProjectHowItWorks', { projectId, markdown, sources });
 }
 
-// Project Story (E-208): a grounded, source-attributed narrative of what has
-// happened to a project since it began. Returns a fresh cached story when
-// available, otherwise generates one (AI-quota gated server-side).
-export async function getProjectStory({ projectId, window, from, to }) {
-  return callEzmodoAPI('mcpGetProjectStory', { projectId, window, from, to });
-}
-
 async function searchProjects(args) {
   const {
     query: searchText,

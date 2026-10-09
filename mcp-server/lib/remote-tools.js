@@ -92,7 +92,6 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'get_organization',
   'get_project',
   'get_project_changes',
-  'get_project_story',
   'get_release_readiness',
   'get_task',
   'get_testing_summary',

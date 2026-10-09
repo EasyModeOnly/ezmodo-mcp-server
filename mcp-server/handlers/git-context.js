@@ -513,7 +513,6 @@ export async function getCurrentProjectContext(args) {
             allProjects: config.projects || null,
             tags: config.tags || [],
             autoGenerateTestCases: config.settings?.aiConfig?.autoGenerateTestCases || false,
-            organizeResponseMode: config.settings?.aiConfig?.organizeResponseMode || 'raw_snapshot',
             // The words this project's type uses (E-107). Cached alongside
             // tags because it changes about as often, and an
             // agent needs it on every session, not on a second round trip.
@@ -610,7 +609,6 @@ export async function getCurrentProjectContext(args) {
           allProjects: config.projects || null,
           tags,
           autoGenerateTestCases: projectSettings?.aiConfig?.autoGenerateTestCases || false,
-          organizeResponseMode: projectSettings?.aiConfig?.organizeResponseMode || 'raw_snapshot',
           projectType,
           terminology,
           validation,

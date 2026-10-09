@@ -6,7 +6,7 @@ jest.unstable_mockModule('../lib/http-client.js', () => ({
   callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
-const { manageProject, getProject, getProjectStory } = await import('../handlers/projects.js');
+const { manageProject, getProject } = await import('../handlers/projects.js');
 
 describe('Project Operations', () => {
   afterEach(() => {
@@ -61,39 +61,6 @@ describe('Project Operations', () => {
     });
   });
 
-  describe('getProjectStory', () => {
-    it('should proxy to mcpGetProjectStory with window params', async () => {
-      mockCallEzmodoAPI.mockResolvedValueOnce({ story: { markdown: 'the story', claims: [] } });
-
-      const result = await getProjectStory({
-        projectId: 'proj-1',
-        window: 'custom',
-        from: '2026-01-01T00:00:00Z',
-        to: '2026-03-01T00:00:00Z',
-      });
-
-      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetProjectStory', {
-        projectId: 'proj-1',
-        window: 'custom',
-        from: '2026-01-01T00:00:00Z',
-        to: '2026-03-01T00:00:00Z',
-      });
-      expect(result.story.markdown).toBe('the story');
-    });
-
-    it('should default the window params to undefined when omitted', async () => {
-      mockCallEzmodoAPI.mockResolvedValueOnce({ story: { markdown: '', claims: [] } });
-
-      await getProjectStory({ projectId: 'proj-1' });
-
-      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetProjectStory', {
-        projectId: 'proj-1',
-        window: undefined,
-        from: undefined,
-        to: undefined,
-      });
-    });
-  });
   // callEzmodoAPI unwraps the Go API's {success, data} envelope, so the list
   // arrives as `{projects: [...]}` with no `success` flag. The filter branch
   // used to test for one and bail, returning the whole list unfiltered — a

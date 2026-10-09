@@ -139,34 +139,4 @@ export const PROJECT_TOOLS = [
       },
     },
   },
-  {
-    name: 'get_project_story',
-    description: 'Project Story (E-208): a grounded, source-attributed narrative of what has happened to a project ' +
-      'since it began in ezmodo — the time-axis complement to "how it works". Use it to catch up on a project. ' +
-      'Returns rendered markdown plus validated claims (each citing real event:/decision: sources), the resolved ' +
-      'window, and generatedAt. Returns a fresh cached story when available, otherwise generates one (AI-quota gated).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectId: {
-          type: 'string',
-          description: 'Project ID to narrate',
-        },
-        window: {
-          type: 'string',
-          enum: ['since_inception', 'last_release', 'last_sprint', 'custom'],
-          description: 'Time window for the story (default: since_inception). last_release/last_sprint/custom require from+to.',
-        },
-        from: {
-          type: 'string',
-          description: 'Window start, RFC3339 (e.g. 2026-01-02T15:04:05Z). Required for custom/last_release/last_sprint.',
-        },
-        to: {
-          type: 'string',
-          description: 'Window end, RFC3339. Required for custom/last_release/last_sprint.',
-        },
-      },
-      required: ['projectId'],
-    },
-  },
 ];
