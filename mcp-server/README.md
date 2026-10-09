@@ -11,7 +11,7 @@ Point any MCP client at the package. There is nothing to configure:
   "mcpServers": {
     "ezmodo": {
       "command": "npx",
-      "args": ["-y", "-p", "@ezmodo/mcp-server", "ezmodo-mcp-server"]
+      "args": ["-y", "-p", "@ezmodo/mcp-server@latest", "ezmodo-mcp-server"]
     }
   }
 }
@@ -21,8 +21,13 @@ The first tool call returns a sign-in URL. Open it, approve the access, and
 retry — the server holds the token from then on and refreshes it itself. No API
 key, no environment variable, no CLI.
 
-That block is the same for Claude Desktop, Cursor, Windsurf, Zed, Codex and
-anything else that speaks stdio MCP; only the file it goes in differs.
+That block is the same for Cursor, Windsurf, Zed, Codex and anything else that
+speaks stdio MCP; only the file it goes in differs. Keep `@latest`: npx
+re-resolves the tag on every launch, so you pick up new releases without
+editing the config.
+
+**Claude Desktop, claude.ai, iOS and Android need nothing installed**: add
+`https://ezmodo.com/mcp` as a custom connector and sign in.
 
 **Claude Code users should install the plugin instead**, which bundles this
 server along with the work-tracking skills, slash commands and hooks:
@@ -65,7 +70,7 @@ For CI, containers and anything headless where no browser exists, set
   "mcpServers": {
     "ezmodo": {
       "command": "npx",
-      "args": ["-y", "-p", "@ezmodo/mcp-server", "ezmodo-mcp-server"],
+      "args": ["-y", "-p", "@ezmodo/mcp-server@latest", "ezmodo-mcp-server"],
       "env": {
         "EZMODO_API_KEY": "ezm_sk_your_key_here"
       }

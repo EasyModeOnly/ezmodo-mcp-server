@@ -21,7 +21,7 @@ You probably do not need to run this yourself.
   connector. Nothing to install.
 - **Any other MCP client:**
   ```json
-  { "command": "npx", "args": ["-y", "-p", "@ezmodo/mcp-server", "ezmodo-mcp-server"] }
+  { "command": "npx", "args": ["-y", "-p", "@ezmodo/mcp-server@latest", "ezmodo-mcp-server"] }
   ```
 
 No key is needed. The first tool call hands back a sign-in link; approve it in a
