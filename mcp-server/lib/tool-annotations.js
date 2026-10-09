@@ -28,6 +28,8 @@
  */
 
 export const READ_ONLY_TOOLS = new Set([
+  // GETs only; its file under .ezmodo/catch-up is a local side effect (#3180).
+  'catch_up',
   'detect_git_repository',
   'estimate_task',
   'evaluate_feature_flag',

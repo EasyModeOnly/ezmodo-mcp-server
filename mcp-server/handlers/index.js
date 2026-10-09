@@ -213,6 +213,7 @@ export const HANDLERS = {
 
   // Activity Timeline
   get_project_changes: activityHandlers.getProjectChanges,
+  catch_up: activityHandlers.catchUp,
 
   // Facts
   manage_fact: factHandlers.manageFact,

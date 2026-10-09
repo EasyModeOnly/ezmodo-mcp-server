@@ -35,4 +35,53 @@ export const ACTIVITY_TOOLS = [
       required: ['projectId'],
     },
   },
+  {
+    name: 'catch_up',
+    description: 'Catch me up: what happened in a project since a date, for YOU to summarise for your person. ' +
+      'ezmodo does not write the summary; it hands you the activity grouped by the thing it happened to — one ' +
+      'line per task, epic, goal, milestone or document, with its status journey in order (todo → in_progress → ' +
+      'completed), what else changed, how many comments, who, and when — most significant first.\n\n' +
+      'Built for volume. `totals` always counts the whole window. A small window comes back inline (`items`). ' +
+      'A large one, in a checkout, is written to a file under .ezmodo/catch-up/ and you get its path plus the ' +
+      'top `highlights`: read the file in chunks as far as you need. Over the remote connector a large window ' +
+      'comes back a page at a time: pass `nextCursor` back as `cursor` for the next page.\n\n' +
+      'scope "epic" (with epicId) answers for one epic instead, since you last looked, in sentences — it is ' +
+      'get_epic_activity. For a sprint, pass the sprint\'s start date as `since`. For what happened to things ' +
+      'you watch, use list_notifications.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        scope: {
+          type: 'string',
+          enum: ['project', 'epic'],
+          description: 'What to catch up on (default "project")',
+        },
+        projectId: {
+          type: 'string',
+          description: 'The project (scope "project"). Defaults to this checkout\'s project.',
+        },
+        epicId: {
+          type: 'string',
+          description: 'The epic (scope "epic")',
+        },
+        since: {
+          type: 'string',
+          description: 'ISO 8601 date or a relative duration: "7d", "2w", "1m". Default 7 days. For scope "epic" ' +
+            'the default is since you last caught up on it.',
+        },
+        entityTypes: {
+          type: 'string',
+          description: 'Only these kinds, comma-separated: task, epic, goal, milestone, document, project',
+        },
+        cursor: {
+          type: 'string',
+          description: 'The `nextCursor` from the previous page (remote paging). Carries the window with it.',
+        },
+        markSeen: {
+          type: 'boolean',
+          description: 'Scope "epic" only: mark the epic as caught up (default true)',
+        },
+      },
+    },
+  },
 ];

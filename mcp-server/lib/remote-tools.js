@@ -61,6 +61,9 @@ export const LOCAL_ONLY_TOOLS = Object.freeze([
 export const REMOTE_SAFE_TOOLS = Object.freeze([
   'accept_agent_suggestion',
   'add_epic_comment',
+  // Writes .ezmodo/catch-up/ only when a checkout exists, and pages by cursor
+  // when it does not (#3180), as get_document does with .ezmodo/docs.
+  'catch_up',
   'configure_agent',
   'create_tasks',
   'delete_attachment',
