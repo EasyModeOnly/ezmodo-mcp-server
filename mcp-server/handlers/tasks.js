@@ -39,6 +39,7 @@ export async function manageTask(args) {
   case 'get_commits': return getTaskCommits(params);
   case 'generate_how_it_works': return generateTaskHowItWorks(params);
   case 'apply_how_it_works': return applyTaskHowItWorks(params);
+  case 'how_it_works_context': return taskHowItWorksContext(params);
   case 'claim': return claimTask(params, false);
   case 'release': return claimTask(params, true);
   case 'list_suggested_edits': return suggestedEdits(params, false);
@@ -609,6 +610,16 @@ async function getTaskCommits(args) {
 // via the model. AI-quota gated server-side (mirrors projects.generateProjectHowItWorks).
 async function generateTaskHowItWorks({ taskId }) {
   return callEzmodoAPI('mcpGenerateTaskHowItWorks', { taskId });
+}
+
+/**
+ * Read the grounded context for a task's how-it-works before writing it with
+ * apply_how_it_works: its intent plus every source ref apply will accept
+ * (E-283 #3173). No model call.
+ */
+async function taskHowItWorksContext({ taskId }) {
+  if (!taskId) throw new Error('taskId is required for how_it_works_context');
+  return callEzmodoAPI('mcpTaskHowItWorksContext', { taskId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for a task (BYO-AI,

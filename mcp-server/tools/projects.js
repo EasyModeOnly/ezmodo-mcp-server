@@ -24,20 +24,22 @@ export const PROJECT_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'generate_how_it_works', 'apply_how_it_works'],
+          enum: ['create', 'update', 'generate_how_it_works', 'apply_how_it_works', 'how_it_works_context'],
           description: 'Action to perform. "update" changes an existing project ' +
             '(requires projectId); only the fields you pass are touched — accepts name, ' +
             'description, slug, ownerId, gitUrl and gitProvider. Setting gitUrl after ' +
             'creation is what enables commit-to-task linking. "generate_how_it_works" (re)generates the ' +
             'project\'s grounded, source-attributed "how it works" living description from ' +
-            'its linked work (requires projectId; AI-quota gated). "apply_how_it_works" (BYO-AI) ' +
+            'its linked work (requires projectId; AI-quota gated). "how_it_works_context" returns the intent and the exact source refs you may cite ' +
+            '(no model call). Prefer writing the summary yourself: read how_it_works_context, then ' +
+            '"apply_how_it_works" (BYO-AI) ' +
             'persists a summary YOU authored (markdown + sources); the server validates your cited ' +
             'sources against the real grounded context before saving — no server model call. Read ' +
             'the result back via get_project.',
         },
         projectId: {
           type: 'string',
-          description: 'Project ID (required for update, generate_how_it_works, apply_how_it_works)',
+          description: 'Project ID (required for update, generate_how_it_works, apply_how_it_works, how_it_works_context)',
         },
         // --- apply_how_it_works (BYO-AI) ---
         markdown: {

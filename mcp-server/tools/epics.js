@@ -58,7 +58,7 @@ export const EPIC_TOOLS = [
         action: {
           type: 'string',
           enum: [
-            'create', 'update', 'generate_how_it_works', 'apply_how_it_works', 'add_editor', 'remove_editor', 'release',
+            'create', 'update', 'generate_how_it_works', 'apply_how_it_works', 'how_it_works_context', 'add_editor', 'remove_editor', 'release',
           ],
           description: 'Action to perform. "release" (epicId, version) ships one epic on its own: it ' +
             'creates a version milestone, adds the epic to it and, unless newCandidate is false, its first ' +
@@ -75,14 +75,16 @@ export const EPIC_TOOLS = [
             'source-attributed "how it works" living description from its reality — its tasks\' status ' +
             'rollup, their captured decisions and their linked commits (requires epicId; AI-quota gated). ' +
             'An epic is where intent and reality drift furthest apart: intent is a charter written once, ' +
-            'reality is months of accumulated work. "apply_how_it_works" (BYO-AI) persists a summary YOU ' +
+            'reality is months of accumulated work. "how_it_works_context" returns the intent and the exact source refs you may cite ' +
+            '(no model call). Prefer writing the summary yourself: read how_it_works_context, then ' +
+            '"apply_how_it_works" (BYO-AI) persists a summary YOU ' +
             'authored: pass markdown + sources; the server validates your cited sources against the real ' +
             'grounded context (dropping fabricated ones) before saving — no server model call.',
         },
         // --- Identifiers ---
         epicId: {
           type: 'string',
-          description: 'Epic ID (required for update, generate_how_it_works, apply_how_it_works, ' +
+          description: 'Epic ID (required for update, generate_how_it_works, apply_how_it_works, how_it_works_context, ' +
             'add_editor, remove_editor, release)',
         },
         // --- release ---

@@ -15,6 +15,7 @@ export async function manageProject(args) {
   case 'update': return updateProject(params);
   case 'generate_how_it_works': return generateProjectHowItWorks(params);
   case 'apply_how_it_works': return applyProjectHowItWorks(params);
+  case 'how_it_works_context': return projectHowItWorksContext(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -55,6 +56,16 @@ async function updateProject(args) {
 // via the model. AI-quota gated server-side (mirrors entities.generateGoalHowItWorks).
 async function generateProjectHowItWorks({ projectId }) {
   return callEzmodoAPI('mcpGenerateProjectHowItWorks', { projectId });
+}
+
+/**
+ * Read the grounded context for a project's how-it-works before writing it with
+ * apply_how_it_works: its intent plus every source ref apply will accept
+ * (E-283 #3173). No model call.
+ */
+async function projectHowItWorksContext({ projectId }) {
+  if (!projectId) throw new Error('projectId is required for how_it_works_context');
+  return callEzmodoAPI('mcpProjectHowItWorksContext', { projectId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for a project (BYO-AI,

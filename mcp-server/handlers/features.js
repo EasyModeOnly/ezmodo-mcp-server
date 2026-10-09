@@ -24,9 +24,10 @@ export async function manageFeature(args) {
   case 'promote_epic': return promoteEpic(params);
   case 'generate_how_it_works': return generateHowItWorks(params);
   case 'apply_how_it_works': return applyHowItWorks(params);
+  case 'how_it_works_context': return featureHowItWorksContext(params);
   case 'apply_init': return applyInit(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, paths, promote_epic, generate_how_it_works, apply_how_it_works, or apply_init.`);
+    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, paths, promote_epic, generate_how_it_works, how_it_works_context, apply_how_it_works, or apply_init.`);
   }
 }
 
@@ -129,6 +130,16 @@ async function promoteEpic({ epicId }) {
 // description via the model (E-165). AI-quota gated server-side.
 async function generateHowItWorks({ featureId }) {
   return callEzmodoAPI('mcpGenerateHowItWorks', { featureId });
+}
+
+/**
+ * Read the grounded context for a feature's how-it-works before writing it with
+ * apply_how_it_works: its intent plus every source ref apply will accept
+ * (E-283 #3173). No model call.
+ */
+async function featureHowItWorksContext({ featureId }) {
+  if (!featureId) throw new Error('featureId is required for how_it_works_context');
+  return callEzmodoAPI('mcpFeatureHowItWorksContext', { featureId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for a feature (BYO-AI,

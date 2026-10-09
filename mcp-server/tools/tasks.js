@@ -37,7 +37,7 @@ export const TASK_TOOLS = [
           type: 'string',
           enum: [
             'create', 'update', 'complete', 'defer', 'link_commit', 'unlink_commit', 'get_commits',
-            'generate_how_it_works', 'apply_how_it_works', 'claim', 'release',
+            'generate_how_it_works', 'apply_how_it_works', 'how_it_works_context', 'claim', 'release',
             'list_suggested_edits', 'answer_suggested_edit', 'reminders',
           ],
           description: 'Action to perform. "claim" (taskId, optional claimNote) says you are working on ' +
@@ -63,7 +63,9 @@ export const TASK_TOOLS = [
             '"generate_how_it_works" (re)generates the task\'s ' +
             'grounded, source-attributed "how it works" living description from its reality — ' +
             'subtasks, comments, status history, commits plus a manifest pass over linked files ' +
-            '(requires taskId; AI-quota gated). "apply_how_it_works" (BYO-AI) persists a summary ' +
+            '(requires taskId; AI-quota gated). "how_it_works_context" returns the intent and the exact source refs you may cite ' +
+            '(no model call). Prefer writing the summary yourself: read how_it_works_context, then ' +
+            '"apply_how_it_works" (BYO-AI) persists a summary ' +
             'YOU authored: pass markdown + sources; the server validates your cited sources against ' +
             'the real grounded context (dropping fabricated ones) before saving — no server model call.',
         },
@@ -120,7 +122,7 @@ export const TASK_TOOLS = [
         // --- Identifiers (used by most actions) ---
         taskId: {
           type: 'string',
-          description: 'Task ID (required for update, complete, defer, link_commit, unlink_commit, get_commits, generate_how_it_works, apply_how_it_works)',
+          description: 'Task ID (required for update, complete, defer, link_commit, unlink_commit, get_commits, generate_how_it_works, apply_how_it_works, how_it_works_context)',
         },
         // --- apply_how_it_works (BYO-AI) ---
         markdown: {

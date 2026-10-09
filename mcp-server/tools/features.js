@@ -35,7 +35,7 @@ export const FEATURE_TOOLS = [
           type: 'string',
           enum: [
             'create', 'update', 'delete', 'link', 'unlink', 'paths',
-            'promote_epic', 'generate_how_it_works', 'apply_how_it_works', 'apply_init',
+            'promote_epic', 'generate_how_it_works', 'apply_how_it_works', 'how_it_works_context', 'apply_init',
           ],
           description: 'Action to perform. "paths" adds, removes or replaces the code paths the ' +
             'feature OWNS (featureId + paths + pathsMode) — work touching a file under an owned path ' +
@@ -43,7 +43,9 @@ export const FEATURE_TOOLS = [
             '(inheriting its title/description/scope) and links the epic to it. ' +
             '"generate_how_it_works" (re)generates the feature\'s grounded, source-attributed ' +
             '"how it works" living description from its linked work + code (requires featureId; ' +
-            'AI-quota gated). "apply_how_it_works" (BYO-AI) persists a summary YOU authored ' +
+            'AI-quota gated). "how_it_works_context" returns the intent and the exact source refs you may cite ' +
+            '(no model call). Prefer writing the summary yourself: read how_it_works_context, then ' +
+            '"apply_how_it_works" (BYO-AI) persists a summary YOU authored ' +
             '(markdown + sources); the server validates your cited sources against the real ' +
             'grounded context before saving — no server model call. Read the result back via ' +
             'get_feature with includeDetail. ' +
@@ -59,7 +61,7 @@ export const FEATURE_TOOLS = [
         },
         featureId: {
           type: 'string',
-          description: 'Feature ID (required for update, delete, link, unlink, generate_how_it_works, apply_how_it_works)',
+          description: 'Feature ID (required for update, delete, link, unlink, generate_how_it_works, apply_how_it_works, how_it_works_context)',
         },
         // --- apply_how_it_works (BYO-AI) ---
         markdown: {

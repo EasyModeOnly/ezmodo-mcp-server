@@ -15,10 +15,12 @@ export const ENTITY_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'generate_how_it_works', 'apply_how_it_works'],
+          enum: ['create', 'update', 'delete', 'generate_how_it_works', 'apply_how_it_works', 'how_it_works_context'],
           description: 'Action to perform. "generate_how_it_works" (re)generates the ' +
             'goal\'s grounded, source-attributed "how it works" living description from ' +
-            'its linked work (requires goalId; AI-quota gated). "apply_how_it_works" (BYO-AI) ' +
+            'its linked work (requires goalId; AI-quota gated). "how_it_works_context" returns the intent and the exact source refs you may cite ' +
+            '(no model call). Prefer writing the summary yourself: read how_it_works_context, then ' +
+            '"apply_how_it_works" (BYO-AI) ' +
             'persists a summary YOU authored (markdown + sources); the server validates your cited ' +
             'sources against the real grounded context before saving — no server model call. Read ' +
             'the result back via get_goal.',
@@ -26,7 +28,7 @@ export const ENTITY_TOOLS = [
         // --- Identifiers ---
         goalId: {
           type: 'string',
-          description: 'Goal ID (required for update, delete, generate_how_it_works, apply_how_it_works)',
+          description: 'Goal ID (required for update, delete, generate_how_it_works, apply_how_it_works, how_it_works_context)',
         },
         // --- apply_how_it_works (BYO-AI) ---
         markdown: {

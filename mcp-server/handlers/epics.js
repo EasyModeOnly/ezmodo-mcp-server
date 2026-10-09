@@ -62,6 +62,7 @@ export async function manageEpic(args) {
   case 'update': return updateEpic(params);
   case 'generate_how_it_works': return generateEpicHowItWorks(params);
   case 'apply_how_it_works': return applyEpicHowItWorks(params);
+  case 'how_it_works_context': return epicHowItWorksContext(params);
   case 'add_editor': return manageEpicEditor('add', params);
   case 'remove_editor': return manageEpicEditor('remove', params);
   case 'release': return releaseEpic(params);
@@ -103,6 +104,16 @@ async function manageEpicEditor(action, { epicId, editorUserId }) {
 // Server-side: one model call, AI-quota gated.
 async function generateEpicHowItWorks({ epicId }) {
   return callEzmodoAPI('mcpGenerateEpicHowItWorks', { epicId });
+}
+
+/**
+ * Read the grounded context for an epic's how-it-works before writing it with
+ * apply_how_it_works: its intent plus every source ref apply will accept
+ * (E-283 #3173). No model call.
+ */
+async function epicHowItWorksContext({ epicId }) {
+  if (!epicId) throw new Error('epicId is required for how_it_works_context');
+  return callEzmodoAPI('mcpEpicHowItWorksContext', { epicId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for an epic (BYO-AI,

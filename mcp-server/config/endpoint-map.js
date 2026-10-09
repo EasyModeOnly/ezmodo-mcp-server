@@ -20,6 +20,7 @@ export const ENDPOINT_MAP = {
   'mcpUpdateProject': { route: 'mcp/v1/projects', method: 'PUT' },
   'mcpGenerateProjectHowItWorks': { route: 'mcp/v1/projects/generate-how-it-works', method: 'POST' },
   'mcpApplyProjectHowItWorks': { route: 'mcp/v1/projects/apply-how-it-works', method: 'POST' },
+  'mcpProjectHowItWorksContext': { route: 'mcp/v1/projects/how-it-works-context', method: 'GET' },
 
   // Epics (project-scoped milestones)
   'mcpCreateEpic': { route: 'mcp/v1/epics', method: 'POST' },
@@ -44,6 +45,7 @@ export const ENDPOINT_MAP = {
   // E-237 #2382: the epic is the fifth consumer of the grounding engine.
   'mcpGenerateEpicHowItWorks': { route: 'mcp/v1/epics/generate-how-it-works', method: 'POST' },
   'mcpApplyEpicHowItWorks': { route: 'mcp/v1/epics/apply-how-it-works', method: 'POST' },
+  'mcpEpicHowItWorksContext': { route: 'mcp/v1/epics/how-it-works-context', method: 'GET' },
   // Release this epic (E-262 #3067): milestone + epic + first candidate in
   // one call. {id} is the epic id.
   'mcpReleaseEpic': { route: 'mcp/v1/epics/{id}/release', method: 'POST' },
@@ -67,6 +69,7 @@ export const ENDPOINT_MAP = {
   'mcpGetTaskCommits': { route: 'mcp/v1/tasks/commits', method: 'GET' },
   'mcpGenerateTaskHowItWorks': { route: 'mcp/v1/tasks/generate-how-it-works', method: 'POST' },
   'mcpApplyTaskHowItWorks': { route: 'mcp/v1/tasks/apply-how-it-works', method: 'POST' },
+  'mcpTaskHowItWorksContext': { route: 'mcp/v1/tasks/how-it-works-context', method: 'GET' },
 
   // Watching / subscriptions and the notification inbox (E-41)
   'mcpManageWatch': { route: 'mcp/v1/watch', method: 'POST' },
@@ -131,6 +134,7 @@ export const ENDPOINT_MAP = {
   'mcpDeleteGoal': { route: 'mcp/v1/goals', method: 'DELETE' },
   'mcpGenerateGoalHowItWorks': { route: 'mcp/v1/goals/generate-how-it-works', method: 'POST' },
   'mcpApplyGoalHowItWorks': { route: 'mcp/v1/goals/apply-how-it-works', method: 'POST' },
+  'mcpGoalHowItWorksContext': { route: 'mcp/v1/goals/how-it-works-context', method: 'GET' },
 
   // Tags (organization-scoped categorization)
   'mcpCreateTag': { route: 'mcp/v1/tags', method: 'POST' },
@@ -284,6 +288,7 @@ export const ENDPOINT_MAP = {
   'mcpPromoteEpicToFeature': { route: 'mcp/v1/features/promote-epic', method: 'POST' },
   'mcpGenerateHowItWorks': { route: 'mcp/v1/features/generate-how-it-works', method: 'POST' },
   'mcpApplyHowItWorks': { route: 'mcp/v1/features/apply-how-it-works', method: 'POST' },
+  'mcpFeatureHowItWorksContext': { route: 'mcp/v1/features/how-it-works-context', method: 'GET' },
   'mcpApplyFeatureInit': { route: 'mcp/v1/features/init-apply', method: 'POST' },
 
   // Decisions / ADRs (E-170) — org-level durable decision records that link to

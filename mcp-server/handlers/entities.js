@@ -21,6 +21,7 @@ export async function manageGoal(args) {
   case 'delete': return deleteGoal(params);
   case 'generate_how_it_works': return generateGoalHowItWorks(params);
   case 'apply_how_it_works': return applyGoalHowItWorks(params);
+  case 'how_it_works_context': return goalHowItWorksContext(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -78,6 +79,16 @@ async function generateGoalHowItWorks({ goalId }) {
   const webUrl = await buildGoalUrl(id);
   if (webUrl && result?.goal) result.goal.webUrl = webUrl;
   return result;
+}
+
+/**
+ * Read the grounded context for a goal's how-it-works before writing it with
+ * apply_how_it_works: its intent plus every source ref apply will accept
+ * (E-283 #3173). No model call.
+ */
+async function goalHowItWorksContext({ goalId }) {
+  if (!goalId) throw new Error('goalId is required for how_it_works_context');
+  return callEzmodoAPI('mcpGoalHowItWorksContext', { goalId });
 }
 
 // Apply (persist) a LOCAL-agent-authored "how it works" for a goal (BYO-AI,
