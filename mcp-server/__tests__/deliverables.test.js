@@ -199,10 +199,23 @@ describe('manage_release with deliverables (E-280)', () => {
     await expect(manageRelease({ action: 'update_release', releaseId: 'r1' })).rejects.toThrow(/at least one of/);
   });
 
+  it('get_contents takes paging and says it is paged (#3196)', () => {
+    const tool = TOOLS.find((t) => t.name === 'manage_release');
+    const props = tool.inputSchema.properties;
+    expect(props.section.enum).toEqual(['tasks', 'epics', 'excluded']);
+    expect(props.offset.type).toBe('number');
+    expect(props.limit.description).toMatch(/get_contents/);
+    expect(tool.description).toMatch(/totals/);
+    expect(tool.description).toMatch(/page\.hasMore/);
+  });
+
   it('contents: get, derive, add, remove, changelog', async () => {
     mockCallEzmodoAPI.mockResolvedValue({});
     await manageRelease({ action: 'get_contents', releaseId: 'r1' });
     expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetReleaseContents', { id: 'r1' });
+    await manageRelease({ action: 'get_contents', releaseId: 'r1', section: 'tasks', limit: 100, offset: 50 });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpGetReleaseContents',
+      { id: 'r1', section: 'tasks', limit: 100, offset: 50 });
     await manageRelease({ action: 'derive_contents', releaseId: 'r1' });
     expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpDeriveReleaseContents', { id: 'r1' });
     await manageRelease({ action: 'add_content', releaseId: 'r1', entityType: 'task', entityId: 't1' });

@@ -253,7 +253,11 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpUpdateRelease', { id: await releaseIdFor(args, action), ...body });
   }
   case 'get_contents':
-    return callEzmodoAPI('mcpGetReleaseContents', { id: await releaseIdFor(args, action) });
+    // Paged per section (#3196): without section, the first page of each;
+    // totals and page.hasMore say what was left out.
+    return callEzmodoAPI('mcpGetReleaseContents', {
+      id: await releaseIdFor(args, action), ...pick(args, ['section', 'limit', 'offset']),
+    });
   case 'derive_contents':
     return callEzmodoAPI('mcpDeriveReleaseContents', { id: await releaseIdFor(args, action) });
   case 'add_content':

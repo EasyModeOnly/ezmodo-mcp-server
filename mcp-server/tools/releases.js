@@ -119,7 +119,9 @@ export const RELEASE_TOOLS = [
       'get_release (the release page: route environments, candidates, checklist, contents, effective gates); ' +
       'update_release (status?: planned|in_progress|shipped|abandoned, milestoneId? ("" detaches), notes?); ' +
       'get_contents / derive_contents (the tasks and epics this release ships, derived from the newest candidate\'s ' +
-      'commits; derive keeps manual edits); add_content / remove_content (entityType: task|epic, entityId — a ' +
+      'commits; derive keeps manual edits. Paged: each section — tasks, epics, excluded — returns its first 50, ' +
+      'with totals (the true counts) and page.hasMore; get_contents takes section? + limit? (max 200) + offset? to ' +
+      'read further); add_content / remove_content (entityType: task|epic, entityId — a ' +
       'removed item stays out on re-derive); release_changelog (markdown); ' +
       'task_shipping (taskId, projectId? — which deliverables have shipped the task: "API shipped, Web pending"). ' +
       'apply_checklist and add_checklist_item also take releaseId instead of milestoneId; add_gate, list_gates, ' +
@@ -223,7 +225,13 @@ export const RELEASE_TOOLS = [
         },
         version: { type: 'string', description: 'Release version, e.g. "0.23.0": with deliverable, names a release' },
         releaseId: { type: 'string', description: 'Release id (a deliverable at a version)' },
-        limit: { type: 'number', description: 'list_releases: how many' },
+        limit: { type: 'number', description: 'list_releases: how many. get_contents: page size per section (default 50, max 200)' },
+        offset: { type: 'number', description: 'get_contents: rows to skip in the section' },
+        section: {
+          type: 'string',
+          enum: ['tasks', 'epics', 'excluded'],
+          description: 'get_contents: page only this section (omitted = the first page of each)',
+        },
         entityType: { type: 'string', enum: ['task', 'epic'], description: 'add_content / remove_content' },
         entityId: { type: 'string', description: 'add_content / remove_content: the task or epic id' },
         taskId: { type: 'string', description: 'task_shipping: the task' },
