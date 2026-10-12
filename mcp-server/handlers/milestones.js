@@ -102,8 +102,16 @@ async function linkEpicToMilestone(args) {
   });
 }
 
+// The API's UnlinkEpicRequest reads `entityId`, while the tool schema documents
+// `epicId` — the same translation link_epic does. Passing args through untouched
+// made every schema-following unlink fail with "entityId is required" (#3226).
 async function unlinkEpicFromMilestone(args) {
-  return callEzmodoAPI('mcpUnlinkEpicFromMilestone', args);
+  const { epicId, entityId, entityType, ...rest } = args;
+  return callEzmodoAPI('mcpUnlinkEpicFromMilestone', {
+    ...rest,
+    entityId: epicId ?? entityId,
+    entityType: entityType || 'epic',
+  });
 }
 
 async function generateMilestoneChangelog(args) {

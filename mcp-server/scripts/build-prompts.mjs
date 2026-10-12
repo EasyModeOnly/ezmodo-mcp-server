@@ -5,8 +5,8 @@
  * WHAT PROMPTS ARE FOR, now that #2633 exists. The two overlap enough to be
  * worth stating: `instructions` is what the agent should ALWAYS do, injected
  * into system context on every session. Prompts are things a USER deliberately
- * invokes. That split is what decides the content — the four plugin commands
- * (start, resume, submit, untracked) are user-invoked actions, so they belong
+ * invokes. That split is what decides the content — the plugin commands
+ * (start, resume, submit, untracked, catch-up) are user-invoked actions, so they belong
  * here; the always-on discipline does not, and serving it twice would be the
  * drift problem again.
  *
@@ -56,6 +56,7 @@ export const COMMANDS = [
   { file: 'resume.md', name: 'resume', surfaces: ['local', 'remote'] },
   { file: 'submit.md', name: 'submit', surfaces: ['local'] },
   { file: 'untracked.md', name: 'untracked', surfaces: ['local', 'remote'] },
+  { file: 'catch-up.md', name: 'catch-up', surfaces: ['local', 'remote'] },
 ];
 
 /** Split YAML-ish frontmatter from the body. Only the two keys we use. */

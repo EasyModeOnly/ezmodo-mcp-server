@@ -245,6 +245,66 @@ describe('link-commit-reminder, end to end', () => {
 
     expect(runHook('cd "$(mktemp -d)" && git commit -m x', session.dir)).toBe('');
   });
+
+  // #3195: worktrees under the repo have no .ezmodo/ of their own (it is
+  // untracked), so they all resolved to the main checkout's session file and
+  // were told to link whichever task was claimed last.
+  describe('parallel worktrees (#3195)', () => {
+    let main;
+    let wt;
+    const legacyPath = () => join(main.dir, '.ezmodo', 'active-session.json');
+    const writeLegacy = (s) => writeFileSync(legacyPath(), JSON.stringify(s));
+    const gitIn = (dir, ...args) =>
+      execFileSync('git', args, { cwd: dir, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+
+    beforeEach(() => {
+      main = repo('main', 1);
+      rmSync(legacyPath());
+      const at = join(main.dir, '.claude', 'worktrees', 'agent-a');
+      gitIn(main.dir, 'worktree', 'add', '-q', '-b', 'feat-a', at);
+      // git's own spelling of the path, as the writer records it — on Windows
+      // a temp dir can differ from it in 8.3 short names and slashes.
+      wt = gitIn(at, 'rev-parse', '--show-toplevel');
+    });
+
+    it("names the task from the worktree's own git dir, over the shared file", () => {
+      writeLegacy({ taskId: 'task-other', taskNumber: 9, title: 'other', worktree: main.dir, branch: 'branch-main' });
+      writeFileSync(
+        join(gitIn(wt, 'rev-parse', '--absolute-git-dir'), 'ezmodo-active-session.json'),
+        JSON.stringify({ taskId: 'task-a', taskNumber: 5, title: 'a work', worktree: wt, branch: 'feat-a' })
+      );
+
+      const text = runHook('git commit -m x', wt);
+
+      expect(text).toContain('feat-a');
+      expect(text).toContain('taskId "task-a"');
+      expect(text).not.toContain('task-other');
+    });
+
+    it('refuses a shared session written for another worktree, and says so', () => {
+      writeLegacy({ taskId: 'task-other', taskNumber: 9, title: 'other', worktree: main.dir, branch: 'branch-main' });
+
+      const text = runHook('git commit -m x', wt);
+
+      expect(text).not.toContain('taskId "task-other"');
+      expect(text).toContain('report_untracked_work');
+      expect(text).toContain('Not #9');
+    });
+
+    it('refuses a branch-only legacy session for another branch', () => {
+      writeLegacy({ taskId: 'task-other', taskNumber: 9, title: 'other', branch: 'main' });
+
+      expect(runHook('git commit -m x', wt)).not.toContain('taskId "task-other"');
+    });
+
+    it('still trusts a legacy session that names this worktree, or nothing at all', () => {
+      writeLegacy({ taskId: 'task-here', taskNumber: 3, title: 'here', worktree: wt });
+      expect(runHook('git commit -m x', wt)).toContain('taskId "task-here"');
+
+      writeLegacy({ taskId: 'task-old', taskNumber: 4, title: 'old' });
+      expect(runHook('git commit -m x', wt)).toContain('taskId "task-old"');
+    });
+  });
 });
 
 // #3128: the edit hook matched `.ezmodo/` against path.relative()'s output with

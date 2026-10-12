@@ -212,8 +212,36 @@ describe('Milestone Operations', () => {
       const args = { milestoneId: 'ms-1', epicId: 'epic-1' };
       const result = await manageMilestone({ action: 'unlink_epic', ...args });
 
-      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUnlinkEpicFromMilestone', args);
+      // #3226: the API reads entityId; epicId (what the schema documents) must be mapped.
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUnlinkEpicFromMilestone', {
+        milestoneId: 'ms-1',
+        entityId: 'epic-1',
+        entityType: 'epic',
+      });
       expect(result.success).toBe(true);
+    });
+
+    it('maps epicId the same way link_epic does, and passes other args through', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true }).mockResolvedValueOnce({ success: true });
+      const args = { projectId: 'p-1', milestoneSlug: 'v1', epicId: 'epic-9' };
+
+      await manageMilestone({ action: 'link_epic', ...args });
+      await manageMilestone({ action: 'unlink_epic', ...args });
+
+      const [[, linkBody], [, unlinkBody]] = mockCallEzmodoAPI.mock.calls;
+      expect(unlinkBody).toEqual(linkBody);
+      expect(unlinkBody).toEqual({ projectId: 'p-1', milestoneSlug: 'v1', entityId: 'epic-9', entityType: 'epic' });
+      expect(unlinkBody).not.toHaveProperty('epicId');
+    });
+
+    it('still accepts a raw entityId when no epicId is given', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+      await manageMilestone({ action: 'unlink_epic', milestoneId: 'ms-1', entityId: 'epic-2' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUnlinkEpicFromMilestone', {
+        milestoneId: 'ms-1',
+        entityId: 'epic-2',
+        entityType: 'epic',
+      });
     });
 
     it('should handle error when link does not exist', async () => {

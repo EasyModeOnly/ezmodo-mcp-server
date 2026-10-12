@@ -74,8 +74,9 @@ describe('skill references', () => {
 });
 
 describe('surface filtering', () => {
-  it('serves the four commands locally', () => {
+  it('serves the five commands locally', () => {
     expect(listPrompts('local').map((p) => p.name).sort()).toEqual([
+      'catch-up',
       'resume',
       'start',
       'submit',
@@ -85,6 +86,10 @@ describe('surface filtering', () => {
 
   it('withholds submit remotely — it reads git SHAs and links commits', () => {
     expect(listPrompts('remote').map((p) => p.name)).not.toContain('submit');
+  });
+
+  it('serves catch-up remotely — catch_up pages by cursor over the connector (#3181)', () => {
+    expect(listPrompts('remote').map((p) => p.name)).toContain('catch-up');
   });
 
   it('refuses a prompt it holds but does not serve on this surface', () => {
