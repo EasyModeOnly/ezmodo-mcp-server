@@ -17,6 +17,10 @@ import { buildEpicUrl } from '../lib/web-url.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
 
+// Statuses an epic may be created in (#3224). "active" is accepted only with
+// `tasks`; the API enforces the same rule and answers 400 otherwise.
+const CREATE_STATUSES = ['backlog', 'ready'];
+
 /**
  * Flatten the nested-task result into the fields an agent acts on (#2247).
  *
@@ -137,6 +141,19 @@ async function createEpic(args) {
     );
   }
 
+  // An epic starts in backlog or ready (#3224): scope creep is measured from
+  // the moment it becomes active, so a bare create cannot skip that step. The
+  // one exception is a create that brings its tasks, which the API creates in
+  // backlog, fills, then activates. Checked here too so the agent gets the
+  // advice without spending a request on the 400.
+  const status = createArgs.status;
+  if (status && !CREATE_STATUSES.includes(status) && !(status === 'active' && tasks?.length)) {
+    throw new Error(
+      `an epic cannot be created as "${status}": create the epic in backlog or ready, then set it active ` +
+      'with action "update" once its tasks are in (or pass status "active" together with `tasks`)',
+    );
+  }
+
   // An epic with its breakdown goes to the composing endpoint (#2247) so the
   // whole thing is one request; without tasks nothing changes. Everything below
   // this line — suggested tags, links, web URL — acts on the EPIC and so is identical
@@ -153,6 +170,10 @@ async function createEpic(args) {
     : await callEzmodoAPI('mcpCreateEpic', createArgs);
 
   if (tasks?.length) summarizeNestedTasks(result);
+  if (result?.activationError) {
+    result.message = `${result.message ?? 'Epic created.'} It was left in backlog because activating it failed: ` +
+      `${result.activationError}. Set it active with action "update" when that is resolved.`;
+  }
 
   // Suggest, never apply, keyword-matched tags (#2830).
   const suggestedTags = suggestTags(await resolveEpicAutoAssign(title, description), createArgs.tagIds);

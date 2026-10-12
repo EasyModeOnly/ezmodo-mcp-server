@@ -162,4 +162,33 @@ describe('manage_epic action:"create" with nested tasks', () => {
       { path: 'api/main.go', source: 'mcp' },
     ]);
   });
+
+  // #3224: with tasks, "active" is allowed — the API creates the epic in
+  // backlog, adds the tasks, then activates it.
+  it('passes status active through when tasks come with it', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({ ...epicWithTasks(2), status: 'active' });
+
+    await manageEpic({
+      action: 'create', projectId: 'proj-1', title: 'Active breakdown', status: 'active',
+      tasks: [{ title: 'A' }, { title: 'B' }],
+    });
+
+    const [endpoint, payload] = mockCallEzmodoAPI.mock.calls[0];
+    expect(endpoint).toBe('mcpCreateEpicWithTasks');
+    expect(payload.status).toBe('active');
+  });
+
+  it('explains an activation failure without hiding the created epic', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({
+      ...epicWithTasks(1), status: 'backlog', activationError: 'milestone is frozen',
+    });
+
+    const result = await manageEpic({
+      action: 'create', projectId: 'proj-1', title: 'Frozen', status: 'active', tasks: [{ title: 'A' }],
+    });
+
+    expect(result.epicId).toBe('epic-1');
+    expect(result.message).toContain('left in backlog');
+    expect(result.message).toContain('milestone is frozen');
+  });
 });

@@ -141,7 +141,11 @@ export const EPIC_TOOLS = [
         status: {
           type: 'string',
           enum: ['backlog', 'ready', 'active', 'completed', 'cancelled', 'archived'],
-          description: 'Epic status (default: backlog for create)',
+          description: 'Epic status. CREATE accepts only "backlog" (default) or "ready": an epic starts ' +
+            'in planning and scope creep is counted from when it becomes active, so create it, add its ' +
+            'tasks, then set it "active" with action "update". The one exception is a create that passes ' +
+            '`tasks`: "active" is allowed there, and the epic is activated after its tasks exist. Any ' +
+            'other status on create is rejected (400). UPDATE accepts every status in the list.',
         },
         milestoneId: {
           type: 'string',

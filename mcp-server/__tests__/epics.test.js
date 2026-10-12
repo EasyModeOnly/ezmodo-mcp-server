@@ -77,7 +77,7 @@ describe('Epic Operations', () => {
         projectId: 'proj-1',
         title: 'Full Epic',
         description: 'Detailed description',
-        status: 'active',
+        status: 'ready',
         milestoneId: 'milestone-1',
         labels: ['frontend', 'urgent'],
       };
@@ -86,6 +86,14 @@ describe('Epic Operations', () => {
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateEpic', args);
       expect(result.success).toBe(true);
       expect(result.epicId).toBe('epic-full');
+    });
+
+    // #3224: a bare create cannot start active — the creep baseline is taken
+    // on the move to active. Refused before any request is spent.
+    it.each(['active', 'completed', 'cancelled', 'archived'])('refuses a bare create as %s', async (status) => {
+      await expect(manageEpic({ action: 'create', projectId: 'proj-1', title: 'E', status }))
+        .rejects.toThrow('create the epic in backlog or ready, then set it active');
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
 
     it('should propagate API errors', async () => {
