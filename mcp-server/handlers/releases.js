@@ -35,6 +35,30 @@ async function lookupCandidate(args, action) {
   });
 }
 
+const TEMPLATE_NOTE = 'Copied onto every new build of this release. Not work: nothing finishes these rows. ' +
+  'Each build\'s own copies (candidateId set) carry the state; a new build after a rejection starts them over.';
+
+/**
+ * Move the per-candidate template rows (`template: true`, #3218) out of a
+ * response's checklist into perBuildTemplate, without their state. Left in,
+ * they read as open steps next to the build's done copies, and agents
+ * reported them as unfinished work.
+ */
+export function splitTemplateRows(resp) {
+  if (!resp || !Array.isArray(resp.checklist)) return resp;
+  const template = resp.checklist.filter((it) => it?.template);
+  if (!template.length) return resp;
+  return {
+    ...resp,
+    checklist: resp.checklist.filter((it) => !it?.template),
+    perBuildTemplate: {
+      note: TEMPLATE_NOTE,
+      steps: template.map((it) => pick(it, ['id', 'key', 'title', 'phase', 'position', 'ownerId', 'ownerName',
+        'notes', 'runbookUrl', 'autoCheck'])),
+    },
+  };
+}
+
 /** A release's id: releaseId, else the release at deliverable + version. */
 async function releaseIdFor(args, action) {
   if (args.releaseId) return args.releaseId;
@@ -66,10 +90,11 @@ export async function getReleaseReadiness(args = {}) {
     return callEzmodoAPI('mcpReleaseReadiness', params);
   }
   if (args.releaseId) {
-    return callEzmodoAPI('mcpGetRelease', { id: args.releaseId });
+    return splitTemplateRows(await callEzmodoAPI('mcpGetRelease', { id: args.releaseId }));
   }
   if (args.milestoneId) {
-    return callEzmodoAPI('mcpMilestoneRelease', { milestoneId: args.milestoneId, ...pick(args, ['deliverable']) });
+    return splitTemplateRows(
+      await callEzmodoAPI('mcpMilestoneRelease', { milestoneId: args.milestoneId, ...pick(args, ['deliverable']) }));
   }
   throw new Error('Give candidateId (+ environment), or deliverable + version (+ environment), or releaseId, ' +
     'or milestoneId, or listGateTypes: true.');
@@ -125,12 +150,13 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpRevokeReleaseWaiver', { id: args.waiverId });
   case 'apply_checklist':
     if (args.releaseId) {
-      return callEzmodoAPI('mcpApplyReleaseChecklistForRelease', { id: args.releaseId, ...pick(args, ['templateId', 'sync']) });
+      return splitTemplateRows(await callEzmodoAPI('mcpApplyReleaseChecklistForRelease',
+        { id: args.releaseId, ...pick(args, ['templateId', 'sync']) }));
     }
     need(args, ['milestoneId'], action);
-    return callEzmodoAPI('mcpApplyReleaseChecklist', {
+    return splitTemplateRows(await callEzmodoAPI('mcpApplyReleaseChecklist', {
       milestoneId: args.milestoneId, ...pick(args, ['templateId', 'deliverable', 'sync']),
-    });
+    }));
   case 'add_checklist_item': {
     const item = pick(args, ['title', 'phase', 'ownerId', 'ownerName', 'notes', 'runbookUrl', 'autoCheck']);
     if (args.releaseId) {
@@ -239,11 +265,11 @@ export async function manageRelease(args = {}) {
       projectId: await projectIdFor(args, action), ...pick(args, ['deliverable', 'version', 'milestoneId', 'notes']),
     });
   case 'get_release':
-    if (args.releaseId) return callEzmodoAPI('mcpGetRelease', { id: args.releaseId });
+    if (args.releaseId) return splitTemplateRows(await callEzmodoAPI('mcpGetRelease', { id: args.releaseId }));
     need(args, ['version'], action);
-    return callEzmodoAPI('mcpLookupRelease', {
+    return splitTemplateRows(await callEzmodoAPI('mcpLookupRelease', {
       projectId: await projectIdFor(args, action), version: args.version, ...pick(args, ['deliverable']),
-    });
+    }));
   case 'update_release': {
     // milestoneId "" detaches the milestone, so it is sent when given at all.
     const body = pick(args, ['status', 'milestoneId', 'notes']);

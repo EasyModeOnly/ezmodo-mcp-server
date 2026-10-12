@@ -5,7 +5,7 @@ jest.unstable_mockModule('../lib/http-client.js', () => ({
   callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
-const { getReleaseReadiness, manageRelease } = await import('../handlers/releases.js');
+const { getReleaseReadiness, manageRelease, splitTemplateRows } = await import('../handlers/releases.js');
 const { manageMilestone } = await import('../handlers/milestones.js');
 const { manageTestSuite } = await import('../handlers/testing.js');
 const { ENDPOINT_MAP } = await import('../config/endpoint-map.js');
@@ -58,6 +58,39 @@ describe('Release Readiness tools (E-262)', () => {
 
     it('says what it needs when given nothing', async () => {
       await expect(getReleaseReadiness({})).rejects.toThrow(/candidateId/);
+    });
+
+    it('splits the per-candidate template out of the checklist (#3218)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({
+        checklist: [
+          { id: 'plan', phase: 'planning', state: 'done' },
+          { id: 'tmpl', key: 'signoff', title: 'Sign off the build', phase: 'per-candidate', state: 'open', template: true },
+          { id: 'copy', key: 'signoff', phase: 'per-candidate', candidateId: 'c1', state: 'done' },
+        ],
+      });
+      const r = await getReleaseReadiness({ releaseId: 'r1' });
+      expect(r.checklist.map((it) => it.id)).toEqual(['plan', 'copy']);
+      expect(r.perBuildTemplate.steps).toEqual([
+        { id: 'tmpl', key: 'signoff', title: 'Sign off the build', phase: 'per-candidate' },
+      ]);
+      expect(r.perBuildTemplate.note).toMatch(/Not work/);
+    });
+  });
+
+  describe('splitTemplateRows', () => {
+    it('leaves a response with no template rows, or no checklist, alone', () => {
+      const plain = { checklist: [{ id: 'a', state: 'open' }] };
+      expect(splitTemplateRows(plain)).toBe(plain);
+      expect(splitTemplateRows({ verdict: 'go' })).toEqual({ verdict: 'go' });
+      expect(splitTemplateRows(null)).toBeNull();
+    });
+
+    it('applies to get_release and the milestone overview too', async () => {
+      const resp = () => ({ checklist: [{ id: 't', phase: 'per-candidate', state: 'open', template: true }] });
+      mockCallEzmodoAPI.mockResolvedValueOnce(resp());
+      expect((await manageRelease({ action: 'get_release', releaseId: 'r1' })).checklist).toEqual([]);
+      mockCallEzmodoAPI.mockResolvedValueOnce(resp());
+      expect((await getReleaseReadiness({ milestoneId: 'm1' })).perBuildTemplate.steps).toHaveLength(1);
     });
   });
 

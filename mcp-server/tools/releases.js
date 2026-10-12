@@ -32,7 +32,10 @@ export const RELEASE_TOOLS = [
       '(3) releaseId → the release page: route environments, candidates, checklist, contents and effective gates. ' +
       '(4) milestoneId (+ deliverable?) → the milestone\'s release overview: environments, candidates with their ' +
       'promotions, the checklist and the gates. Set listGateTypes to get the gate types and their params instead. ' +
-      'Environment accepts an id, key or alias ("prod", "stage").',
+      'Environment accepts an id, key or alias ("prod", "stage"). In modes 3 and 4 the per-candidate steps appear ' +
+      'once per build (candidateId set, with that build\'s state); the template they are copied from comes back ' +
+      'separately as perBuildTemplate (rows the API marks template: true). The template is never open work: ' +
+      'nothing can finish it, so do not report it as unfinished — read each build\'s copies instead.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -116,7 +119,8 @@ export const RELEASE_TOOLS = [
       'environment it reached); ' +
       'create_release (version, deliverable?, milestoneId?, notes? — returns the existing release at that version ' +
       'if there is one); ' +
-      'get_release (the release page: route environments, candidates, checklist, contents, effective gates); ' +
+      'get_release (the release page: route environments, candidates, checklist, contents, effective gates; the ' +
+      'per-candidate template is split out as perBuildTemplate and is not open work); ' +
       'update_release (status?: planned|in_progress|shipped|abandoned, milestoneId? ("" detaches), notes?); ' +
       'get_contents / derive_contents (the tasks and epics this release ships, derived from the newest candidate\'s ' +
       'commits; derive keeps manual edits. Paged: each section — tasks, epics, excluded — returns its first 50, ' +
