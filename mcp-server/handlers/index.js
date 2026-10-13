@@ -30,6 +30,8 @@ import * as tagHandlers from './tags.js';
 import * as watcherHandlers from './watchers.js';
 import * as publicIssueHandlers from './public-issues.js';
 import * as changelogHandlers from './changelog.js';
+import * as roadmapHandlers from './roadmap.js';
+import * as publicTrackerHandlers from './public-tracker.js';
 import * as aiIntelligenceHandlers from './ai-intelligence.js';
 import * as gitContextHandlers from './git-context.js';
 import * as githubHandlers from './github.js';
@@ -159,6 +161,11 @@ export const HANDLERS = {
   list_changelog: changelogHandlers.listChangelog,
   get_changelog_entry: changelogHandlers.getChangelogEntry,
   manage_changelog: changelogHandlers.manageChangelog,
+
+  // The rest of the public tracker (#3233)
+  manage_roadmap: roadmapHandlers.manageRoadmap,
+  get_public_tracker: publicTrackerHandlers.getPublicTracker,
+  manage_public_tracker: publicTrackerHandlers.managePublicTracker,
 
   // Links (polymorphic entity_links — task/epic/project/document)
   manage_link: linkHandlers.manageLink,

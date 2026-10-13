@@ -61,6 +61,7 @@ export const READ_ONLY_TOOLS = new Set([
   'get_organization',
   'get_project',
   'get_project_changes',
+  'get_public_tracker',
   'get_release_readiness',
   'get_task',
   'get_testing_summary',

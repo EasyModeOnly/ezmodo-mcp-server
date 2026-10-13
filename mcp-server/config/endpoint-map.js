@@ -104,6 +104,52 @@ export const ENDPOINT_MAP = {
     route: 'mcp/v1/projects/{projectId}/changelog/{entryId}/unpublish', method: 'POST',
   },
 
+  // The rest of the public tracker's maintainer side (#3233). Same paths as
+  // the web app's REST routes; the API reuses the REST handlers' project gate.
+  // Roadmap
+  'mcpListRoadmapItems': { route: 'mcp/v1/projects/{projectId}/roadmap-items', method: 'GET' },
+  'mcpCreateRoadmapItem': { route: 'mcp/v1/projects/{projectId}/roadmap-items', method: 'POST' },
+  'mcpReorderRoadmapItems': { route: 'mcp/v1/projects/{projectId}/roadmap-items/reorder', method: 'POST' },
+  'mcpUpdateRoadmapItem': { route: 'mcp/v1/projects/{projectId}/roadmap-items/{itemId}', method: 'PATCH' },
+  'mcpDeleteRoadmapItem': { route: 'mcp/v1/projects/{projectId}/roadmap-items/{itemId}', method: 'DELETE' },
+  'mcpShipRoadmapItem': { route: 'mcp/v1/projects/{projectId}/roadmap-items/{itemId}/ship', method: 'POST' },
+  'mcpLinkRoadmapIssue': {
+    route: 'mcp/v1/projects/{projectId}/roadmap-items/{itemId}/issues/{number}', method: 'POST',
+  },
+  'mcpUnlinkRoadmapIssue': {
+    route: 'mcp/v1/projects/{projectId}/roadmap-items/{itemId}/issues/{number}', method: 'DELETE',
+  },
+  // Public settings (openness)
+  'mcpGetPublicSettings': { route: 'mcp/v1/projects/{projectId}/public-settings', method: 'GET' },
+  'mcpUpdatePublicSettings': { route: 'mcp/v1/projects/{projectId}/public-settings', method: 'PUT' },
+  // Moderation
+  'mcpListParticipants': { route: 'mcp/v1/projects/{projectId}/participants', method: 'GET' },
+  'mcpSetParticipantTrust': { route: 'mcp/v1/projects/{projectId}/participants/{userId}', method: 'PUT' },
+  'mcpListModerationQueue': { route: 'mcp/v1/projects/{projectId}/issue-comments', method: 'GET' },
+  'mcpApproveIssueComment': {
+    route: 'mcp/v1/projects/{projectId}/issue-comments/{commentId}/approve', method: 'POST',
+  },
+  'mcpHideIssueComment': { route: 'mcp/v1/projects/{projectId}/issue-comments/{commentId}/hide', method: 'POST' },
+  'mcpBlockCommentAuthor': {
+    route: 'mcp/v1/projects/{projectId}/issue-comments/{commentId}/block-author', method: 'POST',
+  },
+  'mcpListIssueComments': { route: 'mcp/v1/projects/{projectId}/issues/{number}/comments', method: 'GET' },
+  'mcpReplyToIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}/comments', method: 'POST' },
+  'mcpLockIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}/lock', method: 'POST' },
+  'mcpUnlockIssue': { route: 'mcp/v1/projects/{projectId}/issues/{number}/unlock', method: 'POST' },
+  // Security reports (admin only)
+  'mcpListSecurityReports': { route: 'mcp/v1/projects/{projectId}/security-reports', method: 'GET' },
+  'mcpSetSecurityReportStatus': {
+    route: 'mcp/v1/projects/{projectId}/security-reports/{feedbackId}/status', method: 'POST',
+  },
+  // GitHub sync and import (reads and conflict resolution only)
+  'mcpListGitHubSyncs': { route: 'mcp/v1/projects/{projectId}/github-syncs', method: 'GET' },
+  'mcpGetGitHubSyncHealth': { route: 'mcp/v1/projects/{projectId}/github-syncs/{syncId}/health', method: 'GET' },
+  'mcpResolveGitHubSyncConflict': {
+    route: 'mcp/v1/projects/{projectId}/github-syncs/{syncId}/conflicts/{conflictId}/resolve', method: 'POST',
+  },
+  'mcpGetGitHubImportStatus': { route: 'mcp/v1/projects/{projectId}/github-import/status', method: 'GET' },
+
   // Documentation
   'mcpGetDocumentation': { route: 'mcp/v1/documents', method: 'GET' },
   'mcpGetDocument': { route: 'mcp/v1/documents/by-id', method: 'GET' },
