@@ -93,6 +93,17 @@ export const ENDPOINT_MAP = {
   'mcpRejectIssueIntake': { route: 'mcp/v1/projects/{projectId}/intake/{feedbackId}/reject', method: 'POST' },
   'mcpConvertIssueIntake': { route: 'mcp/v1/projects/{projectId}/intake/{feedbackId}/convert', method: 'POST' },
 
+  // Public changelog (#3219). Same paths as the web app's REST routes, except
+  // that the list leaves out bodies and GET .../{entryId} is MCP-only.
+  'mcpListChangelog': { route: 'mcp/v1/projects/{projectId}/changelog', method: 'GET' },
+  'mcpGetChangelogEntry': { route: 'mcp/v1/projects/{projectId}/changelog/{entryId}', method: 'GET' },
+  'mcpDraftChangelogEntry': { route: 'mcp/v1/projects/{projectId}/changelog/{milestoneId}/draft', method: 'POST' },
+  'mcpUpdateChangelogEntry': { route: 'mcp/v1/projects/{projectId}/changelog/{entryId}', method: 'PATCH' },
+  'mcpPublishChangelogEntry': { route: 'mcp/v1/projects/{projectId}/changelog/{entryId}/publish', method: 'POST' },
+  'mcpUnpublishChangelogEntry': {
+    route: 'mcp/v1/projects/{projectId}/changelog/{entryId}/unpublish', method: 'POST',
+  },
+
   // Documentation
   'mcpGetDocumentation': { route: 'mcp/v1/documents', method: 'GET' },
   'mcpGetDocument': { route: 'mcp/v1/documents/by-id', method: 'GET' },

@@ -30,6 +30,7 @@ import { GRAPH_TOOLS } from './graph.js';
 import { TAG_TOOLS } from './tags.js';
 import { WATCHER_TOOLS } from './watchers.js';
 import { PUBLIC_ISSUE_TOOLS } from './public-issues.js';
+import { CHANGELOG_TOOLS } from './changelog.js';
 import { AI_INTELLIGENCE_TOOLS } from './ai-intelligence.js';
 import { GIT_CONTEXT_TOOLS } from './git-context.js';
 import { WORKTREE_TOOLS } from '../lib/worktree-tools.js';
@@ -73,6 +74,7 @@ export const TOOLS = [
   ...TAG_TOOLS,
   ...WATCHER_TOOLS,
   ...PUBLIC_ISSUE_TOOLS,
+  ...CHANGELOG_TOOLS,
   ...AI_INTELLIGENCE_TOOLS,
   ...GIT_CONTEXT_TOOLS,
   ...WORKTREE_TOOLS,

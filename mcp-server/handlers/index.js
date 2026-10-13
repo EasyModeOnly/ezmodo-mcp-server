@@ -29,6 +29,7 @@ import * as graphHandlers from './graph.js';
 import * as tagHandlers from './tags.js';
 import * as watcherHandlers from './watchers.js';
 import * as publicIssueHandlers from './public-issues.js';
+import * as changelogHandlers from './changelog.js';
 import * as aiIntelligenceHandlers from './ai-intelligence.js';
 import * as gitContextHandlers from './git-context.js';
 import * as githubHandlers from './github.js';
@@ -153,6 +154,11 @@ export const HANDLERS = {
   list_issues: publicIssueHandlers.listIssues,
   get_issue: publicIssueHandlers.getIssue,
   manage_issue: publicIssueHandlers.manageIssue,
+
+  // Public changelog (#3219)
+  list_changelog: changelogHandlers.listChangelog,
+  get_changelog_entry: changelogHandlers.getChangelogEntry,
+  manage_changelog: changelogHandlers.manageChangelog,
 
   // Links (polymorphic entity_links — task/epic/project/document)
   manage_link: linkHandlers.manageLink,
