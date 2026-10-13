@@ -12,6 +12,8 @@ export const DOCUMENT_TOOLS = [
       'Provide markdown `content` — it is converted to the unified document body (E-192) automatically. ' +
       'Markdown is the whole write contract: an update replaces the document body with what you send, ' +
       'so pass the full document, not a fragment. ' +
+      'To embed a diagram document, put its id in a ```diagram-ref fence (one id, nothing else); ' +
+      'get_document returns embeds in that form, so they survive a get → edit → update. ' +
       '(The legacy section model is gone — `sections` and the section ops were removed; sending them is an error.)',
     inputSchema: {
       type: 'object',
@@ -46,14 +48,16 @@ export const DOCUMENT_TOOLS = [
         },
         content: {
           type: 'string',
-          description: 'Document content in markdown format. Converted to the unified document body automatically. (create, update)',
+          description: 'Document content in markdown format. Converted to the unified document body automatically. ' +
+            'For a "diagram" document it is the diagram: mermaid source, bare or in a ```mermaid fence. (create, update)',
         },
         type: {
           type: 'string',
           enum: ['setup', 'api', 'architecture', 'troubleshooting', 'guide', 'diagram', 'description', 'adr', 'how-it-works', 'other'],
           description: 'Document type/category. Use "diagram" to create a project-scoped diagram ' +
-            '(auto-placed in the Diagrams folder, seeded as mermaid; pass content="excalidraw" for excalidraw, ' +
-            'content="sitemap" for a sitemap). Use "adr" for an Architecture ' +
+            '(auto-placed in the Diagrams folder). Its content is mermaid source; content="excalidraw" or ' +
+            '"sitemap" creates an empty diagram of that kind. Updating a diagram\'s content replaces its source. ' +
+            'Embed it in other docs with a ```diagram-ref fence. Use "adr" for an Architecture ' +
             'Decision Record: an org-scoped "adr" document (pass organizationId, no projectId) with no folderId ' +
             'is auto-placed in the org\'s reserved "ADRs" area (E-195); seed structure from the "Architecture ' +
             'Decision Record" system template. Use "how-it-works" for a human-authored, ' +

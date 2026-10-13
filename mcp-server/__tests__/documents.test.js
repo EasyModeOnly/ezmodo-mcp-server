@@ -531,4 +531,14 @@ describe('Document links (E-225)', () => {
     expect(props.removeRelatedItem.properties.type.enum).toBe(LINKABLE_TYPES);
     expect(props.links.type).toBe('array');
   });
+
+  // #3237: agents can only keep an embed or fill a diagram if the tool says how.
+  it('documents the diagram-ref fence and diagram source', async () => {
+    const { DOCUMENT_TOOLS } = await import('../tools/documents.js');
+    const tool = DOCUMENT_TOOLS.find((t) => t.name === 'manage_document');
+
+    expect(tool.description).toContain('```diagram-ref');
+    expect(tool.inputSchema.properties.content.description).toMatch(/mermaid source/);
+    expect(tool.inputSchema.properties.type.description).toMatch(/content is mermaid source/);
+  });
 });
