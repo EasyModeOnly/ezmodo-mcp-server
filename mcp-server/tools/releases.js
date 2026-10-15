@@ -82,6 +82,9 @@ export const RELEASE_TOOLS = [
       'in line with the template (title, notes, order), leaves done/failed/waived/N/A steps as recorded, and lists ' +
       'steps the template lacks in notInTemplate without removing them); ' +
       'add_checklist_item (milestoneId, title, phase, ownerId?, ownerName?, notes?, runbookUrl?, autoCheck?); ' +
+      'assign_steps (milestoneId or releaseId, assigneeId, phase?, deliverable? — gives every OPEN step of the ' +
+      'release, or of one phase, to one organization member, with one notification; steps already done, failed, ' +
+      'waived or N/A, and closed builds\' copies, keep their owner. Returns assigned, skipped and the checklist); ' +
       'set_item_state (itemId, state: open|done|failed|waived|n_a, note? — required for waived, candidateId? — ' +
       'failed means the step was done and did not pass: it fails its phase gate, and when that phase is set to ' +
       'reject it rejects the candidate (a per-candidate step\'s own, else candidateId, else every active candidate ' +
@@ -128,7 +131,8 @@ export const RELEASE_TOOLS = [
       'read further); add_content / remove_content (entityType: task|epic, entityId — a ' +
       'removed item stays out on re-derive); release_changelog (markdown); ' +
       'task_shipping (taskId, projectId? — which deliverables have shipped the task: "API shipped, Web pending"). ' +
-      'apply_checklist and add_checklist_item also take releaseId instead of milestoneId; add_gate, list_gates, ' +
+      'apply_checklist, add_checklist_item and assign_steps also take releaseId instead of milestoneId; ' +
+      'add_gate, list_gates, ' +
       'get_settings, save_settings and save_template take deliverable for that deliverable\'s own gates, settings ' +
       'and templates (save_settings with deliverable: completeTasksOn "" or inheritHoldDeploys: true go back to the ' +
       'project\'s).',
@@ -139,7 +143,7 @@ export const RELEASE_TOOLS = [
           type: 'string',
           enum: [
             'create_candidate', 'update_candidate', 'promote', 'sign_off', 'waive', 'revoke_waiver',
-            'apply_checklist', 'add_checklist_item', 'set_item_state', 'update_checklist_item',
+            'apply_checklist', 'add_checklist_item', 'assign_steps', 'set_item_state', 'update_checklist_item',
             'delete_checklist_item', 'item_to_task',
             'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
             'list_templates', 'save_template', 'get_settings', 'save_settings',
@@ -154,7 +158,10 @@ export const RELEASE_TOOLS = [
           description: 'Project id (add_gate, add_recommended_gates, list_gates, list_templates, save_template, ' +
             'get_settings, save_settings, report_*)',
         },
-        milestoneId: { type: 'string', description: 'Milestone id (create_candidate, apply_checklist, add_checklist_item)' },
+        milestoneId: {
+          type: 'string',
+          description: 'Milestone id (create_candidate, apply_checklist, add_checklist_item, assign_steps)',
+        },
         sync: {
           type: 'boolean',
           description: 'apply_checklist: also update OPEN steps to match the template; never removes a step',
@@ -187,6 +194,7 @@ export const RELEASE_TOOLS = [
         phase: { type: 'string', enum: ['planning', 'freeze', 'per-candidate', 'pre-prod', 'post-release'] },
         ownerId: { type: 'string' },
         ownerName: { type: 'string' },
+        assigneeId: { type: 'string', description: 'assign_steps: the organization member to give the steps to' },
         runbookUrl: { type: 'string' },
         autoCheck: { type: 'object', description: 'A gate expression {type, params}: the item counts as done while it passes' },
         clearAutoCheck: { type: 'boolean', description: 'update_checklist_item: remove the step\'s auto-check' },

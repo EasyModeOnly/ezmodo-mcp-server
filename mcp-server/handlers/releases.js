@@ -168,6 +168,19 @@ export async function manageRelease(args = {}) {
       milestoneId: args.milestoneId, ...item, ...pick(args, ['deliverable']),
     });
   }
+  case 'assign_steps': {
+    // "Assign all" (#3215): every open step of the release, or of one phase.
+    need(args, ['assigneeId'], action);
+    const body = pick(args, ['assigneeId', 'phase']);
+    if (args.releaseId) {
+      return splitTemplateRows(await callEzmodoAPI('mcpAssignReleaseChecklistForRelease',
+        { id: args.releaseId, ...body }));
+    }
+    need(args, ['milestoneId'], action);
+    return splitTemplateRows(await callEzmodoAPI('mcpAssignReleaseChecklist', {
+      milestoneId: args.milestoneId, ...body, ...pick(args, ['deliverable']),
+    }));
+  }
   case 'set_item_state': {
     need(args, ['itemId', 'state'], action);
     const body = { id: args.itemId, state: args.state };

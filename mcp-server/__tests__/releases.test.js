@@ -29,9 +29,31 @@ describe('Release Readiness tools (E-262)', () => {
       'mcpReportReleaseDeployment', 'mcpUpdateReleaseCandidate', 'mcpReleaseReadiness', 'mcpPromoteReleaseCandidate',
       'mcpSignOffReleaseCandidate', 'mcpReleaseMilestone', 'mcpStartSuiteRun', 'mcpRecordSuiteRunResult',
       'mcpUpdateSuiteRunStatus', 'mcpListReleaseGates', 'mcpListReleaseTemplates', 'mcpGetReleaseSettings',
-      'mcpSaveReleaseSettings',
+      'mcpSaveReleaseSettings', 'mcpAssignReleaseChecklist', 'mcpAssignReleaseChecklistForRelease',
     ];
     expect(used.filter((e) => !ENDPOINT_MAP[e])).toEqual([]);
+  });
+
+  it('assign_steps gives a release\'s or a phase\'s steps to one person (#3215)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({
+      assigned: 2,
+      skipped: 1,
+      checklist: [{ id: 'a' }, { id: 'tmpl', template: true, phase: 'per-candidate' }],
+    });
+    const r = await manageRelease({
+      action: 'assign_steps', milestoneId: 'm1', assigneeId: 'u1', phase: 'freeze', deliverable: 'api',
+    });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpAssignReleaseChecklist', {
+      milestoneId: 'm1', assigneeId: 'u1', phase: 'freeze', deliverable: 'api',
+    });
+    expect(r.assigned).toBe(2);
+    expect(r.checklist.map((it) => it.id)).toEqual(['a']);
+    await manageRelease({ action: 'assign_steps', releaseId: 'r1', assigneeId: 'u1' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpAssignReleaseChecklistForRelease', {
+      id: 'r1', assigneeId: 'u1',
+    });
+    await expect(manageRelease({ action: 'assign_steps', milestoneId: 'm1' })).rejects.toThrow(/assigneeId/);
+    await expect(manageRelease({ action: 'assign_steps', assigneeId: 'u1' })).rejects.toThrow(/milestoneId/);
   });
 
   describe('get_release_readiness', () => {
