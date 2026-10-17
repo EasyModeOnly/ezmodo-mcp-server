@@ -88,7 +88,7 @@ export const MILESTONE_TOOLS = [
         links: LINKS_ARRAY_SCHEMA,
         items: {
           type: 'array',
-          description: 'Initial linked items, e.g., epics (create, update)',
+          description: 'Linked items, e.g. epics. create: the initial list. update: REPLACES the whole list (omit it to leave the items alone; [] removes them all); the list order is the display order. An epic already in another open milestone is refused: unlink it there first. To add or remove one item, use link_epic / unlink_epic',
           items: {
             type: 'object',
             properties: {
