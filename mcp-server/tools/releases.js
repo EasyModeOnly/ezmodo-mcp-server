@@ -119,8 +119,9 @@ export const RELEASE_TOOLS = [
       'save_template (projectId, name, items[], templateId? to replace, isDefault?, orgWide?); ' +
       'report_check (projectId, name, status: pending|running|success|failure|cancelled|skipped, ' +
       'candidate? (id or version label), commitSha?, environment?, url?, source?, externalId?); ' +
-      'report_deployment (projectId, environment, status: pending|in_progress|success|failure|cancelled, ' +
-      'candidate?, commitSha?, url?, source?, externalId?). Reports are idempotent: sending the same one again ' +
+      'report_deployment (projectId, environment, status: pending|waiting|in_progress|success|failure|cancelled, ' +
+      'candidate?, commitSha?, url?, source?, externalId?, awaiting?: approval|npm|store and note? with status waiting ' +
+      '— what holds a deploy that left CI but is not out, and who acts). Reports are idempotent: sending the same one again ' +
       'updates it. Both reports also take deliverable + version to name the build (with candidate? as a label ' +
       'within that release). ' +
       'RELEASES (E-280) — a release is a deliverable (see manage_deliverable) at a version; projectId defaults to ' +
@@ -236,6 +237,12 @@ export const RELEASE_TOOLS = [
         orgWide: { type: 'boolean' },
         description: { type: 'string' },
         url: { type: 'string' },
+        awaiting: {
+          type: 'string',
+          enum: ['approval', 'npm', 'store'],
+          description: 'report_deployment with status waiting: what holds the deploy (an approval, a staged npm release, a store review)',
+        },
+        note: { type: 'string', description: 'report_deployment with status waiting: who acts and how, in one sentence' },
         source: { type: 'string', description: 'Who is reporting: github, gitlab, jenkins, cli, manual… (report_*)' },
         externalId: { type: 'string', description: 'The pipeline\'s own id for this check/deployment; makes repeat reports update one row' },
         summary: { type: 'string' },

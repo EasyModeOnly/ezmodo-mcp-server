@@ -267,7 +267,7 @@ export async function manageRelease(args = {}) {
       source: 'mcp',
       ...pick(args, [
         'projectId', 'environment', 'status', 'deliverable', 'version', 'candidate', 'commitSha', 'url', 'source',
-        'externalId',
+        'externalId', 'awaiting', 'note',
       ]),
     });
 

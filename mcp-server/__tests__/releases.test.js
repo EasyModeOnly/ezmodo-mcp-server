@@ -57,6 +57,17 @@ describe('Release Readiness tools (E-262)', () => {
     await expect(manageRelease({ action: 'assign_steps', assigneeId: 'u1' })).rejects.toThrow(/milestoneId/);
   });
 
+  it('report_deployment passes what a waiting deploy is held on (#3295)', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({});
+    await manageRelease({
+      action: 'report_deployment', projectId: 'p', environment: 'production', status: 'waiting',
+      deliverable: 'mcp-server', version: '1.1.0', awaiting: 'npm', note: 'Approve it with the script.',
+    });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReportReleaseDeployment', expect.objectContaining({
+      status: 'waiting', awaiting: 'npm', note: 'Approve it with the script.',
+    }));
+  });
+
   describe('get_release_readiness', () => {
     it('one candidate in one environment', async () => {
       mockCallEzmodoAPI.mockResolvedValueOnce({ verdict: 'no_go' });
