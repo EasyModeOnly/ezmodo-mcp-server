@@ -92,6 +92,10 @@ export async function getReleaseReadiness(args = {}) {
   if (args.releaseId) {
     return splitTemplateRows(await callEzmodoAPI('mcpGetRelease', { id: args.releaseId }));
   }
+  if (args.milestoneId && args.view === 'status') {
+    // Where every deliverable's build is, what it waits on and who (#3295).
+    return callEzmodoAPI('mcpMilestoneReleaseStatus', { milestoneId: args.milestoneId });
+  }
   if (args.milestoneId) {
     return splitTemplateRows(
       await callEzmodoAPI('mcpMilestoneRelease', { milestoneId: args.milestoneId, ...pick(args, ['deliverable']) }));

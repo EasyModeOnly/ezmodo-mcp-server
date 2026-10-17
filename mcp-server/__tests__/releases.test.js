@@ -30,6 +30,7 @@ describe('Release Readiness tools (E-262)', () => {
       'mcpSignOffReleaseCandidate', 'mcpReleaseMilestone', 'mcpStartSuiteRun', 'mcpRecordSuiteRunResult',
       'mcpUpdateSuiteRunStatus', 'mcpListReleaseGates', 'mcpListReleaseTemplates', 'mcpGetReleaseSettings',
       'mcpSaveReleaseSettings', 'mcpAssignReleaseChecklist', 'mcpAssignReleaseChecklistForRelease',
+      'mcpMilestoneReleaseStatus',
     ];
     expect(used.filter((e) => !ENDPOINT_MAP[e])).toEqual([]);
   });
@@ -76,6 +77,17 @@ describe('Release Readiness tools (E-262)', () => {
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpMilestoneRelease', { milestoneId: 'm1' });
       await getReleaseReadiness({ listGateTypes: true });
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReleaseGateTypes', {});
+    });
+
+    it('the milestone status with view: "status" (#3295)', async () => {
+      const status = { summary: '1 of 2 live in Production', deliverables: [{ key: 'api', stage: 'post_release' }] };
+      mockCallEzmodoAPI.mockResolvedValueOnce(status);
+      const r = await getReleaseReadiness({ milestoneId: 'm1', view: 'status', deliverable: 'api' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpMilestoneReleaseStatus', { milestoneId: 'm1' });
+      expect(r).toEqual(status);
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+      await getReleaseReadiness({ milestoneId: 'm1', view: 'overview' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpMilestoneRelease', { milestoneId: 'm1' });
     });
 
     it('says what it needs when given nothing', async () => {

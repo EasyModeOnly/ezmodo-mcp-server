@@ -31,7 +31,11 @@ export const RELEASE_TOOLS = [
       'projectId defaults to .ezmodo/config.json). ' +
       '(3) releaseId → the release page: route environments, candidates, checklist, contents and effective gates. ' +
       '(4) milestoneId (+ deliverable?) → the milestone\'s release overview: environments, candidates with their ' +
-      'promotions, the checklist and the gates. Set listGateTypes to get the gate types and their params instead. ' +
+      'promotions, the checklist and the gates. ' +
+      '(5) milestoneId + view: "status" → "where is this release?": one row per deliverable with its build, stage, ' +
+      'the environment it is in, what it is waiting on and who (waitingOn), and nextAction, plus a one-line summary. ' +
+      'Start here when asked what is next for a release or who it is waiting on. ' +
+      'Set listGateTypes to get the gate types and their params instead. ' +
       'Environment accepts an id, key or alias ("prod", "stage"). In modes 3 and 4 the per-candidate steps appear ' +
       'once per build (candidateId set, with that build\'s state); the template they are copied from comes back ' +
       'separately as perBuildTemplate (rows the API marks template: true). The template is never open work: ' +
@@ -54,7 +58,11 @@ export const RELEASE_TOOLS = [
           type: 'string', description: 'Project id for the deliverable + version lookup (default: .ezmodo/config.json)',
         },
         releaseId: { type: 'string', description: 'Release id (mode 3)' },
-        milestoneId: { type: 'string', description: 'Milestone id (mode 4)' },
+        milestoneId: { type: 'string', description: 'Milestone id (modes 4 and 5)' },
+        view: {
+          type: 'string', enum: ['overview', 'status'],
+          description: 'With milestoneId: "overview" (default, mode 4) or "status" (mode 5)',
+        },
         listGateTypes: { type: 'boolean', description: 'Return the available gate types and their params' },
       },
     },

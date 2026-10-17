@@ -282,6 +282,7 @@ export const ENDPOINT_MAP = {
   // the web app; {id} / {milestoneId} are filled from the request data.
   'mcpReleaseGateTypes': { route: 'mcp/v1/releases/gate-types', method: 'GET' },
   'mcpMilestoneRelease': { route: 'mcp/v1/releases/milestones/{milestoneId}', method: 'GET' },
+  'mcpMilestoneReleaseStatus': { route: 'mcp/v1/releases/milestones/{milestoneId}/status', method: 'GET' }, // #3295
   'mcpCreateReleaseCandidate': { route: 'mcp/v1/releases/milestones/{milestoneId}/candidates', method: 'POST' },
   'mcpAddReleaseChecklistItem': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist', method: 'POST' },
   'mcpApplyReleaseChecklist': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist/apply', method: 'POST' },
