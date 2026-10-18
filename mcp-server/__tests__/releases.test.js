@@ -223,6 +223,12 @@ describe('Release Readiness tools (E-262)', () => {
       expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpUpdateReleaseCandidate', { id: 'c1', status: 'active' });
     });
 
+    it('update_candidate renames a build with versionLabel (#3292)', async () => {
+      mockCallEzmodoAPI.mockResolvedValue({});
+      await manageRelease({ action: 'update_candidate', candidateId: 'c1', versionLabel: '1.2.0-rc.2' });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpUpdateReleaseCandidate', { id: 'c1', versionLabel: '1.2.0-rc.2' });
+    });
+
     it('report_check defaults the source to mcp but keeps an explicit one', async () => {
       mockCallEzmodoAPI.mockResolvedValue({});
       await manageRelease({ action: 'report_check', projectId: 'p1', name: 'build', status: 'success', candidate: '1.4.0-rc.1' });

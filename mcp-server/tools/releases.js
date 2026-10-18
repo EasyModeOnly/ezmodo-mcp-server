@@ -78,7 +78,9 @@ export const RELEASE_TOOLS = [
       'create_candidate (releaseId, or version + deliverable? — the release is started if new and the label ' +
       'defaults to the version — or milestoneId + versionLabel + deliverable?; kind?, commitSha?, notes?); ' +
       'update_candidate (candidateId, notes?, commitSha?, status: active|rejected|shipped, rejectionReason? — ' +
-      'recorded with a rejection; setting active again clears the rejection); ' +
+      'recorded with a rejection; setting active again clears the rejection; versionLabel? renames the build, which ' +
+      'keeps its promotions and steps — refused if another build of the release has that label, or the build was ' +
+      'rejected); ' +
       'promote (candidateId, environment, notes?); ' +
       'sign_off (candidateId, environment, note?); ' +
       'waive (candidateId, environment, targetType: gate|checklist_item|epic, targetId, reason, ' +
@@ -178,7 +180,9 @@ export const RELEASE_TOOLS = [
         candidateId: { type: 'string', description: 'Release candidate id' },
         candidate: { type: 'string', description: 'Candidate id OR version label (report_check, report_deployment)' },
         environment: { type: 'string', description: 'Environment id, key or alias' },
-        versionLabel: { type: 'string', description: 'e.g. "1.4.0-rc.2" (create_candidate)' },
+        versionLabel: {
+          type: 'string', description: 'e.g. "1.4.0-rc.2" (create_candidate; update_candidate renames the build)',
+        },
         kind: { type: 'string', enum: ['alpha', 'beta', 'rc', 'ga'], description: 'Inferred from the label when omitted' },
         commitSha: { type: 'string', description: 'Commit the candidate was built from. Optional: projects with no git still ship.' },
         notes: { type: 'string' },

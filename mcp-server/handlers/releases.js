@@ -131,7 +131,11 @@ export async function manageRelease(args = {}) {
   }
   case 'update_candidate': {
     need(args, ['candidateId'], action);
-    const body = { id: args.candidateId, ...pick(args, ['notes', 'commitSha', 'status', 'rejectionReason']) };
+    // versionLabel renames the build (#3292); the API refuses a label another
+    // build of the release has, and renaming a rejected build.
+    const body = {
+      id: args.candidateId, ...pick(args, ['notes', 'commitSha', 'status', 'rejectionReason', 'versionLabel']),
+    };
     // Agents reach for `reason` (it is waive's word); take it as the
     // rejection's reason when rejecting (#2916).
     if (body.rejectionReason === undefined && args.status === 'rejected' && args.reason !== undefined) {
