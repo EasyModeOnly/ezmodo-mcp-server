@@ -22,8 +22,10 @@
  * Both are written from the MCP server's own cwd. Subagents in one Claude Code
  * session share one server, whose cwd is the session's checkout — the server
  * cannot see which worktree a subagent is in. The recorded `worktree` and
- * `branch` are therefore the SERVER's, and the hook trusts the legacy file only
- * when they match the checkout the commit ran in.
+ * `branch` are therefore the SERVER's. The plugin hooks take the taskId only
+ * from the per-worktree file (E-297 #3348): the legacy one is in the working
+ * tree, where a repo can commit it, so the commit hook shows it as an
+ * unverified pointer when it matches the checkout the commit ran in.
  */
 
 import { execSync } from 'child_process';
