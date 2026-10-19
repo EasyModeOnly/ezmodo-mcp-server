@@ -1,4 +1,4 @@
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, beforeAll } from '@jest/globals';
 
 const mockCallEzmodoAPI = jest.fn();
 jest.unstable_mockModule('../lib/http-client.js', () => ({
@@ -26,7 +26,8 @@ describe('manage_test_suite import_results (E-278 #3043)', () => {
   it('reads filePath locally and sends it base64 with its name', async () => {
     const readFile = jest.fn().mockResolvedValue(Buffer.from('<testsuites/>'));
     const stat = jest.fn().mockResolvedValue({ size: 13 });
-    await importTestResults({ projectId: 'p1', filePath: '/tmp/out/junit.xml', suiteId: 's1' }, readFile, stat);
+    const resolve = jest.fn(async (p) => p);
+    await importTestResults({ projectId: 'p1', filePath: '/tmp/out/junit.xml', suiteId: 's1' }, readFile, stat, resolve);
     expect(readFile).toHaveBeenCalledWith('/tmp/out/junit.xml');
     expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpImportTestResults', {
       projectId: 'p1', contentBase64: Buffer.from('<testsuites/>').toString('base64'), suite: 's1', fileName: 'junit.xml',
@@ -36,7 +37,8 @@ describe('manage_test_suite import_results (E-278 #3043)', () => {
   it('refuses a file over the limit without reading it', async () => {
     const readFile = jest.fn();
     const stat = jest.fn().mockResolvedValue({ size: MAX_RESULTS_FILE_BYTES + 1 });
-    await expect(importTestResults({ projectId: 'p1', filePath: '/big.xml' }, readFile, stat)).rejects.toThrow('limit');
+    await expect(importTestResults({ projectId: 'p1', filePath: '/big.xml' }, readFile, stat, async (p) => p))
+      .rejects.toThrow('limit');
     expect(readFile).not.toHaveBeenCalled();
     expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
@@ -112,5 +114,49 @@ describe('manage_test_suite create_case_from_unmatched and import_results runId/
     expect(props.unmatched.enum).toEqual(['all', 'failures']);
     expect(props.caseCategory.enum).toContain('regression');
     expect(props.casePriority.enum).toContain('medium');
+  });
+});
+
+// E-297: filePath came straight from the caller, so ~/.ssh/id_rsa uploaded as
+// a "results file". It now has to resolve inside the checkout.
+describe('import_results file confinement (E-297)', () => {
+  let root;
+  let outside;
+  beforeAll(async () => {
+    const fsp = (await import('fs/promises')).default;
+    const os = (await import('os')).default;
+    const pathMod = (await import('path')).default;
+    root = await fsp.mkdtemp(pathMod.join(os.tmpdir(), 'ezmodo-root-'));
+    outside = await fsp.mkdtemp(pathMod.join(os.tmpdir(), 'ezmodo-outside-'));
+    await fsp.mkdir(pathMod.join(root, 'out'));
+    await fsp.writeFile(pathMod.join(root, 'out', 'junit.xml'), '<testsuites/>');
+    await fsp.writeFile(pathMod.join(outside, 'id_rsa'), 'SECRET');
+    await fsp.symlink(pathMod.join(outside, 'id_rsa'), pathMod.join(root, 'out', 'link.xml'));
+  });
+
+  it('accepts a file inside the checkout, relative or absolute', async () => {
+    const { resolveInsideRoot } = await import('../lib/local-paths.js');
+    const fsp = (await import('fs/promises')).default;
+    const real = await fsp.realpath(root);
+    expect(await resolveInsideRoot('out/junit.xml', root)).toBe(`${real}/out/junit.xml`);
+    expect(await resolveInsideRoot(`${root}/out/junit.xml`, root)).toBe(`${real}/out/junit.xml`);
+  });
+
+  it.each([
+    ['a parent traversal', () => '../' + outside.split('/').pop() + '/id_rsa'],
+    ['an absolute path elsewhere', () => `${outside}/id_rsa`],
+    ['a symlink pointing out', () => 'out/link.xml'],
+  ])('refuses %s', async (_label, pathFor) => {
+    const { resolveInsideRoot } = await import('../lib/local-paths.js');
+    await expect(resolveInsideRoot(pathFor(), root)).rejects.toThrow('outside the project checkout');
+  });
+
+  it('never reads or uploads a refused file', async () => {
+    const readFile = jest.fn();
+    const refuse = jest.fn().mockRejectedValue(new Error('outside the project checkout'));
+    await expect(importTestResults({ projectId: 'p1', filePath: '~/.ssh/id_rsa' }, readFile, jest.fn(), refuse))
+      .rejects.toThrow('outside');
+    expect(readFile).not.toHaveBeenCalled();
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
 });

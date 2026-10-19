@@ -19,7 +19,7 @@ import { HANDLERS } from '../handlers/index.js';
 import { listPrompts, getPromptContent } from '../prompts/index.js';
 import { MCP_VERSION } from './version.js';
 import { getLogger } from './logger.js';
-import { isRemoteSafe } from './remote-tools.js';
+import { isRemoteSafe, refusedRemoteArgs, withoutRefusedArgs } from './remote-tools.js';
 import { annotate } from './tool-annotations.js';
 import {
   EMAIL_ALREADY_REGISTERED,
@@ -96,7 +96,9 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
   // cannot disagree. They must agree: filtering only tools/list would leave
   // every excluded handler dispatchable by a client that guesses the name,
   // which is the failure this whole module exists to prevent.
-  const tools = (surface === 'remote' ? TOOLS.filter((tool) => isRemoteSafe(tool.name)) : TOOLS).map(annotate);
+  const tools = (
+    surface === 'remote' ? TOOLS.filter((tool) => isRemoteSafe(tool.name)).map(withoutRefusedArgs) : TOOLS
+  ).map(annotate);
   const available = new Set(tools.map((tool) => tool.name));
 
   const server = new Server(
@@ -133,6 +135,20 @@ export function createServer({ surface = 'local', startSignIn = defaultStartSign
     const handler = HANDLERS[name];
     if (!handler) {
       throw new Error(`Unknown tool: ${name}`);
+    }
+
+    // A remote-safe tool can still take an argument that names a local file,
+    // and over the connector "local" is our container (E-297). Refused here, at
+    // the one dispatch point, for the same reason the tool filter is.
+    if (surface === 'remote') {
+      const refused = refusedRemoteArgs(name, args);
+      if (refused.length > 0) {
+        log.warn('Refused a local-file argument on the remote surface', { tool: name, args: refused });
+        throw new Error(
+          `${refused.join(', ')} names a file on the machine running the server and is not ` +
+            'accepted over this connection. Send the file\'s content instead.'
+        );
+      }
     }
 
     const start = Date.now();

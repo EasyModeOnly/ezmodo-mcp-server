@@ -221,10 +221,31 @@ async function handleMcpPost(req, res, requestId) {
     inFlight.run({ requestId, req, body }, () => serveMcp(req, res, body)));
 }
 
+/**
+ * The request's path, or null when it doesn't parse. Only the path is used, so
+ * the Host header plays no part: it used to be the URL base, and "GET //" or a
+ * Host with a space made `new URL` throw outside any try, an unhandled
+ * rejection that exited the process for every user on the instance, before
+ * any credential check (E-297).
+ */
+function requestPath(rawUrl) {
+  try {
+    return new URL(rawUrl, 'http://localhost').pathname;
+  } catch {
+    return null;
+  }
+}
+
 const httpServer = createHttpServer(async (req, res) => {
   const requestId = randomUUID();
   const started = Date.now();
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = requestPath(req.url);
+  if (pathname === null) {
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('Bad request path');
+    return;
+  }
+  const url = { pathname };
 
   res.on('finish', () => {
     log.info('http request', {
@@ -283,6 +304,12 @@ const httpServer = createHttpServer(async (req, res) => {
       res.end();
     }
   }
+});
+
+// A last line of defence for the same failure: one stray rejection must not
+// take down every user's in-flight request. Logged, not swallowed.
+process.on('unhandledRejection', (reason) => {
+  log.error('Unhandled rejection', { error: reason instanceof Error ? reason.message : String(reason) });
 });
 
 httpServer.listen(PORT, () => {

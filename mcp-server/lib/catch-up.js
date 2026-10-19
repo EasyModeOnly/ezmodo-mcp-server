@@ -24,9 +24,8 @@
  * remote call reads one page.
  */
 
-import fs from 'fs/promises';
 import path from 'path';
-import { findConfigPath } from './local-cache.js';
+import { ezmodoSubdir, writeFileNoFollow } from './local-paths.js';
 
 /** Up to this many events, the grouped lines come back inline. */
 export const INLINE_MAX_EVENTS = 150;
@@ -239,8 +238,13 @@ export function renderMarkdown({ projectId, since, until, totals, items, truncat
 
 /** `.ezmodo/catch-up`, or null when this is not a tracked checkout. */
 export async function catchUpRoot() {
-  const configPath = await findConfigPath();
-  return configPath ? path.join(path.dirname(configPath), 'catch-up') : null;
+  // Must resolve inside the checkout, and files are never written through a
+  // symlink (E-297 #3351).
+  try {
+    return await ezmodoSubdir('catch-up');
+  } catch {
+    return null;
+  }
 }
 
 const safe = (s) => String(s).replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
@@ -256,8 +260,7 @@ export async function writeCatchUpFile({ projectId, since }, markdown) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const file = path.join(root, `${safe(projectId)}-since-${safe(day(since))}-${stamp}.md`);
   try {
-    await fs.mkdir(root, { recursive: true });
-    await fs.writeFile(file, markdown, 'utf-8');
+    await writeFileNoFollow(file, markdown);
   } catch {
     return null;
   }

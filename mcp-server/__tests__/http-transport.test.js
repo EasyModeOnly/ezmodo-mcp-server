@@ -299,3 +299,25 @@ describe('the CI connector handshake (scripts/ci/mcp-connector-smoke.mjs)', () =
     expect(apiRequests.map((r) => r.authorization)).toEqual(['Bearer key-smoke']);
   });
 });
+
+// E-297: the request URL used to be parsed with the Host header as its base,
+// outside any try. "GET //" made new URL throw, the rejection went unhandled,
+// and the process exited, with no credential needed.
+test('a malformed request path is a 400, and the server keeps serving', async () => {
+  const { connect } = await import('node:net');
+  const { port } = new URL(base);
+  const raw = await new Promise((resolve, reject) => {
+    const socket = connect(Number(port), '127.0.0.1', () => {
+      socket.write('GET // HTTP/1.1\r\nHost: a b\r\nConnection: close\r\n\r\n');
+    });
+    let data = '';
+    socket.setEncoding('utf8');
+    socket.on('data', (chunk) => { data += chunk; });
+    socket.on('end', () => resolve(data));
+    socket.on('error', reject);
+  });
+  expect(raw.split('\r\n')[0]).toMatch(/^HTTP\/1\.1 400/);
+  expect(server.exitCode).toBeNull();
+  const health = await fetch(`${base}/health`);
+  expect(health.status).toBe(200);
+});

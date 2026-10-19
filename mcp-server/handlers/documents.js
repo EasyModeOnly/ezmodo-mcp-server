@@ -3,10 +3,10 @@
  * Handler functions for documentation-related MCP tools
  */
 
-import fs from 'fs/promises';
 import path from 'path';
 import { callEzmodoAPI } from '../lib/http-client.js';
 import { findConfigPath } from '../lib/local-cache.js';
+import { ensureDirInside, isInside, writeFileNoFollow } from '../lib/local-paths.js';
 import { getLogger } from '../lib/logger.js';
 import { attachLinks } from '../lib/links-at-create.js';
 
@@ -100,6 +100,18 @@ async function getDocumentation(args) {
   return callEzmodoAPI('mcpGetDocumentation', args);
 }
 
+/**
+ * The file name (without .md) a fetched document is saved under: its slug when
+ * that is a plain slug, else its id when that is a plain id, else nothing.
+ * Both come from the API and are attacker-influenced, so neither is trusted to
+ * be a file name (E-297).
+ */
+export function safeFileStem(slug, id) {
+  if (typeof slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return slug;
+  if (typeof id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(id)) return id;
+  return null;
+}
+
 async function fetchSingleDocument(args) {
   const data = await callEzmodoAPI('mcpGetDocument', args);
   const doc = data.document;
@@ -121,12 +133,21 @@ async function fetchSingleDocument(args) {
 
   const configDir = path.dirname(configPath);
   const docsDir = path.join(configDir, 'docs');
-  const filename = `${doc.slug || doc.id}.md`;
-  const filePath = path.resolve(docsDir, filename);
+  const stem = safeFileStem(doc.slug, doc.id);
+  const filePath = stem && path.resolve(docsDir, `${stem}.md`);
+  if (!filePath || !isInside(docsDir, filePath)) {
+    // A slug or id that is not a plain file name never becomes a path (E-297):
+    // "../../CLAUDE" would otherwise overwrite a file outside .ezmodo/docs.
+    getLogger().warn('Document has no safe file name; returning it inline', { id: doc.id });
+    return data;
+  }
 
   try {
-    await fs.mkdir(docsDir, { recursive: true });
-    await fs.writeFile(filePath, doc.content, 'utf-8');
+    // Neither .ezmodo/docs nor the file itself may be a symlink out of the
+    // checkout: a planted .ezmodo/docs/<slug>.md -> ~/.bashrc would turn a
+    // document fetch into a write anywhere (E-297).
+    await ensureDirInside(docsDir, path.dirname(configDir));
+    await writeFileNoFollow(filePath, doc.content);
   } catch (err) {
     getLogger().warn('Failed to save document to local file', { error: err.message, filePath });
     // Fall back to returning full content in response

@@ -71,3 +71,19 @@ describe('remote tool surface', () => {
     }
   });
 });
+
+describe('local-file arguments on the remote surface (E-297)', () => {
+  it('names filePath on manage_test_suite as refused', async () => {
+    const { refusedRemoteArgs, withoutRefusedArgs } = await import('../lib/remote-tools.js');
+    expect(refusedRemoteArgs('manage_test_suite', { action: 'import_results', filePath: '/proc/self/environ' }))
+      .toEqual(['filePath']);
+    expect(refusedRemoteArgs('manage_test_suite', { action: 'import_results', content: '<x/>' })).toEqual([]);
+    expect(refusedRemoteArgs('get_task', { filePath: 'x' })).toEqual([]);
+
+    const { TOOLS } = await import('../tools/index.js');
+    const suite = TOOLS.find((t) => t.name === 'manage_test_suite');
+    expect(suite.inputSchema.properties.filePath).toBeDefined();
+    expect(withoutRefusedArgs(suite).inputSchema.properties.filePath).toBeUndefined();
+    expect(withoutRefusedArgs(suite).inputSchema.properties.content).toBeDefined();
+  });
+});

@@ -774,8 +774,12 @@ async function cleanupTaskWorktrees(args) {
         tasksToCleanup.push(...cancelledData.tasks);
       }
 
-      // Filter to only tasks with git context
-      tasksToCleanup = tasksToCleanup.filter(t => t.gitContext && t.gitContext.branchName);
+      // Filter to only tasks with git context. An epic branch is shared by
+      // every task in the epic, so one finished task says nothing about whether
+      // the others are done with it: never discover those automatically.
+      tasksToCleanup = tasksToCleanup.filter(
+        t => t.gitContext && t.gitContext.branchName && !t.gitContext.isEpicBranch
+      );
     }
 
     // Clean up each worktree
@@ -802,6 +806,19 @@ async function cleanupTaskWorktrees(args) {
         continue;
       }
 
+      // Never forced (E-297 #3352). The branch match comes from a task's
+      // gitContext, which any org member can write, so a "completed" task can
+      // name someone else's in-progress branch. Without --force git refuses a
+      // worktree with uncommitted or untracked changes, so the worst a forged
+      // task can do is remove a clean checkout whose branch survives.
+      const status = getWorktreeStatus(worktree.path);
+      if (status.isDirty) {
+        result.reason = 'Worktree has uncommitted changes; commit or discard them, then run cleanup again';
+        result.worktreePath = worktree.path;
+        results.push(result);
+        continue;
+      }
+
       if (dryRun) {
         result.action = 'would-remove';
         result.worktreePath = worktree.path;
@@ -823,7 +840,7 @@ async function cleanupTaskWorktrees(args) {
       } else {
         try {
           // Remove worktree
-          removeWorktree(repoRoot, worktree.path, true);
+          removeWorktree(repoRoot, worktree.path, false);
           result.action = 'removed';
           result.worktreePath = worktree.path;
 

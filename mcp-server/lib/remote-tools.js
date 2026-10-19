@@ -177,7 +177,37 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
 
 const remoteSafe = new Set(REMOTE_SAFE_TOOLS);
 
+/**
+ * Arguments of remote-safe tools that name a file on the machine running the
+ * server (E-297). Locally that machine is the user's; over the connector it is
+ * our container, so a path there reads OUR filesystem on the caller's behalf.
+ * The tool stays remote-safe for its other actions, and these arguments are
+ * refused at dispatch and removed from the schema the remote surface lists.
+ */
+export const REMOTE_REFUSED_ARGS = Object.freeze({
+  manage_test_suite: Object.freeze(['filePath']),
+});
+
 /** Whether a tool may be served over the remote transport. */
 export function isRemoteSafe(toolName) {
   return remoteSafe.has(toolName);
+}
+
+/** The local-file arguments present in a remote call to `toolName`, if any. */
+export function refusedRemoteArgs(toolName, args) {
+  const refused = REMOTE_REFUSED_ARGS[toolName] || [];
+  return refused.filter((name) => args && args[name] !== undefined && args[name] !== null);
+}
+
+/** `tool` with the arguments the remote surface refuses taken out of its schema. */
+export function withoutRefusedArgs(tool) {
+  const refused = REMOTE_REFUSED_ARGS[tool.name];
+  if (!refused || !tool.inputSchema?.properties) return tool;
+  const properties = { ...tool.inputSchema.properties };
+  for (const name of refused) delete properties[name];
+  const required = tool.inputSchema.required?.filter((name) => !refused.includes(name));
+  return {
+    ...tool,
+    inputSchema: { ...tool.inputSchema, properties, ...(required ? { required } : {}) },
+  };
 }

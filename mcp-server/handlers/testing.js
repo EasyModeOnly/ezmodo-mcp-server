@@ -13,6 +13,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { callEzmodoAPI } from '../lib/http-client.js';
+import { localRoot, resolveInsideRoot } from '../lib/local-paths.js';
 
 /** The API refuses results files over 10 MB; refuse them here before reading. */
 export const MAX_RESULTS_FILE_BYTES = 10 * 1024 * 1024;
@@ -264,7 +265,14 @@ async function bulkTestCases(args) {
  * model) or inline content. It travels base64-encoded so XML with any
  * encoding survives JSON.
  */
-export async function importTestResults(args, readFile = fs.readFile, stat = fs.stat) {
+/** A results file must be inside the checkout (E-297): see lib/local-paths.js. */
+async function resolveResultsFile(filePath) {
+  return resolveInsideRoot(filePath, await localRoot());
+}
+
+export async function importTestResults(
+  args, readFile = fs.readFile, stat = fs.stat, resolvePath = resolveResultsFile,
+) {
   requireFields(args, ['projectId'], 'import_results');
   const {
     projectId, filePath, content, format, suite, suiteId, environment, commitSha, releaseCandidateId, runId, unmatched,
@@ -275,11 +283,12 @@ export async function importTestResults(args, readFile = fs.readFile, stat = fs.
   let body;
   let fileName = args.fileName;
   if (filePath) {
-    const info = await stat(filePath);
+    const resolved = await resolvePath(filePath);
+    const info = await stat(resolved);
     if (info.size > MAX_RESULTS_FILE_BYTES) {
       throw new Error(`${filePath} is ${info.size} bytes; the limit is ${MAX_RESULTS_FILE_BYTES}`);
     }
-    const data = await readFile(filePath);
+    const data = await readFile(resolved);
     body = { contentBase64: Buffer.from(data).toString('base64') };
     fileName = fileName || path.basename(filePath);
   } else {

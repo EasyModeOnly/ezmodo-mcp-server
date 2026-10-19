@@ -18,7 +18,7 @@ jest.unstable_mockModule('../handlers/epics.js', () => ({ getEpicActivity: mockG
 
 const { catchUp } = await import('../handlers/activity.js');
 const {
-  groupEvents, rankGroups, describeGroup, decodeCursor, encodeCursor,
+  groupEvents, rankGroups, describeGroup, decodeCursor, encodeCursor, writeCatchUpFile,
   INLINE_MAX_EVENTS, LOCAL_MAX_EVENTS, REMOTE_PAGE_EVENTS,
 } = await import('../lib/catch-up.js');
 
@@ -210,5 +210,29 @@ describe('catch_up', () => {
   it('refuses an unknown scope and a cursor it did not make', async () => {
     await expect(catchUp({ scope: 'sprint' })).rejects.toThrow(/start date as since/);
     await expect(catchUp({ cursor: 'garbage' })).rejects.toThrow(/cursor/);
+  });
+});
+
+// E-297 #3351: a committed .ezmodo/catch-up -> /somewhere must not become a
+// place catch_up writes into.
+describe('catch-up file writes stay in the checkout (E-297)', () => {
+  it('writes nothing through a .ezmodo/catch-up link and answers inline instead', async () => {
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'catch-up-outside-'));
+    try {
+      await fs.mkdir(path.join(tmp, '.ezmodo'), { recursive: true });
+      await fs.symlink(outside, path.join(tmp, '.ezmodo', 'catch-up'));
+      mockFindConfigPath.mockResolvedValue(path.join(tmp, '.ezmodo', 'config.json'));
+      expect(await writeCatchUpFile({ projectId: 'p1', since: at(1) }, '# hi')).toBeNull();
+      expect(await fs.readdir(outside)).toEqual([]);
+    } finally {
+      await fs.rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('writes into a real .ezmodo/catch-up', async () => {
+    mockFindConfigPath.mockResolvedValue(path.join(tmp, '.ezmodo', 'config.json'));
+    const written = await writeCatchUpFile({ projectId: 'p1', since: at(1) }, '# hi');
+    expect(written.path.startsWith(path.join(tmp, '.ezmodo', 'catch-up'))).toBe(true);
+    expect(await fs.readFile(written.path, 'utf-8')).toBe('# hi');
   });
 });

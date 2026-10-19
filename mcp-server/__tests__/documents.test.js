@@ -23,12 +23,20 @@ jest.unstable_mockModule('fs/promises', () => ({
   },
 }));
 
+// The no-follow writers open files with flags the fs mock above can't model;
+// route them to the same mocks so these tests keep asserting what was written.
+jest.unstable_mockModule('../lib/local-paths.js', () => ({
+  isInside: (root, target) => target === root || target.startsWith(`${root}/`),
+  ensureDirInside: (dir) => mockMkdir(dir, { recursive: true }),
+  writeFileNoFollow: (file, text) => mockWriteFile(file, text, 'utf-8'),
+}));
+
 // Mock logger
 jest.unstable_mockModule('../lib/logger.js', () => ({
   getLogger: () => ({ warn: jest.fn(), debug: jest.fn(), info: jest.fn(), error: jest.fn() }),
 }));
 
-const { manageDocument, getDocument } = await import('../handlers/documents.js');
+const { manageDocument, getDocument, safeFileStem } = await import('../handlers/documents.js');
 
 describe('Document Operations', () => {
   afterEach(() => {
@@ -60,6 +68,41 @@ describe('Document Operations', () => {
 
       expect(mockWriteFile).toHaveBeenCalledWith('/project/.ezmodo/docs/doc-1.md', '# Content', 'utf-8');
       expect(result.localFilePath).toBe('/project/.ezmodo/docs/doc-1.md');
+    });
+
+    // E-297: slug and id come from the API, so neither may steer the write
+    // outside .ezmodo/docs.
+    it.each([
+      ['../../CLAUDE', 'doc-1', '/project/.ezmodo/docs/doc-1.md'],
+      ['../../.claude/commands/evil', 'doc-1', '/project/.ezmodo/docs/doc-1.md'],
+      ['/etc/passwd', 'doc-1', '/project/.ezmodo/docs/doc-1.md'],
+    ])('never writes outside .ezmodo/docs for slug %j', async (slug, id, expected) => {
+      const document = { id, title: 'T', content: 'x', slug };
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, document });
+      mockFindConfigPath.mockResolvedValueOnce('/project/.ezmodo/config.json');
+
+      await getDocument({ documentId: id });
+
+      expect(mockWriteFile).toHaveBeenCalledWith(expected, 'x', 'utf-8');
+    });
+
+    it('returns the document inline when neither slug nor id is a safe file name', async () => {
+      const document = { id: '../../x', title: 'T', content: 'body', slug: '../../CLAUDE' };
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, document });
+      mockFindConfigPath.mockResolvedValueOnce('/project/.ezmodo/config.json');
+
+      const result = await getDocument({ documentId: 'x' });
+
+      expect(mockWriteFile).not.toHaveBeenCalled();
+      expect(result.document.content).toBe('body');
+    });
+
+    it('safeFileStem keeps plain slugs and ids only', () => {
+      expect(safeFileStem('my-doc', 'id')).toBe('my-doc');
+      expect(safeFileStem('a', 'id')).toBe('a');
+      expect(safeFileStem('../x', 'doc_1')).toBe('doc_1');
+      expect(safeFileStem('a/b', 'x.y')).toBeNull();
+      expect(safeFileStem(undefined, undefined)).toBeNull();
     });
 
     it('should get a document by projectId and slug', async () => {

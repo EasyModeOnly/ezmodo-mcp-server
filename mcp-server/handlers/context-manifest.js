@@ -9,7 +9,8 @@
  * queryProjectGraph, analyzeImpact, getGraphStats, and analyzeProjectOrganization.
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
+import path from 'path';
 import { promisify } from 'util';
 import {
   loadManifest,
@@ -32,7 +33,35 @@ import {
   createMeta,
 } from '../lib/manifest-query.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+/**
+ * The command rebuild_manifest runs, as a file and an argv array: never a shell
+ * string (E-297). target_paths comes from the tool call, so a prompt-injected
+ * agent chooses it, and `["x; touch /tmp/marker; #"]` once ran under the
+ * user's shell. Each path must also be a plain repo-relative path, so it can't
+ * act as a flag to the script either.
+ */
+export function rebuildCommand(mode, targetPaths) {
+  const script = mode === 'incremental'
+    ? 'scripts/context-manifest/update.ts'
+    : 'scripts/context-manifest/generate.ts';
+  const args = ['tsx', script];
+  if (targetPaths && targetPaths.length > 0) {
+    if (!Array.isArray(targetPaths)) throw new Error('target_paths must be an array of paths');
+    for (const p of targetPaths) {
+      if (typeof p !== 'string' || p === '' || p.includes('\0') || p.includes(',') ||
+          p.startsWith('-') || path.isAbsolute(p) || p.split(/[\\/]/).includes('..')) {
+        throw new Error(
+          `target_paths entry ${JSON.stringify(p)} is not a repo-relative path ` +
+            '(no leading "-", "..", absolute paths or commas)'
+        );
+      }
+    }
+    args.push('--', '--paths', targetPaths.join(','));
+  }
+  return { file: 'npx', args };
+}
 
 // Max facts to include in context responses (pinned first, then newest)
 const MAX_CONTEXT_FACTS = 50;
@@ -585,7 +614,7 @@ function getDefaultIncludes(entityType) {
 // rebuild_manifest (unchanged)
 // ============================================================================
 
-export async function rebuildManifest(args) {
+export async function rebuildManifest(args, run = execFileAsync) {
   const startTime = process.hrtime.bigint();
 
   const { mode: rawMode = 'incremental', target_paths: targetPaths } = args;
@@ -612,18 +641,14 @@ export async function rebuildManifest(args) {
   const priorCount = localManifest?.metadata?.entryCount || 0;
 
   let command;
-  if (mode === 'incremental') {
-    command = 'npx tsx scripts/context-manifest/update.ts';
-  } else {
-    command = 'npx tsx scripts/context-manifest/generate.ts';
-  }
-
-  if (targetPaths && targetPaths.length > 0) {
-    command += ` -- --paths ${targetPaths.join(',')}`;
+  try {
+    command = rebuildCommand(mode, targetPaths);
+  } catch (err) {
+    return { success: false, mode, error: err.message, _source: 'local' };
   }
 
   try {
-    const { stdout, stderr } = await execAsync(command, {
+    const { stdout, stderr } = await run(command.file, command.args, {
       cwd: process.cwd(),
       timeout: 300000, // 5 minutes
     });

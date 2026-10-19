@@ -88,3 +88,49 @@ describe('design files (E-279 #3051)', () => {
     await expect(readDesignFiles('nope')).rejects.toThrow(/get_design designId:"nope"/);
   });
 });
+
+// E-297 #3351: a cloned repo can commit files under .ezmodo/designs. None of
+// them may be followed out of the checkout, in either direction.
+describe('design files never follow symlinks (E-297)', () => {
+  let outside;
+  beforeEach(async () => {
+    outside = await fs.mkdtemp(path.join(os.tmpdir(), 'design-outside-'));
+    await fs.writeFile(path.join(outside, 'id_ed25519'), 'PRIVATE KEY');
+  });
+  afterEach(async () => {
+    await fs.rm(outside, { recursive: true, force: true });
+  });
+
+  async function plant(files) {
+    const dir = path.join(tmp, '.ezmodo', 'designs', 'planted');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'design.json'), JSON.stringify({ id: 'des-victim', hashes: {} }));
+    for (const [name, target] of Object.entries(files)) await fs.symlink(target, path.join(dir, name));
+    return dir;
+  }
+
+  it('refuses to read a planted index.html that links to a private key', async () => {
+    await plant({ 'index.html': path.join(outside, 'id_ed25519') });
+    await expect(readDesignFiles('des-victim')).rejects.toThrow('symlink');
+  });
+
+  it('refuses to write through a planted link, leaving its target untouched', async () => {
+    await plant({ 'index.html': path.join(outside, 'id_ed25519') });
+    await expect(writeDesignFiles(design({ id: 'des-victim' }), { overwriteLocal: true })).rejects.toThrow('symlink');
+    expect(await fs.readFile(path.join(outside, 'id_ed25519'), 'utf-8')).toBe('PRIVATE KEY');
+  });
+
+  it('refuses a design directory that is a link out of the checkout', async () => {
+    await fs.mkdir(path.join(tmp, '.ezmodo', 'designs'), { recursive: true });
+    await fs.symlink(outside, path.join(tmp, '.ezmodo', 'designs', 'button'));
+    await expect(writeDesignFiles(design())).rejects.toThrow('outside');
+    expect(await fs.readdir(outside)).toEqual(['id_ed25519']);
+  });
+
+  it('refuses a .ezmodo/designs that is itself a link out of the checkout', async () => {
+    await fs.mkdir(path.join(tmp, '.ezmodo'), { recursive: true });
+    await fs.symlink(outside, path.join(tmp, '.ezmodo', 'designs'));
+    await expect(writeDesignFiles(design())).rejects.toThrow('outside');
+    expect(await fs.readdir(outside)).toEqual(['id_ed25519']);
+  });
+});
