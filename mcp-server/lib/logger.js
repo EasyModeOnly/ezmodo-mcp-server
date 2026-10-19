@@ -46,6 +46,10 @@ export function createLogger(options = {}) {
     verbose = false,
     logsDir = join(homedir(), '.ezmodo', 'logs'),
     structured = false,
+    // No log file on the hosted connector (E-297 #3354): its disk is memory,
+    // nothing reads the file, retention only ran at startup, and every entry
+    // held request detail. Cloud Logging already has the stderr lines.
+    fileLogging = !structured,
   } = options;
 
   // Over stdio a person reads stderr in a terminal, so it stays a short line.
@@ -60,7 +64,9 @@ export function createLogger(options = {}) {
   }
 
   // Ensure logs directory exists (fire-and-forget)
-  let dirReady = mkdir(logsDir, { recursive: true }).catch(() => {});
+  let dirReady = fileLogging
+    ? mkdir(logsDir, { recursive: true, mode: 0o700 }).catch(() => {})
+    : Promise.resolve();
 
   function write(level, msg, data) {
     const entry = {
@@ -71,11 +77,14 @@ export function createLogger(options = {}) {
       ...data,
     };
 
-    // Fire-and-forget write — wait for dir, then append
-    dirReady.then(() => {
-      const filePath = getLogFilePath(logsDir);
-      return appendFile(filePath, JSON.stringify(entry) + '\n');
-    }).catch(() => {});
+    // Fire-and-forget write — wait for dir, then append. Owner-only: entries
+    // carry tool arguments.
+    if (fileLogging) {
+      dirReady.then(() => {
+        const filePath = getLogFilePath(logsDir);
+        return appendFile(filePath, JSON.stringify(entry) + '\n', { mode: 0o600 });
+      }).catch(() => {});
+    }
 
     // stderr routing: warn/error always go to stderr; debug/info only if verbose
     if (level === 'warn' || level === 'error' || verbose) {
@@ -84,6 +93,7 @@ export function createLogger(options = {}) {
   }
 
   async function cleanup() {
+    if (!fileLogging) return;
     try {
       await dirReady;
       const files = await readdir(logsDir);

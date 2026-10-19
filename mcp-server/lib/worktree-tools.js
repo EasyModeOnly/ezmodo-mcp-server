@@ -3,9 +3,11 @@
  * Implements worktree management operations for AI agents
  */
 
+import fs from 'fs';
 import path from 'path';
 import { callEzmodoAPI } from './http-client.js';
 import { getLogger } from './logger.js';
+import { isInside } from './local-paths.js';
 import {
   isGitRepository,
   getRepositoryRoot,
@@ -32,6 +34,42 @@ import {
 /**
  * Tool Definitions for MCP Server
  */
+/**
+ * Where a new worktree goes when the project names a default directory for
+ * them. The setting comes from the API, so the result must stay beside the
+ * repository: "../../.." would otherwise put a checkout anywhere on disk
+ * (E-297 #3355). Returns undefined to fall back to the built-in default.
+ */
+function projectWorktreePath(repoRoot, projectResult, name) {
+  const configured = projectResult?.project?.gitContext?.defaultWorktreePath;
+  if (!configured) return undefined;
+  const candidate = path.resolve(repoRoot, configured, name);
+  if (!isInside(path.dirname(repoRoot), candidate)) {
+    getLogger().warn('Ignoring a project defaultWorktreePath outside the repository\'s parent', { configured });
+    return undefined;
+  }
+  return candidate;
+}
+
+/** `candidate` if it is one of this checkout's registered worktrees, else throws. */
+function registeredWorktree(candidate) {
+  const root = getRepositoryRoot(process.cwd());
+  const real = (p) => {
+    try {
+      return fs.realpathSync(p);
+    } catch {
+      return path.resolve(p);
+    }
+  };
+  const target = real(candidate);
+  if (!root || !listWorktrees(root).some((wt) => real(wt.path) === target)) {
+    throw new Error(
+      `${candidate} is not a worktree of this repository; pass worktreePath explicitly if it is yours`
+    );
+  }
+  return candidate;
+}
+
 export const WORKTREE_TOOLS = [
   {
     name: 'manage_worktree',
@@ -193,13 +231,11 @@ async function createEpicWorktree(args) {
     }
 
     // Determine repository path
-    let repoPath = repositoryPath;
-    if (!repoPath && projectResult?.project?.gitContext?.repositoryPath) {
-      repoPath = projectResult.project.gitContext.repositoryPath;
-    }
-    if (!repoPath) {
-      repoPath = process.cwd();
-    }
+    // The caller's path or the checkout this server runs in, never the API's
+    // project.gitContext.repositoryPath: any project editor can set that, and
+    // git run in a directory with a hostile .git/config runs its commands
+    // (E-297 #3355).
+    const repoPath = repositoryPath || process.cwd();
 
     // Verify it's a git repository
     if (!isGitRepository(repoPath)) {
@@ -232,8 +268,8 @@ async function createEpicWorktree(args) {
 
     // Determine worktree path
     let wtPath = worktreePath;
-    if (!wtPath && projectResult?.project?.gitContext?.defaultWorktreePath) {
-      wtPath = path.join(repoRoot, projectResult.project.gitContext.defaultWorktreePath, `epic-${epicId}`);
+    if (!wtPath) {
+      wtPath = projectWorktreePath(repoRoot, projectResult, `epic-${epicId}`);
     }
     if (!wtPath) {
       wtPath = path.join(path.dirname(repoRoot), 'worktrees', `epic-${epicId}`);
@@ -337,13 +373,11 @@ async function createTaskWorktree(args) {
     });
 
     // Determine repository path
-    let repoPath = repositoryPath;
-    if (!repoPath && projectResult?.project?.gitContext?.repositoryPath) {
-      repoPath = projectResult.project.gitContext.repositoryPath;
-    }
-    if (!repoPath) {
-      repoPath = process.cwd();
-    }
+    // The caller's path or the checkout this server runs in, never the API's
+    // project.gitContext.repositoryPath: any project editor can set that, and
+    // git run in a directory with a hostile .git/config runs its commands
+    // (E-297 #3355).
+    const repoPath = repositoryPath || process.cwd();
 
     // Verify it's a git repository
     if (!isGitRepository(repoPath)) {
@@ -376,8 +410,8 @@ async function createTaskWorktree(args) {
 
     // Determine worktree path
     let wtPath = worktreePath;
-    if (!wtPath && projectResult?.project?.gitContext?.defaultWorktreePath) {
-      wtPath = path.join(repoRoot, projectResult.project.gitContext.defaultWorktreePath, taskId);
+    if (!wtPath) {
+      wtPath = projectWorktreePath(repoRoot, projectResult, taskId);
     }
     if (!wtPath) {
       wtPath = path.join(path.dirname(repoRoot), 'worktrees', taskId);
@@ -449,7 +483,9 @@ async function syncTaskWorktreeStatus(args) {
     // Determine worktree path
     let wtPath = worktreePath;
     if (!wtPath && task.gitContext.worktreePath) {
-      wtPath = task.gitContext.worktreePath;
+      // From the API, so any org member can set it: only one of this
+      // checkout's own worktrees is acted on (E-297 #3355).
+      wtPath = registeredWorktree(task.gitContext.worktreePath);
     }
     if (!wtPath) {
       throw new Error('Worktree path not specified and not found in task');
@@ -737,7 +773,7 @@ async function cleanupTaskWorktrees(args) {
     }
 
     // Determine repository path
-    const repoPath = projectData.project?.gitContext?.repositoryPath || process.cwd();
+    const repoPath = process.cwd(); // never the API's path (E-297 #3355)
 
     if (!isGitRepository(repoPath)) {
       throw new Error(`Not a git repository: ${repoPath}`);
@@ -907,7 +943,7 @@ export async function listProjectWorktrees(args) {
     }
 
     // Determine repository path
-    const repoPath = repositoryPath || projectData.project?.gitContext?.repositoryPath || process.cwd();
+    const repoPath = repositoryPath || process.cwd(); // never the API's path (E-297 #3355)
 
     if (!isGitRepository(repoPath)) {
       throw new Error(`Not a git repository: ${repoPath}`);

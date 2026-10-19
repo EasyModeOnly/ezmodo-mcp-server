@@ -1,5 +1,5 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync, existsSync, statSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -52,6 +52,25 @@ describe('createLogger', () => {
     expect(entry.msg).toBe('test message');
     expect(entry.key).toBe('value');
     expect(entry.ts).toBeDefined();
+  });
+
+  // E-297 #3354: the hosted connector logs structured lines to stderr only.
+  it('writes no file when structured (the hosted connector)', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const dir = join(testDir, 'hosted');
+    const logger = createLogger({ source: 'mcp', logsDir: dir, structured: true });
+    logger.warn('hosted warning', { requestId: 'r1' });
+    await flush();
+    expect(existsSync(dir)).toBe(false);
+    spy.mockRestore();
+  });
+
+  it('keeps local log files owner-only', async () => {
+    const logger = createLogger({ source: 'mcp', logsDir: testDir });
+    logger.info('private', {});
+    await flush();
+    const [file] = readdirSync(testDir);
+    expect(statSync(join(testDir, file)).mode & 0o077).toBe(0);
   });
 
   it('writes multiple log levels', async () => {

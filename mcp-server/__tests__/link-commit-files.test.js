@@ -264,3 +264,21 @@ describe('link_commit manifest update', () => {
     expect(result.manifest.skipped).toBeDefined();
   });
 });
+
+// E-297 #3354: manage_task is remote-safe, and link_commit used to run git in
+// a caller-chosen workingDirectory, which on the connector is our container.
+describe('link_commit over the hosted connector', () => {
+  it('reads no local git or manifest and drops workingDirectory', async () => {
+    const { withRequestContext } = await import('../lib/request-context.js');
+    mockCallEzmodoAPI.mockResolvedValue({ commit: { sha: SHA } });
+
+    const result = await withRequestContext({ apiKey: 'k', surface: 'remote' }, () =>
+      manageTask({ action: 'link_commit', taskId: 't1', sha: SHA, workingDirectory: '/etc' }));
+
+    expect(mockGetRepositoryRoot).not.toHaveBeenCalled();
+    expect(mockGetCommitNameStatus).not.toHaveBeenCalled();
+    const [, sent] = mockCallEzmodoAPI.mock.calls.find(([endpoint]) => endpoint === 'mcpLinkCommitToTask');
+    expect(sent.workingDirectory).toBeUndefined();
+    expect(result.manifest.skipped).toMatch(/remote/);
+  });
+});

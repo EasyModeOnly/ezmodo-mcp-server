@@ -21,6 +21,7 @@ import { writeActiveSession, clearActiveSession } from '../lib/active-session.js
 import { attachLinks } from '../lib/links-at-create.js';
 import { getContext } from './context-manifest.js';
 import { getCommitFiles, getRepositoryRoot } from '../lib/git-helpers.js';
+import { isRemoteRequest } from '../lib/request-context.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
 import { applyCommitToManifest } from '../lib/commit-manifest.js';
 
@@ -563,6 +564,15 @@ export async function getTask(args) {
 // should now describe with update_manifest_entries. It never fails the link.
 async function linkCommitToTask(args) {
   const { updateManifest = true, ...linkArgs } = args;
+  if (isRemoteRequest()) {
+    // Over the connector the checkout is not here: git and the manifest scope
+    // file would be read from our container, at a caller-chosen
+    // workingDirectory (E-297 #3354). The API derives what it needs itself.
+    delete linkArgs.workingDirectory;
+    const result = await callEzmodoAPI('mcpLinkCommitToTask', linkArgs);
+    const manifest = { skipped: 'remote connection: the manifest is updated from a local checkout' };
+    return result && typeof result === 'object' ? { ...result, manifest } : result;
+  }
   const result = await callEzmodoAPI('mcpLinkCommitToTask', await withCommitFiles(linkArgs));
   if (updateManifest === false) {
     return result;

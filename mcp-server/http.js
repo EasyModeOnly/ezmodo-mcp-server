@@ -217,7 +217,7 @@ async function handleMcpPost(req, res, requestId) {
     return rpcError(res, status, -32700, `Could not parse request body: ${error.message}`);
   }
 
-  await withRequestContext({ apiKey: token }, () =>
+  await withRequestContext({ apiKey: token, surface: 'remote' }, () =>
     inFlight.run({ requestId, req, body }, () => serveMcp(req, res, body)));
 }
 
@@ -312,8 +312,14 @@ process.on('unhandledRejection', (reason) => {
   log.error('Unhandled rejection', { error: reason instanceof Error ? reason.message : String(reason) });
 });
 
-httpServer.listen(PORT, () => {
-  log.info('MCP server running over HTTP', { port: PORT, path: MCP_PATH, version: MCP_VERSION });
+// Loopback unless told otherwise (E-297 #3354). The npm package ships this
+// file as the ezmodo-mcp-server-http bin, and on a developer's machine it
+// would otherwise answer the whole network. The container sets HOST=0.0.0.0
+// (Dockerfile), and K_SERVICE marks Cloud Run in case an image predates that.
+const HOST = process.env.HOST || (process.env.K_SERVICE ? '0.0.0.0' : '127.0.0.1');
+
+httpServer.listen(PORT, HOST, () => {
+  log.info('MCP server running over HTTP', { host: HOST, port: PORT, path: MCP_PATH, version: MCP_VERSION });
   console.error(`✅ ezmodo MCP Server (HTTP) on :${PORT}${MCP_PATH}`);
   // The RESOLVED url, not CONFIG.apiUrl: EZMODO_API_URL overrides it per call,
   // so printing the build-time default tells an operator pointing this at a

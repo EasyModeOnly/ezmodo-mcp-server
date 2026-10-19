@@ -77,6 +77,13 @@ function fillRouteParams(endpoint, route, data) {
     if (value === undefined || value === null || value === '') {
       throw new Error(`${name} is required for ${endpoint}`);
     }
+    // encodeURIComponent leaves "." and ".." alone, and URL parsing then
+    // collapses them as dot segments: itemId ".." turned
+    // roadmap-items/{itemId}/ship into a POST to the parent route (E-297).
+    // Everything else is safe once encoded ("/" becomes %2F, "%2e" %252e).
+    if (String(value) === '.' || String(value) === '..') {
+      throw new Error(`${name} "${value}" is not a valid value for ${endpoint}`);
+    }
     delete rest[name];
     return encodeURIComponent(String(value));
   });

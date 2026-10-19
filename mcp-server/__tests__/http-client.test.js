@@ -117,6 +117,19 @@ describe('callEzmodoAPI route params', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  // E-297: "." and ".." survive encodeURIComponent and are collapsed by URL
+  // parsing, which would send the call to a different route.
+  it.each(['.', '..'])('refuses a path param of %j before any request', async (value) => {
+    await expect(callEzmodoAPI('mcpGetNote', { noteId: value })).rejects.toThrow('not a valid value');
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('encodes values that only look like traversal', async () => {
+    mockFetch.mockResolvedValueOnce(okResponse({}));
+    await callEzmodoAPI('mcpGetNote', { noteId: '../x' });
+    expect(mockFetch.mock.calls[0][0]).toBe('https://api.test/mcp/v1/notes/..%2Fx');
+  });
+
   it('returns success for a 204 instead of parsing an empty body', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

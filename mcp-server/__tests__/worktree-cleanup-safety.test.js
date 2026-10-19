@@ -29,7 +29,9 @@ function addWorktree(branch) {
 
 function apiWith(tasks) {
   mockCallEzmodoAPI.mockImplementation(async (endpoint, params) => {
-    if (endpoint === 'mcpGetProjectContext') return { project: { gitContext: { repositoryPath: repo } } };
+    // The API's repositoryPath is deliberately a decoy: cleanup must use the
+    // checkout it runs in (E-297 #3355).
+    if (endpoint === 'mcpGetProjectContext') return { project: { gitContext: { repositoryPath: '/nonexistent' } } };
     if (endpoint === 'mcpSearchTasks') return { tasks: params.status === 'completed' ? tasks : [] };
     return { success: true };
   });
@@ -41,10 +43,12 @@ beforeEach(() => {
   fs.mkdirSync(repo);
   git(repo, 'init', '-q', '-b', 'main');
   git(repo, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init');
+  jest.spyOn(process, 'cwd').mockReturnValue(repo);
 });
 afterEach(() => {
   fs.rmSync(tmp, { recursive: true, force: true });
   mockCallEzmodoAPI.mockReset();
+  jest.restoreAllMocks();
 });
 
 describe('manage_worktree cleanup never destroys work (E-297)', () => {

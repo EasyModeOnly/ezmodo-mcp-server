@@ -58,6 +58,21 @@ function assertNotOption(value, label) {
 }
 
 /**
+ * Refuse anything that is not a plain branch name. A base branch can come from
+ * the API (project.gitContext.defaultBranch, writable by project editors), and
+ * `git fetch origin <it>` reads a refspec: "+refs/heads/evil:refs/heads/main"
+ * would force-overwrite a local branch (E-297 #3355). Branch names never
+ * legitimately contain these characters (git check-ref-format).
+ */
+export function assertBranchName(value, label) {
+  assertNotOption(value, label);
+  if (value === '' || value.includes('\0') || /[\s:+*?^~\\[\]]|\.\.|@\{/.test(value)) {
+    throw new Error(`Invalid ${label}: ${JSON.stringify(value)} is not a branch name`);
+  }
+  return value;
+}
+
+/**
  * Check if directory is a git repository
  * @param {string} dir - Directory path
  * @returns {boolean}
@@ -146,8 +161,8 @@ export function branchExists(repoPath, branchName) {
  * @returns {string} Commit hash
  */
 export function createBranch(repoPath, branchName, baseBranch) {
-  assertNotOption(branchName, 'branch name');
-  assertNotOption(baseBranch, 'base branch');
+  assertBranchName(branchName, 'branch name');
+  assertBranchName(baseBranch, 'base branch');
 
   // Ensure base branch is up to date
   try {

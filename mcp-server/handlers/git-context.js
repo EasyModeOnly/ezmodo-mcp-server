@@ -71,11 +71,35 @@ async function fetchTagSummaries(organizationId) {
 }
 
 /**
+ * An API-supplied name as one short line of plain text. Project and org names
+ * are written into CLAUDE.md, which Claude Code loads as instructions in every
+ * later session; a name with newlines and markdown ("X\n\n## IMPORTANT\n...")
+ * would otherwise plant its own section there (E-297). Newlines and control
+ * characters become spaces, backticks are dropped so a name cannot close the
+ * inline code around a path, and the result is capped.
+ */
+export function oneLine(value, max = 100) {
+  const text = String(value ?? '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ')
+    .replace(/`/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/**
  * Generate the CLAUDE.md work tracking section with project-specific context
  */
-export function generateClaudeMdSection({
-  projectName, projectId, orgSlug, organizationId, environment, projects,
-}) {
+export function generateClaudeMdSection(raw) {
+  const projectName = oneLine(raw.projectName);
+  const projectId = oneLine(raw.projectId);
+  const orgSlug = oneLine(raw.orgSlug);
+  const organizationId = oneLine(raw.organizationId);
+  const environment = oneLine(raw.environment);
+  const projects = raw.projects?.map((p) => ({
+    name: oneLine(p.name), projectId: oneLine(p.projectId), path: oneLine(p.path, 200),
+  }));
   let projectContext;
   if (projects && projects.length > 0) {
     const projectLines = projects.map((p) => `  - ${p.name} (${p.projectId}): \`${p.path}/\``).join('\n');
@@ -261,7 +285,7 @@ async function updateClaudeMd(workingDirectory, sectionContent, projectName) {
       await fs.writeFile(claudeMdPath, content + newLine + '\n' + sectionContent, 'utf-8');
     } else {
       // Create new file
-      await fs.writeFile(claudeMdPath, `# ${projectName || 'Project'}\n\n${sectionContent}`, 'utf-8');
+      await fs.writeFile(claudeMdPath, `# ${oneLine(projectName) || 'Project'}\n\n${sectionContent}`, 'utf-8');
     }
     return true;
   } catch (err) {

@@ -43,6 +43,15 @@ export function getRequestContext() {
 }
 
 /**
+ * Whether the call in flight came over the hosted connector. There the
+ * "local" filesystem and git are our container's, never the caller's, so
+ * anything that would read them must not (E-297 #3354). Set by http.js.
+ */
+export function isRemoteRequest() {
+  return storage.getStore()?.surface === 'remote';
+}
+
+/**
  * The credential for the request in flight.
  *
  * Request context wins over the environment. Over HTTP that is the whole
