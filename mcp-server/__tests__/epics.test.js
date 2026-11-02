@@ -160,6 +160,74 @@ describe('Epic Operations', () => {
       mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
       await expect(manageEpic({ action: 'update', epicId: 'bad' })).rejects.toThrow('Epic not found');
     });
+
+    // #3414: the API's epic update has no addLinks/removeLinks fields and
+    // silently dropped them, so these must go through the links endpoint.
+    describe('addLinks / removeLinks (#3414)', () => {
+      it('applies both directions through the links endpoint, not the update body', async () => {
+        mockCallEzmodoAPI.mockResolvedValue({ success: true });
+
+        const result = await manageEpic({
+          action: 'update',
+          epicId: 'epic-1',
+          title: 'Renamed',
+          addLinks: [{ targetType: 'feature', targetId: 'feat-1' }],
+          removeLinks: [{ targetType: 'task', targetId: 'task-9' }],
+        });
+
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateEpic', { epicId: 'epic-1', title: 'Renamed' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpAddLink', {
+          sourceType: 'epic', sourceId: 'epic-1', targetType: 'feature', targetId: 'feat-1', linkType: 'relates_to',
+        });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpRemoveLink', {
+          sourceType: 'epic', sourceId: 'epic-1', targetType: 'task', targetId: 'task-9', linkType: 'relates_to',
+        });
+        expect(result.links.added).toHaveLength(1);
+        expect(result.links.removed).toHaveLength(1);
+        expect(result.links.failed).toEqual([]);
+        expect(result.warning).toBeUndefined();
+      });
+
+      it('skips the epic update call when only links change', async () => {
+        mockCallEzmodoAPI.mockResolvedValue({ success: true });
+
+        const result = await manageEpic({
+          action: 'update', epicId: 'epic-1', addLinks: [{ targetType: 'goal', targetId: 'g-1' }],
+        });
+
+        expect(mockCallEzmodoAPI.mock.calls.map((c) => c[0])).toEqual(['mcpAddLink']);
+        expect(result.epicId).toBe('epic-1');
+        expect(result.links.added).toHaveLength(1);
+      });
+
+      it('reports a failed link instead of a silent success', async () => {
+        mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
+          if (endpoint === 'mcpRemoveLink') throw new Error('link not found');
+          return { success: true };
+        });
+
+        const result = await manageEpic({
+          action: 'update', epicId: 'epic-1', removeLinks: [{ targetType: 'feature', targetId: 'nope' }],
+        });
+
+        expect(result.links.removed).toEqual([]);
+        expect(result.links.failed).toEqual([
+          { targetType: 'feature', targetId: 'nope', linkType: 'relates_to', op: 'remove', error: 'link not found' },
+        ]);
+        expect(result.warning).toMatch(/1 link change\(s\) failed/);
+      });
+
+      it('applies no links when a frozen milestone blocks the update', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({ blocked: true, freezeType: 'full-freeze', milestoneName: '1.2.0' });
+
+        const result = await manageEpic({
+          action: 'update', epicId: 'epic-1', status: 'active', addLinks: [{ targetType: 'goal', targetId: 'g-1' }],
+        });
+
+        expect(result.blocked).toBe(true);
+        expect(mockCallEzmodoAPI.mock.calls.map((c) => c[0])).toEqual(['mcpUpdateEpic']);
+      });
+    });
   });
 
   describe('listEpics', () => {

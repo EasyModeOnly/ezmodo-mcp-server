@@ -15,6 +15,7 @@ import { resolveEpicAutoAssign } from '../lib/auto-assign.js';
 import { suggestTags } from '../lib/suggested-tags.js';
 import { buildEpicUrl } from '../lib/web-url.js';
 import { attachLinks } from '../lib/links-at-create.js';
+import { attachLinkUpdates, hasLinkUpdates } from '../lib/link-updates.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
 
 // Statuses an epic may be created in (#3224). "active" is accepted only with
@@ -191,8 +192,16 @@ async function createEpic(args) {
   return result;
 }
 
-async function updateEpic(args) {
-  const result = await callEzmodoAPI('mcpUpdateEpic', args);
+async function updateEpic(allArgs) {
+  // addLinks/removeLinks are not fields of the epic update endpoint; they are
+  // applied through the links endpoint after it (#3414).
+  const { addLinks, removeLinks, ...args } = allArgs;
+  const linkChanges = { addLinks, removeLinks };
+  const linksOnly = hasLinkUpdates(linkChanges)
+    && Object.keys(args).every((k) => k === 'epicId');
+  const result = linksOnly
+    ? { epicId: args.epicId }
+    : await callEzmodoAPI('mcpUpdateEpic', args);
 
   // If the milestone is frozen and the operation was blocked, return guidance
   if (result?.blocked) {
@@ -206,7 +215,7 @@ async function updateEpic(args) {
     };
   }
 
-  return result;
+  return attachLinkUpdates(result, { sourceType: 'epic', sourceId: args.epicId, ...linkChanges });
 }
 
 export async function searchEpics(args) {

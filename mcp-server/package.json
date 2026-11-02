@@ -1,6 +1,6 @@
 {
   "name": "@ezmodo/mcp-server",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "MCP server for ezmodo - AI-first project management",
   "main": "index.js",
   "type": "module",
@@ -58,9 +58,9 @@
     "email": "help@ezmodo.com"
   },
   "dependencies": {
-    "@modelcontextprotocol/node": "^2.1.0",
+    "@modelcontextprotocol/node": "^2.1.2",
     "@modelcontextprotocol/server": "^2.3.1",
-    "hono": "^4.13.13",
+    "hono": "^4.13.14",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

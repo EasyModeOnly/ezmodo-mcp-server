@@ -42,6 +42,7 @@ import { createMcpHandler } from '@modelcontextprotocol/server';
 import { toNodeHandler } from '@modelcontextprotocol/node';
 
 import { createServer } from './lib/create-server.js';
+import { plausibleCredential } from './lib/credential-shape.js';
 import { withRequestContext } from './lib/request-context.js';
 import { initLogger, getLogger } from './lib/logger.js';
 import { MCP_VERSION } from './lib/version.js';
@@ -179,7 +180,8 @@ function rpcError(res, status, code, message, extraHeaders) {
   sendJson(res, status, { jsonrpc: '2.0', error: { code, message }, id: null }, extraHeaders);
 }
 
-async function readBody(req, limitBytes = 8 * 1024 * 1024) {
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
+async function readBody(req, limitBytes = MAX_BODY_BYTES) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
@@ -206,6 +208,17 @@ async function handleMcpPost(req, res, requestId) {
     return rpcError(res, 401, -32001, 'Missing or malformed Authorization header. Expected: Bearer <token>', {
       'WWW-Authenticate': authenticateChallenge('invalid_request', 'Authorization header required'),
     });
+  }
+
+  if (!plausibleCredential(token)) {
+    log.warn('MCP request with an implausible credential', { requestId });
+    return rpcError(res, 401, -32001, 'The Authorization header does not carry an EzModo API key or an access token', {
+      'WWW-Authenticate': authenticateChallenge('invalid_token', 'Malformed bearer token'),
+    });
+  }
+  // A declared length over the limit is refused before reading a byte.
+  if (Number(req.headers['content-length']) > MAX_BODY_BYTES) {
+    return rpcError(res, 413, -32700, 'Request body too large');
   }
 
   let body;

@@ -19,6 +19,7 @@ import { buildTaskUrl } from '../lib/web-url.js';
 import { getLogger } from '../lib/logger.js';
 import { writeActiveSession, clearActiveSession } from '../lib/active-session.js';
 import { attachLinks } from '../lib/links-at-create.js';
+import { attachLinkUpdates, hasLinkUpdates } from '../lib/link-updates.js';
 import { getContext } from './context-manifest.js';
 import { getCommitFiles, getRepositoryRoot } from '../lib/git-helpers.js';
 import { isRemoteRequest } from '../lib/request-context.js';
@@ -409,12 +410,18 @@ export async function reportUntrackedWork(args) {
 }
 
 async function updateTask(allArgs) {
-  const { reminders, ...args } = allArgs;
-  // A call that only changes reminders (E-265) is not a task update at all.
-  const onlyReminders = hasReminderChanges(reminders)
-    && Object.keys(args).every((k) => k === 'taskId');
-  if (onlyReminders) {
-    return taskReminders({ taskId: args.taskId, reminders });
+  // addLinks/removeLinks are not fields of the task update endpoint; they are
+  // applied through the links endpoint after it (#3414).
+  const { reminders, addLinks, removeLinks, ...args } = allArgs;
+  const linkChanges = { addLinks, removeLinks };
+  const noTaskFields = Object.keys(args).every((k) => k === 'taskId');
+  // A call that only changes reminders (E-265) and/or links is not a task
+  // update at all.
+  if (noTaskFields && (hasReminderChanges(reminders) || hasLinkUpdates(linkChanges))) {
+    const base = hasReminderChanges(reminders)
+      ? await taskReminders({ taskId: args.taskId, reminders })
+      : { taskId: args.taskId };
+    return attachLinkUpdates(base, { sourceType: 'task', sourceId: args.taskId, ...linkChanges });
   }
 
   const result = await callEzmodoAPI('mcpUpdateTask', args);
@@ -462,7 +469,7 @@ async function updateTask(allArgs) {
     }
   }
 
-  return result;
+  return attachLinkUpdates(result, { sourceType: 'task', sourceId: args.taskId, ...linkChanges });
 }
 
 async function completeTask(args) {

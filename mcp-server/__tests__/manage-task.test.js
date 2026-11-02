@@ -287,4 +287,58 @@ describe('manage_task suggested edits', () => {
       .rejects.toThrow('editId and answer');
     expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
   });
+
+  // #3414: the API's task update has no addLinks/removeLinks fields and
+  // silently dropped them, so these must go through the links endpoint.
+  describe('update addLinks / removeLinks (#3414)', () => {
+    it('applies both directions through the links endpoint, not the update body', async () => {
+      mockCallEzmodoAPI.mockResolvedValue({ taskId: 'task-1' });
+
+      const result = await manageTask({
+        action: 'update',
+        taskId: 'task-1',
+        priority: 'high',
+        addLinks: [{ targetType: 'feature', targetId: 'feat-1' }],
+        removeLinks: [{ targetType: 'milestone', targetId: 'ms-1' }],
+      });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateTask', { taskId: 'task-1', priority: 'high' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpAddLink', expect.objectContaining({
+        sourceType: 'task', sourceId: 'task-1', targetType: 'feature', targetId: 'feat-1',
+      }));
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpRemoveLink', expect.objectContaining({
+        sourceType: 'task', sourceId: 'task-1', targetType: 'milestone', targetId: 'ms-1',
+      }));
+      expect(result.links.added).toHaveLength(1);
+      expect(result.links.removed).toHaveLength(1);
+    });
+
+    it('skips the task update call when only links change', async () => {
+      mockCallEzmodoAPI.mockResolvedValue({ success: true });
+
+      const result = await manageTask({
+        action: 'update', taskId: 'task-1', removeLinks: [{ targetType: 'feature', targetId: 'feat-1' }],
+      });
+
+      expect(mockCallEzmodoAPI.mock.calls.map((c) => c[0])).toEqual(['mcpRemoveLink']);
+      expect(result.taskId).toBe('task-1');
+      expect(result.links.removed).toHaveLength(1);
+    });
+
+    it('reports a failed link with a warning', async () => {
+      mockCallEzmodoAPI.mockImplementation(async (endpoint) => {
+        if (endpoint === 'mcpAddLink') throw new Error('target not found');
+        return { taskId: 'task-1' };
+      });
+
+      const result = await manageTask({
+        action: 'update', taskId: 'task-1', status: 'todo', addLinks: [{ targetType: 'goal', targetId: 'nope' }],
+      });
+
+      expect(result.links.failed).toEqual([
+        { targetType: 'goal', targetId: 'nope', linkType: 'relates_to', op: 'add', error: 'target not found' },
+      ]);
+      expect(result.warning).toMatch(/failed/);
+    });
+  });
 });

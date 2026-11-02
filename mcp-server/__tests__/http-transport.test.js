@@ -203,14 +203,14 @@ describe('routing', () => {
   });
 
   test('GET on the endpoint is 405: stateless, no SSE stream', async () => {
-    const res = await fetch(endpoint, { headers: { Accept: 'text/event-stream', Authorization: 'Bearer k' } });
+    const res = await fetch(endpoint, { headers: { Accept: 'text/event-stream', Authorization: 'Bearer ezm_sk_testkey_plain_0123456789' } });
     expect(res.status).toBe(405);
     expect(res.headers.get('allow')).toBe('POST');
     expect((await res.json()).error.message).toMatch(/stateless/);
   });
 
   test('other methods are 405 with Allow: POST', async () => {
-    const res = await fetch(endpoint, { method: 'DELETE', headers: { Authorization: 'Bearer k' } });
+    const res = await fetch(endpoint, { method: 'DELETE', headers: { Authorization: 'Bearer ezm_sk_testkey_plain_0123456789' } });
     expect(res.status).toBe(405);
     expect(res.headers.get('allow')).toBe('POST');
   });
@@ -222,7 +222,7 @@ describe('routing', () => {
   });
 
   test('an unparseable body is a 400 parse error', async () => {
-    const res = await rpc('{not json', { token: 'k' });
+    const res = await rpc('{not json', { token: 'ezm_sk_testkey_plain_0123456789' });
     expect(res.status).toBe(400);
     expect((await res.json()).error.code).toBe(-32700);
   });
@@ -230,7 +230,7 @@ describe('routing', () => {
 
 describe('MCP over Streamable HTTP with a key', () => {
   test('initialize answers with server info and the tools capability', async () => {
-    const res = await rpc(INITIALIZE, { token: 'key-init' });
+    const res = await rpc(INITIALIZE, { token: 'ezm_sk_testkey_init_0123456789' });
     expect(res.status).toBe(200);
     const msg = await answer(res, 1);
     expect(msg.error).toBeUndefined();
@@ -243,7 +243,7 @@ describe('MCP over Streamable HTTP with a key', () => {
 
   test('tools/list serves exactly the remote-safe tools', async () => {
     const res = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, {
-      token: 'key-list',
+      token: 'ezm_sk_testkey_list_0123456789',
       headers: { 'MCP-Protocol-Version': '2025-06-18' },
     });
     expect(res.status).toBe(200);
@@ -260,7 +260,7 @@ describe('MCP over Streamable HTTP with a key', () => {
     const res = await rpc({
       jsonrpc: '2.0', id: 3, method: 'tools/call',
       params: { name: 'detect_git_repository', arguments: {} },
-    }, { token: 'key-local', headers: { 'MCP-Protocol-Version': '2025-06-18' } });
+    }, { token: 'ezm_sk_testkey_local_0123456789', headers: { 'MCP-Protocol-Version': '2025-06-18' } });
     const msg = await answer(res, 3);
     expect(msg.error || msg.result?.isError).toBeTruthy();
     expect(apiRequests).toHaveLength(0);
@@ -271,13 +271,13 @@ describe('MCP over Streamable HTTP with a key', () => {
       jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'get_organization', arguments: {} },
     }, { token, headers: { 'MCP-Protocol-Version': '2025-06-18' } }).then((res) => answer(res, id));
 
-    const [a, b] = await Promise.all([call(10, 'key-alpha'), call(11, 'key-beta')]);
+    const [a, b] = await Promise.all([call(10, 'ezm_sk_testkey_alpha_0123456789'), call(11, 'ezm_sk_testkey_beta_0123456789')]);
     for (const msg of [a, b]) {
       expect(msg.result.isError).toBeFalsy();
       expect(msg.result.content[0].text).toContain('Stub Org');
     }
     const seen = apiRequests.map((r) => r.authorization).sort();
-    expect(seen).toEqual(['Bearer key-alpha', 'Bearer key-beta']);
+    expect(seen).toEqual(['Bearer ezm_sk_testkey_alpha_0123456789', 'Bearer ezm_sk_testkey_beta_0123456789']);
   });
 });
 
@@ -287,7 +287,7 @@ describe('the CI connector handshake (scripts/ci/mcp-connector-smoke.mjs)', () =
     console.log = () => {};
     let results;
     try {
-      results = await runConnectorSmoke({ endpoint, apiKey: 'key-smoke' });
+      results = await runConnectorSmoke({ endpoint, apiKey: 'ezm_sk_testkey_smoke_0123456789' });
     } finally {
       console.log = log;
     }
@@ -296,7 +296,7 @@ describe('the CI connector handshake (scripts/ci/mcp-connector-smoke.mjs)', () =
       ['tools-list', 'pass', undefined],
       ['tools-call', 'pass', undefined],
     ]);
-    expect(apiRequests.map((r) => r.authorization)).toEqual(['Bearer key-smoke']);
+    expect(apiRequests.map((r) => r.authorization)).toEqual(['Bearer ezm_sk_testkey_smoke_0123456789']);
   });
 });
 
@@ -320,4 +320,34 @@ test('a malformed request path is a 400, and the server keeps serving', async ()
   expect(server.exitCode).toBeNull();
   const health = await fetch(`${base}/health`);
   expect(health.status).toBe(200);
+});
+
+// E-297 #3354: any "Bearer x" used to buy an 8 MB buffered read before the
+// credential was looked at. A value that can't be a credential, or a body
+// declared over the limit, is now refused before the body is read.
+test('refuses an implausible bearer before reading the body', async () => {
+  const res = await rpc(INITIALIZE, { token: 'x' });
+  expect(res.status).toBe(401);
+  expect(res.headers.get('www-authenticate')).toMatch(/invalid_token/);
+  expect(apiRequests).toHaveLength(0);
+});
+
+test('refuses a declared body over the limit without reading it', async () => {
+  const { request } = await import('node:http');
+  const status = await new Promise((resolve, reject) => {
+    const req = request(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ezm_sk_testkey_big_0123456789',
+        'Content-Type': 'application/json',
+        Accept: ACCEPT,
+        'Content-Length': String(9 * 1024 * 1024),
+      },
+    }, (res) => { res.resume(); resolve(res.statusCode); });
+    req.on('error', reject);
+    req.write('{');
+    req.end();
+  }).catch((err) => (err.code === 'ECONNRESET' || err.code === 'EPIPE' ? 413 : Promise.reject(err)));
+  expect(status).toBe(413);
+  expect(server.exitCode).toBeNull();
 });

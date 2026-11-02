@@ -16,6 +16,10 @@ jest.unstable_mockModule('../lib/web-url.js', () => ({
 jest.unstable_mockModule('../lib/links-at-create.js', () => ({
   attachLinks: jest.fn(),
 }));
+jest.unstable_mockModule('../lib/link-updates.js', () => ({
+  attachLinkUpdates: jest.fn(async (result) => result),
+  hasLinkUpdates: jest.fn(() => false),
+}));
 jest.unstable_mockModule('../lib/logger.js', () => ({
   getLogger: () => ({ info() {}, warn() {}, debug() {}, error() {} }),
 }));

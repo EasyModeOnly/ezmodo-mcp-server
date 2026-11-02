@@ -27,7 +27,7 @@ import { getLogger } from './logger.js';
 const DEFAULT_LINK_TYPE = 'relates_to';
 
 /** Normalize + drop malformed entries. Returns [] when there is nothing to do. */
-function normalize(links) {
+export function normalize(links) {
   if (!Array.isArray(links)) return [];
   return links
     .filter((l) => l && l.targetType && l.targetId)
