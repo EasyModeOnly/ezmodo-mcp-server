@@ -15,6 +15,7 @@ async function getRoutingContext() {
   if (!config?.orgSlug || !config?.projectSlug) return null;
   return {
     baseUrl: CONFIG.webUrl,
+    organizationId: config.organizationId,
     orgSlug: config.orgSlug,
     projectSlug: config.projectSlug,
   };
@@ -66,4 +67,23 @@ export async function buildMilestoneUrl(milestoneSlug) {
   const ctx = await getRoutingContext();
   if (!ctx) return null;
   return `${ctx.baseUrl}/${ctx.orgSlug}/projects/${ctx.projectSlug}/milestones/${milestoneSlug}`;
+}
+
+/**
+ * Build a web URL for a design (#3490): `<base>/<orgSlug>/designs/<slug or id>`.
+ *
+ * Designs are org-level, so the org in the URL must be the design's own. The
+ * cached config only knows the checkout's org slug, so a design from any other
+ * org (or one whose org is not in the response) gets no URL rather than a link
+ * into the wrong workspace. The slug is preferred: it is unique among the
+ * org's live designs and the page resolves it.
+ * @param {{id?: string, slug?: string, organizationId?: string}} design
+ * @returns {Promise<string|null>}
+ */
+export async function buildDesignUrl(design) {
+  const handle = design?.slug || design?.id;
+  if (!handle || !design?.organizationId) return null;
+  const ctx = await getRoutingContext();
+  if (!ctx || ctx.organizationId !== design.organizationId) return null;
+  return `${ctx.baseUrl}/${ctx.orgSlug}/designs/${encodeURIComponent(handle)}`;
 }

@@ -158,7 +158,8 @@ export const DESIGN_TOOLS = [
       properties: {
         designId: {
           type: 'string',
-          description: 'Design ID for a single lookup',
+          description: 'Design ID for a single lookup. A design slug also works when organizationId is given. ' +
+            'The response carries webUrl: give that to the user rather than building a link yourself.',
         },
         designIds: {
           type: 'array',
@@ -168,7 +169,7 @@ export const DESIGN_TOOLS = [
         },
         organizationId: {
           type: 'string',
-          description: 'Organization ID (optional; scopes a linkedType + linkedId lookup)',
+          description: 'Organization ID (optional; scopes a linkedType + linkedId lookup, and lets designId be a slug)',
         },
         linkedType: {
           type: 'string',

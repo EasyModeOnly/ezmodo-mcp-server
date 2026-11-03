@@ -13,6 +13,7 @@ import path from 'path';
 import { callEzmodoAPI } from '../lib/http-client.js';
 import { getLogger } from '../lib/logger.js';
 import { attachLinks } from '../lib/links-at-create.js';
+import { buildDesignUrl } from '../lib/web-url.js';
 import {
   readDesignFiles,
   recordPushed,
@@ -64,8 +65,10 @@ export async function getDesign(args) {
   }
 
   if (designId) {
-    const fetched = await callEzmodoAPI('mcpGetDesign', { designId });
+    // designId may be a slug when organizationId is given (#3490).
+    const fetched = await callEzmodoAPI('mcpGetDesign', organizationId ? { designId, organizationId } : { designId });
     const result = fetched?.design ? { ...fetched, ...(await toLocal(fetched.design, fileOpts)) } : fetched;
+    await withWebUrl(result?.design);
     if (includeLinks) {
       const links = await callEzmodoAPI('mcpListDesignLinks', { designId });
       result.links = links?.links ?? links;
@@ -117,9 +120,21 @@ async function getDesigns(designIds, fileOpts) {
   for (const r of results) {
     const d = r?.design ?? r;
     const local = await toLocal(d, fileOpts);
-    designs.push(local.design ? { ...local.design, ...omit(local, 'design') } : d);
+    designs.push(await withWebUrl(local.design ? { ...local.design, ...omit(local, 'design') } : d));
   }
   return { designs };
+}
+
+/**
+ * Set `webUrl` on a design object (#3490), so agents link to the design the
+ * page will actually open instead of building the URL by hand. Leaves the
+ * object alone when no URL can be built (see buildDesignUrl).
+ */
+async function withWebUrl(design) {
+  if (!design || typeof design !== 'object') return design;
+  const webUrl = await buildDesignUrl(design);
+  if (webUrl) design.webUrl = webUrl;
+  return design;
 }
 
 const CONTENT_FIELDS = ['html', 'css', 'description'];
@@ -192,6 +207,7 @@ async function createDesign(args) {
   // `links` is applied by the MCP layer after the design exists (E-225).
   const { links, ...createArgs } = args;
   const result = await callEzmodoAPI('mcpCreateDesign', createArgs);
+  await withWebUrl(result?.design);
 
   // Attach create-time links (E-225) — best effort, never fails the create.
   await attachLinks(result, {
@@ -205,8 +221,9 @@ async function createDesign(args) {
 
 async function updateDesign(args) {
   const { fromFiles, ...rest } = args;
-  if (!fromFiles) return callEzmodoAPI('mcpUpdateDesign', rest);
-  return pushDesignFiles(rest);
+  const result = fromFiles ? await pushDesignFiles(rest) : await callEzmodoAPI('mcpUpdateDesign', rest);
+  await withWebUrl(result?.design);
+  return result;
 }
 
 /**

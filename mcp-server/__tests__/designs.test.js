@@ -20,6 +20,11 @@ jest.unstable_mockModule('../lib/design-files.js', () => ({
   setAsideAndRefresh: mockSetAsideAndRefresh,
 }));
 
+const mockBuildDesignUrl = jest.fn(async (d) => (d?.organizationId === 'org-1' ? `https://ezmodo.test/emo/designs/${d.slug || d.id}` : null));
+jest.unstable_mockModule('../lib/web-url.js', () => ({
+  buildDesignUrl: mockBuildDesignUrl,
+}));
+
 const { manageDesign, getDesign, listDesigns, getDesignSystem, MAX_DESIGN_IDS } = await import('../handlers/designs.js');
 
 describe('Design Operations', () => {
@@ -77,6 +82,47 @@ describe('Design Operations', () => {
 
     it('should reject an unknown action', async () => {
       await expect(manageDesign({ action: 'frobnicate' })).rejects.toThrow(/Unknown action/);
+    });
+  });
+
+  describe('webUrl (#3490)', () => {
+    it('is set on create, from the slug', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ design: { id: 'des-1', slug: 'hero', organizationId: 'org-1' } });
+      const result = await manageDesign({ action: 'create', organizationId: 'org-1', name: 'Hero' });
+      expect(result.design.webUrl).toBe('https://ezmodo.test/emo/designs/hero');
+    });
+
+    it('is set on update', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ design: { id: 'des-1', slug: 'hero-2', organizationId: 'org-1' } });
+      const result = await manageDesign({ action: 'update', designId: 'des-1', slug: 'hero-2' });
+      expect(result.design.webUrl).toBe('https://ezmodo.test/emo/designs/hero-2');
+    });
+
+    it('is set on a single and a batch get_design', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ design: { id: 'des-1', slug: 'hero', organizationId: 'org-1', html: '<b/>' } });
+      const single = await getDesign({ designId: 'des-1' });
+      expect(single.design.webUrl).toBe('https://ezmodo.test/emo/designs/hero');
+
+      mockCallEzmodoAPI
+        .mockResolvedValueOnce({ design: { id: 'des-1', slug: 'hero', organizationId: 'org-1' } })
+        .mockResolvedValueOnce({ design: { id: 'des-2', organizationId: 'org-1' } });
+      const batch = await getDesign({ designIds: ['des-1', 'des-2'] });
+      expect(batch.designs.map((d) => d.webUrl)).toEqual([
+        'https://ezmodo.test/emo/designs/hero',
+        'https://ezmodo.test/emo/designs/des-2',
+      ]);
+    });
+
+    it('is left off when none can be built', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ design: { id: 'des-9', slug: 'x', organizationId: 'org-other' } });
+      const result = await getDesign({ designId: 'des-9' });
+      expect(result.design).not.toHaveProperty('webUrl');
+    });
+
+    it('passes organizationId through so designId can be a slug', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ design: { id: 'des-1', slug: 'hero', organizationId: 'org-1' } });
+      await getDesign({ designId: 'hero', organizationId: 'org-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesign', { designId: 'hero', organizationId: 'org-1' });
     });
   });
 
