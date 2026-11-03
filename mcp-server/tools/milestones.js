@@ -117,7 +117,28 @@ export const MILESTONE_TOOLS = [
         // --- link_epic / unlink_epic fields ---
         epicId: {
           type: 'string',
-          description: 'Epic ID to link/unlink (required for link_epic, unlink_epic)',
+          description: 'Epic ID to link/unlink (required for unlink_epic; link_epic takes epicId OR epicIds)',
+        },
+        epicIds: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 100,
+          description: 'link_epic only: link several epics in one transaction (max 100). ' +
+            'Returns one result per epic: linked | moved | already_here | ' +
+            'refused (names the milestone it is in) | not_found. ' +
+            'Partial success: refused ones do not stop the rest. Do not combine with epicId',
+        },
+        move: {
+          type: 'boolean',
+          description: 'link_epic only: an epic already in another milestone is moved here ' +
+            '(unlinked there, linked here, one transaction) instead of refused. ' +
+            'The result names the milestone(s) it left in movedFrom',
+        },
+        confirmReleased: {
+          type: 'boolean',
+          description: 'link_epic with move only: allow moving an epic out of, or into, ' +
+            'a released/archived milestone. That rewrites what shipped, so it is refused without this. ' +
+            'Only pass it when the user confirmed',
         },
         entityType: {
           type: 'string',

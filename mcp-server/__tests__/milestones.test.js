@@ -203,6 +203,52 @@ describe('Milestone Operations', () => {
       mockCallEzmodoAPI.mockRejectedValueOnce(createMockError('Epic not found', 404));
       await expect(manageMilestone({ action: 'link_epic', milestoneId: 'ms-1', epicId: 'bad' })).rejects.toThrow('Epic not found');
     });
+
+    // #3478: move (and confirmReleased) pass through under their own names.
+    it('passes move and confirmReleased through with a single epicId', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ milestoneId: 'ms-2', entityId: 'epic-1', status: 'moved', movedFrom: [{ id: 'ms-1', name: '1.2.0' }] });
+
+      const result = await manageMilestone({
+        action: 'link_epic', projectId: 'p-1', milestoneId: 'ms-2', epicId: 'epic-1', move: true, confirmReleased: true,
+      });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpLinkEpicToMilestone', {
+        projectId: 'p-1',
+        milestoneId: 'ms-2',
+        entityId: 'epic-1',
+        entityType: 'epic',
+        move: true,
+        confirmReleased: true,
+      });
+      expect(result.status).toBe('moved');
+      expect(result.movedFrom[0].name).toBe('1.2.0');
+    });
+
+    // #3479: several epics, one call; epicIds is sent as-is and no entityId.
+    it('sends epicIds with priority and no entityId', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ results: [{ epicId: 'e1', result: 'linked' }], summary: { linked: 1 } });
+
+      await manageMilestone({ action: 'link_epic', projectId: 'p-1', milestoneSlug: 'v1', epicIds: ['e1', 'e2'], priority: 'high' });
+
+      const [[route, body]] = mockCallEzmodoAPI.mock.calls;
+      expect(route).toBe('mcpLinkEpicToMilestone');
+      expect(body).toEqual({ projectId: 'p-1', milestoneSlug: 'v1', epicIds: ['e1', 'e2'], priority: 'high', entityType: 'epic' });
+      expect(body).not.toHaveProperty('entityId');
+    });
+
+    it('refuses epicId and epicIds together without calling the API', async () => {
+      await expect(manageMilestone({ action: 'link_epic', milestoneId: 'ms-1', epicId: 'e1', epicIds: ['e2'] }))
+        .rejects.toThrow('not both');
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+    });
+
+    it('documents epicIds, move and confirmReleased in the tool schema', async () => {
+      const { MILESTONE_TOOLS } = await import('../tools/milestones.js');
+      const props = MILESTONE_TOOLS.find((t) => t.name === 'manage_milestone').inputSchema.properties;
+      expect(props.epicIds.type).toBe('array');
+      expect(props.move.type).toBe('boolean');
+      expect(props.confirmReleased.type).toBe('boolean');
+    });
   });
 
   describe('unlinkEpicFromMilestone', () => {

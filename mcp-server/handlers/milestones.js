@@ -93,13 +93,18 @@ async function deleteMilestone(args) {
   return callEzmodoAPI('mcpDeleteMilestone', args);
 }
 
+// link_epic takes one epic (epicId) or several (epicIds, #3479), plus `move`
+// (#3478) and `confirmReleased`, which the API reads under the same names.
+// Only epicId is renamed (the API's single form reads `entityId`); the rest
+// pass through, so a call without the new options sends what it always did.
 async function linkEpicToMilestone(args) {
   const { epicId, entityType, ...rest } = args;
-  return callEzmodoAPI('mcpLinkEpicToMilestone', {
-    ...rest,
-    entityId: epicId,
-    entityType: entityType || 'epic',
-  });
+  if (epicId !== undefined && Array.isArray(rest.epicIds) && rest.epicIds.length > 0) {
+    throw new Error('link_epic: pass epicId or epicIds, not both');
+  }
+  const body = { ...rest, entityType: entityType || 'epic' };
+  if (epicId !== undefined) body.entityId = epicId;
+  return callEzmodoAPI('mcpLinkEpicToMilestone', body);
 }
 
 // The API's UnlinkEpicRequest reads `entityId`, while the tool schema documents
