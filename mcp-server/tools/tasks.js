@@ -452,7 +452,10 @@ export const TASK_TOOLS = [
         // --- Complete fields ---
         completionNotes: {
           type: 'string',
-          description: 'Notes about task completion (complete only)',
+          description:
+            'What you did and what you did NOT do, and why. Send it with action "complete", ' +
+            'or with action "update" status:"in_review" when you submit the task for review — ' +
+            'the reviewer reads it on the review row. Ignored on any other update.',
         },
         // --- Defer fields ---
         reason: {
