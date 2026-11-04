@@ -23,6 +23,20 @@ function need(args, keys, action) {
 }
 
 /**
+ * Whether save_settings was given any setting to change. The inherit and clear
+ * flags only mean something on a deliverable, so they count only with one.
+ */
+function sendsASetting(args) {
+  const isBool = (v) => typeof v === 'boolean';
+  const forDeliverable = !!args.deliverable;
+  const mode = forDeliverable ? args.completeTasksOn != null : !!args.completeTasksOn;
+  const resets = forDeliverable && ['inheritHoldDeploys', 'inheritDevDeploys', 'inheritAutoReleaseDev', 'clearDeployWorkflow']
+    .some((k) => args[k] === true);
+  return mode || resets || isBool(args.holdDeploys) || isBool(args.autoReleaseDev) || !!args.devDeploys ||
+    (args.deployWorkflow != null && typeof args.deployWorkflow === 'object');
+}
+
+/**
  * The candidate a deliverable + version names (E-280): that release's newest
  * candidate that was not rejected, or the one labelled `candidate` within it.
  * deliverable may be omitted: the API then uses the project's default one.
@@ -241,16 +255,17 @@ export async function manageRelease(args = {}) {
     need(args, ['projectId'], action);
     return callEzmodoAPI('mcpGetReleaseSettings', pick(args, ['projectId', 'deliverable']));
   case 'save_settings': {
-    // A field left out is unchanged. For a deliverable, completeTasksOn ""
-    // and inheritHoldDeploys go back to the project's (E-280 #3084, #3091).
+    // A field left out is unchanged. For a deliverable, completeTasksOn "",
+    // inheritHoldDeploys, inheritDevDeploys and inheritAutoReleaseDev go back
+    // to the project's (E-280 #3084, #3091; E-299 #3362).
     need(args, ['projectId'], action);
-    const hold = typeof args.holdDeploys === 'boolean' || (args.deliverable && args.inheritHoldDeploys === true);
-    const mode = args.deliverable ? args.completeTasksOn != null : !!args.completeTasksOn;
-    if (!hold && !mode) {
-      throw new Error(`${action} needs completeTasksOn or holdDeploys.`);
+    if (!sendsASetting(args)) {
+      throw new Error(`${action} needs completeTasksOn, holdDeploys, devDeploys, autoReleaseDev or deployWorkflow.`);
     }
-    return callEzmodoAPI('mcpSaveReleaseSettings',
-      pick(args, ['projectId', 'completeTasksOn', 'holdDeploys', 'inheritHoldDeploys', 'deliverable']));
+    return callEzmodoAPI('mcpSaveReleaseSettings', pick(args, [
+      'projectId', 'completeTasksOn', 'holdDeploys', 'inheritHoldDeploys', 'devDeploys', 'inheritDevDeploys',
+      'autoReleaseDev', 'inheritAutoReleaseDev', 'deployWorkflow', 'clearDeployWorkflow', 'deliverable',
+    ]));
   }
   case 'save_template':
     need(args, ['projectId', 'name', 'items'], action);

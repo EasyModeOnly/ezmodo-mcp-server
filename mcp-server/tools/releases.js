@@ -117,6 +117,11 @@ export const RELEASE_TOOLS = [
       'get_settings / save_settings (projectId, completeTasksOn?: last_environment|milestone_released|' +
       'any_environment — when a release completes the in-review tasks it ships; holdDeploys?: whether a no-go ' +
       'from the CI release gate (POST /api/v1/releases/gate) holds the deploy, off by default so CI only warns; ' +
+      'devDeploys?: on_merge (default: every merge deploys dev)|on_release (dev only on a release to dev from EzModo); ' +
+      'autoReleaseDev?: EzModo releases an epic to dev once its work is in review and its PRs are merged, off by default; ' +
+      'deployWorkflow?: {provider: github|forgejo, repo: owner/name, workflow: file name e.g. api-deploy.yml, ref?: ' +
+      'branch, default main} — the CI workflow that deploys this deliverable to dev, deliverable only and never ' +
+      'inherited, clearDeployWorkflow: true removes it; ' +
       'a field left out is unchanged); ' +
       'save_template (projectId, name, items[], templateId? to replace, isDefault?, orgWide?); ' +
       'report_check (projectId, name, status: pending|running|success|failure|cancelled|skipped, ' +
@@ -145,8 +150,8 @@ export const RELEASE_TOOLS = [
       'apply_checklist, add_checklist_item and assign_steps also take releaseId instead of milestoneId; ' +
       'add_gate, list_gates, ' +
       'get_settings, save_settings and save_template take deliverable for that deliverable\'s own gates, settings ' +
-      'and templates (save_settings with deliverable: completeTasksOn "" or inheritHoldDeploys: true go back to the ' +
-      'project\'s).',
+      'and templates (save_settings with deliverable: completeTasksOn "", inheritHoldDeploys, inheritDevDeploys or ' +
+      'inheritAutoReleaseDev: true go back to the project\'s).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -238,6 +243,38 @@ export const RELEASE_TOOLS = [
         inheritHoldDeploys: {
           type: 'boolean',
           description: 'save_settings with deliverable: drop its own holdDeploys and use the project\'s',
+        },
+        devDeploys: {
+          type: 'string',
+          enum: ['on_merge', 'on_release'],
+          description: 'save_settings: when dev deploys. on_merge = every merge (the default); on_release = only on a release to dev from EzModo',
+        },
+        inheritDevDeploys: {
+          type: 'boolean',
+          description: 'save_settings with deliverable: drop its own devDeploys and use the project\'s',
+        },
+        autoReleaseDev: {
+          type: 'boolean',
+          description: 'save_settings: true = EzModo releases an epic to dev once its work is in review and its PRs are merged; off by default',
+        },
+        inheritAutoReleaseDev: {
+          type: 'boolean',
+          description: 'save_settings with deliverable: drop its own autoReleaseDev and use the project\'s',
+        },
+        deployWorkflow: {
+          type: 'object',
+          description: 'save_settings with deliverable: the CI workflow that deploys it to dev. Not inherited',
+          properties: {
+            provider: { type: 'string', enum: ['github', 'forgejo'] },
+            repo: { type: 'string', description: 'owner/name' },
+            workflow: { type: 'string', description: 'Workflow file name, e.g. api-deploy.yml' },
+            ref: { type: 'string', description: 'Branch to dispatch on (default main)' },
+          },
+          required: ['provider', 'repo', 'workflow'],
+        },
+        clearDeployWorkflow: {
+          type: 'boolean',
+          description: 'save_settings with deliverable: remove its deploy workflow',
         },
         items: { type: 'array', items: { type: 'object' }, description: 'save_template items: [{key?, title, phase, ownerId?, notes?, runbookUrl?, autoCheck?}]' },
         isDefault: { type: 'boolean' },

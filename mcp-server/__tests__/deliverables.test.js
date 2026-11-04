@@ -282,6 +282,28 @@ describe('manage_release with deliverables (E-280)', () => {
     expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', holdDeploys: false });
     await expect(manageRelease({ action: 'save_settings', projectId: 'p1', inheritHoldDeploys: true })).rejects.toThrow(/holdDeploys/);
   });
+
+  it('settings: dev deploys, auto release to dev and the deploy workflow (#3362)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({});
+    const wf = { provider: 'forgejo', repo: 'EasyModeOnly/ezmodo', workflow: 'api-deploy.yml', ref: 'main' };
+    await manageRelease({ action: 'save_settings', projectId: 'p1', devDeploys: 'on_release', autoReleaseDev: true });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', devDeploys: 'on_release', autoReleaseDev: true });
+    await manageRelease({ action: 'save_settings', projectId: 'p1', deliverable: 'api', deployWorkflow: wf });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', deployWorkflow: wf, deliverable: 'api' });
+    await manageRelease({ action: 'save_settings', projectId: 'p1', autoReleaseDev: false });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', { projectId: 'p1', autoReleaseDev: false });
+    await manageRelease({
+      action: 'save_settings', projectId: 'p1', deliverable: 'api',
+      inheritDevDeploys: true, inheritAutoReleaseDev: true, clearDeployWorkflow: true,
+    });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpSaveReleaseSettings', {
+      projectId: 'p1', inheritDevDeploys: true, inheritAutoReleaseDev: true, clearDeployWorkflow: true, deliverable: 'api',
+    });
+    // Inheriting and clearing only mean something on a deliverable.
+    for (const flag of ['inheritDevDeploys', 'inheritAutoReleaseDev', 'clearDeployWorkflow']) {
+      await expect(manageRelease({ action: 'save_settings', projectId: 'p1', [flag]: true })).rejects.toThrow(/devDeploys/);
+    }
+  });
 });
 
 describe('get_release_readiness with deliverables (E-280)', () => {
