@@ -176,6 +176,12 @@ describe('Release Readiness tools (E-262)', () => {
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCancelReleaseApproval', { id: 'c1', environment: 'production', reason: 'not today' });
     });
 
+    it('release_to_dev sends the project and what was given (E-299 #3364)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ dispatched: true });
+      await manageRelease({ action: 'release_to_dev', projectId: 'p1', deliverable: 'api', epicId: 'e1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReleaseToDev', { projectId: 'p1', deliverable: 'api', epicId: 'e1' });
+    });
+
     it('waive needs a reason', async () => {
       await expect(manageRelease({ action: 'waive', candidateId: 'c1', environment: 'prod', targetType: 'gate', targetId: 'g1' }))
         .rejects.toThrow(/reason/);

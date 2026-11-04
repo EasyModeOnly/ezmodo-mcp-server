@@ -313,6 +313,8 @@ export const ENDPOINT_MAP = {
   // environment; the deploy is started afterwards with the approval's id.
   'mcpApproveReleaseCandidate': { route: 'mcp/v1/release-candidates/{id}/approve', method: 'POST' },
   'mcpCancelReleaseApproval': { route: 'mcp/v1/release-candidates/{id}/approve', method: 'DELETE' },
+  // Release to dev (E-299 #3364): record it and start the deploy workflow.
+  'mcpReleaseToDev': { route: 'mcp/v1/releases/release-to-dev', method: 'POST' },
   'mcpLookupReleaseCandidate': { route: 'mcp/v1/releases/candidates/lookup', method: 'GET' },
   // Deliverables and releases (E-280). A deliverable is a release axis only:
   // work never links to one; it reaches one through a release's contents.

@@ -91,6 +91,10 @@ export const RELEASE_TOOLS = [
       'instruction: it is their sign-off, not yours. A CI key cannot approve); ' +
       'cancel_approval (candidateId, environment, reason? — withdraws the live approval; a deploy not yet ' +
       'past the gate is then held); ' +
+      'release_to_dev (projectId?, deliverable?, epicId?, milestoneId?, commitSha? — deploy a deliverable to dev ' +
+      'now: EzModo records it and starts the deliverable\'s deploy workflow for dev. If it can\'t start it ' +
+      '(no deploy workflow, the host refused) the release waits and the next merge deploys it; the answer says ' +
+      'which. For a deliverable whose devDeploys is on_release this is how dev gets deployed); ' +
       'waive (candidateId, environment, targetType: gate|checklist_item|epic, targetId, reason, ' +
       'evidenceType?: none|link|note|feature_flag, evidence?: {url}|{text}|{flagKey}) — feature_flag evidence is ' +
       'verified: the flag must be served OFF in that environment, or the waiver does not hold; ' +
@@ -166,7 +170,8 @@ export const RELEASE_TOOLS = [
         action: {
           type: 'string',
           enum: [
-            'create_candidate', 'update_candidate', 'promote', 'sign_off', 'approve', 'cancel_approval', 'waive', 'revoke_waiver',
+            'create_candidate', 'update_candidate', 'promote', 'sign_off', 'approve', 'cancel_approval', 'release_to_dev',
+            'waive', 'revoke_waiver',
             'apply_checklist', 'add_checklist_item', 'assign_steps', 'set_item_state', 'update_checklist_item',
             'delete_checklist_item', 'item_to_task',
             'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
@@ -303,6 +308,7 @@ export const RELEASE_TOOLS = [
         },
         version: { type: 'string', description: 'Release version, e.g. "0.23.0": with deliverable, names a release' },
         releaseId: { type: 'string', description: 'Release id (a deliverable at a version)' },
+        epicId: { type: 'string', description: 'release_to_dev: the epic the release is for (optional)' },
         limit: { type: 'number', description: 'list_releases: how many. get_contents: page size per section (default 50, max 200)' },
         offset: { type: 'number', description: 'get_contents: rows to skip in the section' },
         section: {
