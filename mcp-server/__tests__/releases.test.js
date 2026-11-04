@@ -158,6 +158,24 @@ describe('Release Readiness tools (E-262)', () => {
       await expect(manageRelease({ action: 'promote', candidateId: 'c1', environment: 'production' })).rejects.toMatchObject({ code: 'release_blocked' });
     });
 
+    it('approve sends the environment and note (E-307 #3465)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ approval: { id: 'a1', status: 'pending' } });
+      await manageRelease({ action: 'approve', candidateId: 'c1', environment: 'production', note: 'ship it' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpApproveReleaseCandidate', { id: 'c1', environment: 'production', note: 'ship it' });
+    });
+
+    it('approve needs a candidate and an environment', async () => {
+      await expect(manageRelease({ action: 'approve', candidateId: 'c1' })).rejects.toThrow(/environment/);
+      await expect(manageRelease({ action: 'approve', environment: 'production' })).rejects.toThrow(/candidateId/);
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+    });
+
+    it('cancel_approval withdraws it with a reason', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ approval: { id: 'a1', status: 'cancelled' } });
+      await manageRelease({ action: 'cancel_approval', candidateId: 'c1', environment: 'production', reason: 'not today' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCancelReleaseApproval', { id: 'c1', environment: 'production', reason: 'not today' });
+    });
+
     it('waive needs a reason', async () => {
       await expect(manageRelease({ action: 'waive', candidateId: 'c1', environment: 'prod', targetType: 'gate', targetId: 'g1' }))
         .rejects.toThrow(/reason/);

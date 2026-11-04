@@ -309,6 +309,10 @@ export const ENDPOINT_MAP = {
   'mcpReleaseReadiness': { route: 'mcp/v1/release-candidates/{id}/readiness', method: 'GET' },
   'mcpPromoteReleaseCandidate': { route: 'mcp/v1/release-candidates/{id}/promote', method: 'POST' },
   'mcpSignOffReleaseCandidate': { route: 'mcp/v1/release-candidates/{id}/signoff', method: 'POST' },
+  // EzModo as the approver (E-307 #3465): a person lets a build go to an
+  // environment; the deploy is started afterwards with the approval's id.
+  'mcpApproveReleaseCandidate': { route: 'mcp/v1/release-candidates/{id}/approve', method: 'POST' },
+  'mcpCancelReleaseApproval': { route: 'mcp/v1/release-candidates/{id}/approve', method: 'DELETE' },
   'mcpLookupReleaseCandidate': { route: 'mcp/v1/releases/candidates/lookup', method: 'GET' },
   // Deliverables and releases (E-280). A deliverable is a release axis only:
   // work never links to one; it reaches one through a release's contents.

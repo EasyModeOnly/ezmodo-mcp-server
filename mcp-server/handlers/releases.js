@@ -163,6 +163,17 @@ export async function manageRelease(args = {}) {
   case 'sign_off':
     need(args, ['candidateId', 'environment'], action);
     return callEzmodoAPI('mcpSignOffReleaseCandidate', { id: args.candidateId, environment: args.environment, ...pick(args, ['note']) });
+  case 'approve':
+    // E-307 #3465. The API takes write:projects only: a CI key never approves.
+    need(args, ['candidateId', 'environment'], action);
+    return callEzmodoAPI('mcpApproveReleaseCandidate', {
+      id: args.candidateId, environment: args.environment, ...pick(args, ['note']),
+    });
+  case 'cancel_approval':
+    need(args, ['candidateId', 'environment'], action);
+    return callEzmodoAPI('mcpCancelReleaseApproval', {
+      id: args.candidateId, environment: args.environment, ...pick(args, ['reason']),
+    });
   case 'waive':
     need(args, ['candidateId', 'environment', 'targetType', 'targetId', 'reason'], action);
     return callEzmodoAPI('mcpCreateReleaseWaiver',

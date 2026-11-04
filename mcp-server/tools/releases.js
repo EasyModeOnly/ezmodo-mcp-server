@@ -83,6 +83,14 @@ export const RELEASE_TOOLS = [
       'rejected); ' +
       'promote (candidateId, environment, notes?); ' +
       'sign_off (candidateId, environment, note?); ' +
+      'approve (candidateId, environment, note? — a PERSON approves this build for that environment, ' +
+      'where EzModo is the approver (ezmodo\'s own Forgejo deploys, E-307): nothing ships on approval; ' +
+      'the deploy workflow is started with the approval\'s id, and the release gate holds a deploy whose ' +
+      'approval does not match its build. Approving a build cancels live approvals of the deliverable\'s ' +
+      'older builds there; approving again returns the one that stands. Only ever on the user\'s explicit ' +
+      'instruction: it is their sign-off, not yours. A CI key cannot approve); ' +
+      'cancel_approval (candidateId, environment, reason? — withdraws the live approval; a deploy not yet ' +
+      'past the gate is then held); ' +
       'waive (candidateId, environment, targetType: gate|checklist_item|epic, targetId, reason, ' +
       'evidenceType?: none|link|note|feature_flag, evidence?: {url}|{text}|{flagKey}) — feature_flag evidence is ' +
       'verified: the flag must be served OFF in that environment, or the waiver does not hold; ' +
@@ -158,7 +166,7 @@ export const RELEASE_TOOLS = [
         action: {
           type: 'string',
           enum: [
-            'create_candidate', 'update_candidate', 'promote', 'sign_off', 'waive', 'revoke_waiver',
+            'create_candidate', 'update_candidate', 'promote', 'sign_off', 'approve', 'cancel_approval', 'waive', 'revoke_waiver',
             'apply_checklist', 'add_checklist_item', 'assign_steps', 'set_item_state', 'update_checklist_item',
             'delete_checklist_item', 'item_to_task',
             'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
@@ -193,13 +201,13 @@ export const RELEASE_TOOLS = [
         notes: { type: 'string' },
         note: {
           type: 'string',
-          description: 'sign_off note; the reason when set_item_state waives or marks n_a; report_deployment with status waiting: who acts and how, in one sentence',
+          description: 'sign_off and approve note; the reason when set_item_state waives or marks n_a; report_deployment with status waiting: who acts and how, in one sentence',
         },
         status: { type: 'string', description: 'update_candidate / report_check / report_deployment status' },
         rejectionReason: { type: 'string', description: 'update_candidate with status rejected: why it will not ship (reason also works)' },
         targetType: { type: 'string', enum: ['gate', 'checklist_item', 'epic'] },
         targetId: { type: 'string' },
-        reason: { type: 'string', description: 'Why this is going out anyway (waive). Shown on the release record and changelog.' },
+        reason: { type: 'string', description: 'Why this is going out anyway (waive). Shown on the release record and changelog. cancel_approval: why it was withdrawn.' },
         evidenceType: { type: 'string', enum: ['none', 'link', 'note', 'feature_flag'] },
         evidence: {
           type: 'object',
