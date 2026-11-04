@@ -119,6 +119,7 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'list_notifications',
   'list_org_documents',
   'list_repositories',
+  'list_review_queue',
   'list_tags',
   'list_test_cases',
   'list_test_suites',

@@ -20,6 +20,7 @@ import { CATALOG_TOOLS } from './catalogs.js';
 import { UNMAPPED_PATH_TOOLS } from './unmapped-paths.js';
 import { FEATURE_FLAG_TOOLS } from './feature-flags.js';
 import { TASK_TOOLS } from './tasks.js';
+import { REVIEW_TOOLS } from './review.js';
 import { DOCUMENT_TOOLS } from './documents.js';
 import { FOLDER_TOOLS } from './folders.js';
 import { ATTACHMENT_TOOLS } from './attachments.js';
@@ -64,6 +65,7 @@ export const TOOLS = [
   ...UNMAPPED_PATH_TOOLS,
   ...FEATURE_FLAG_TOOLS,
   ...TASK_TOOLS,
+  ...REVIEW_TOOLS,
   ...RECURRING_TASK_TOOLS,
   ...WORK_TEMPLATE_TOOLS,
   ...DOCUMENT_TOOLS,

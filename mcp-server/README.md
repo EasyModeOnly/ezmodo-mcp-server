@@ -217,6 +217,18 @@ watched tasks.
 - `unreadOnly` (optional): Only unread (default: `true`)
 - `limit` (optional): Max results (default: 20, max: 100)
 
+### 11. `list_review_queue`
+A project's tasks waiting for review, oldest submission first, each with its
+assignee, `submittedAt`, verification counts from linked test cases and a
+one-line summary. Read-only: agents cannot approve or send back. A task sent
+back comes out of `get_task` with a top-level `reviewFeedback`, the reviewer's
+newest feedback, which the agent should address first.
+
+**Parameters:**
+- `projectId` (required): Project to list
+- `limit` (optional): Page size (default: 25, max: 100)
+- `offset` (optional): Rows to skip (default: 0)
+
 ## Usage Example
 
 Once configured in Claude Desktop, you can use natural language:

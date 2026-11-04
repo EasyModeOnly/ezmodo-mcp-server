@@ -84,6 +84,7 @@ export const READ_ONLY_TOOLS = new Set([
   'list_org_documents',
   'list_project_worktrees',
   'list_repositories',
+  'list_review_queue',
   'list_tags',
   'list_test_cases',
   'list_test_suites',

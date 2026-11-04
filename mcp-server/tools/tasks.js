@@ -708,7 +708,9 @@ export const TASK_TOOLS = [
       'To get all tasks in an epic, use get_epic with includeTasks=true instead. ' +
       'Provide EITHER taskId OR both taskNumber and projectId. ' +
       'Responses include `descriptionDocumentId` — the id of the backing rich-description Document ' +
-      'when the description has been promoted to one (E-189), otherwise omitted.',
+      'when the description has been promoted to one (E-189), otherwise omitted. ' +
+      'A task sent back from review has a top-level `reviewFeedback` {content, addedBy, addedAt}, ' +
+      'the newest reviewer feedback: address it before anything else.',
     inputSchema: {
       type: 'object',
       properties: {

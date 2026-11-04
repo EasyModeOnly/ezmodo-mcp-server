@@ -19,6 +19,7 @@ import * as catalogHandlers from './catalogs.js';
 import * as unmappedPathHandlers from './unmapped-paths.js';
 import * as featureFlagHandlers from './feature-flags.js';
 import * as taskHandlers from './tasks.js';
+import * as reviewHandlers from './review.js';
 import * as documentHandlers from './documents.js';
 import * as folderHandlers from './folders.js';
 import * as attachmentHandlers from './attachments.js';
@@ -119,6 +120,7 @@ export const HANDLERS = {
   create_tasks: taskHandlers.bulkCreateTasks,
   search_tasks: taskHandlers.searchTasks,
   get_task: taskHandlers.getTask,
+  list_review_queue: reviewHandlers.listReviewQueue,
   report_untracked_work: taskHandlers.reportUntrackedWork,
 
   // Documents

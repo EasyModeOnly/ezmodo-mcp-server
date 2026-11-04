@@ -25,6 +25,7 @@ import { getCommitFiles, getRepositoryRoot } from '../lib/git-helpers.js';
 import { isRemoteRequest } from '../lib/request-context.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
 import { applyCommitToManifest } from '../lib/commit-manifest.js';
+import { latestReviewFeedback } from '../lib/review-feedback.js';
 
 /**
  * Dispatch manage_task actions to the appropriate handler
@@ -546,7 +547,17 @@ export async function getTask(args) {
   const result = await callEzmodoAPI('mcpGetTask', args);
   const webUrl = await buildTaskUrl(result?.task?.taskNumber);
   if (webUrl && result?.task) result.task.webUrl = webUrl;
-  return result;
+  return withReviewFeedback(result);
+}
+
+// A task sent back from review carries the reviewer's feedback in its
+// knowledge (#3440). Lift the newest item to the top of the response, ahead of
+// `task`, so a resumed agent reads it before anything else. Knowledge itself is
+// left as it is.
+function withReviewFeedback(result) {
+  const reviewFeedback = latestReviewFeedback(result?.task?.context?.knowledge);
+  if (!reviewFeedback) return result;
+  return { reviewFeedback, ...result };
 }
 
 // Link a commit to a task, deriving its changed files when the caller did not
