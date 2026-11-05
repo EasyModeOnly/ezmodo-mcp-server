@@ -1,6 +1,8 @@
 /**
- * GitHub Tools
- * MCP tools for managing GitHub pull requests and integration
+ * Repository and pull request tools
+ * MCP tools for linked repositories and their pull requests, on GitHub and on
+ * Forgejo/Gitea servers (E-310 #3497). The API routes each call to the
+ * repository's own provider; the file keeps its GitHub name for history.
  *
  * Consolidated: manage_pull_request (create/update/merge/close/request_review)
  */
@@ -8,15 +10,20 @@
 export const GITHUB_TOOLS = [
   {
     name: 'list_repositories',
-    description: 'List the git repositories linked to a project, each with the ' +
-      '`repoId` that every manage_pull_request action requires. Call this first ' +
-      'when you need a repoId — it is the only way to get one. The id is ' +
-      '"installationId:owner/repo" and the installation id is not derivable ' +
-      'from anywhere else: no other ezmodo tool exposes it, and GitHub only ' +
-      'answers for it with an app JWT or an app-authorized token. ' +
-      '`installationStatus` tells a live link from one whose GitHub App was ' +
-      'uninstalled or suspended; a repoId from a non-active installation will ' +
-      'parse and then fail at the GitHub call.',
+    description: 'List the git repositories linked to a project — GitHub and ' +
+      'Forgejo/Gitea alike — each with the `repoId` that every manage_pull_request ' +
+      'action requires. Call this first when you need a repoId — it is the only way ' +
+      'to get one. The id is "installationId:owner/repo" for GitHub and ' +
+      '"connectionId:owner/repo" for Forgejo/Gitea, and neither prefix is derivable ' +
+      'from anywhere else. Each row also has `provider` ("github" or "forgejo"; ' +
+      'Gitea servers are connected as forgejo), `instance` (the host it lives on, ' +
+      'e.g. "github.com" or "git.example.com"), `connectionMode` and `apiAccess`. ' +
+      'A Forgejo/Gitea repository in `connectionMode: "webhook_only"` has ' +
+      '`apiAccess: false`: ezmodo only receives its webhooks and holds no token, so ' +
+      'it cannot call that server and every manage_pull_request action on it is ' +
+      'refused — act on the server directly. `installationStatus` tells a live link ' +
+      'from one whose GitHub App was uninstalled or suspended; a repoId from a ' +
+      'non-active installation will parse and then fail at the provider call.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -30,9 +37,15 @@ export const GITHUB_TOOLS = [
   },
   {
     name: 'manage_pull_request',
-    description: 'Create, update, merge, close, or request review on GitHub pull requests. ' +
-      'Also suggests reviewers ("suggest_reviewers") ranked from CODEOWNERS and file history — ' +
-      'that action only SUGGESTS; use "request_review" to actually request them.',
+    description: 'Create, update, merge, close, or request review on pull requests in a linked ' +
+      'repository on GitHub or a Forgejo/Gitea server. The repoId picks the provider — get it from ' +
+      'list_repositories. Also suggests reviewers ("suggest_reviewers") ranked from CODEOWNERS and ' +
+      'file history, on either provider — that action only SUGGESTS; use "request_review" to ' +
+      'actually request them. A repository connected in webhook-only mode (Forgejo/Gitea; ' +
+      'list_repositories shows `apiAccess: false`) is refused with "this repository is connected in ' +
+      'webhook-only mode, so EzModo can\'t reach its server; act on the server directly". An action ' +
+      'the provider cannot do is refused with "<action> isn\'t supported for <provider> repositories" ' +
+      'and `details.code: "capability_unsupported"`.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -44,9 +57,11 @@ export const GITHUB_TOOLS = [
         // --- Identifiers (used by all actions) ---
         repoId: {
           type: 'string',
-          description: 'Repository ID in format "installationId:owner/repo" (e.g., "12345678:acme-corp/backend"). ' +
+          description: 'Repository ID from `list_repositories`: "installationId:owner/repo" for GitHub ' +
+            '(e.g., "12345678:acme-corp/backend") or "connectionId:owner/repo" for Forgejo/Gitea. ' +
+            'The repository\'s ezmodo `id` from the same listing is accepted too. ' +
             'Get it from `list_repositories` (or from the `repositories` on a `detect_git_repository` match) — ' +
-            'the installation id is not derivable from the repo, and GitHub will not tell you it.',
+            'the prefix is not derivable from the repo, and the host will not tell you it.',
         },
         number: {
           type: 'number',
@@ -80,17 +95,18 @@ export const GITHUB_TOOLS = [
         assignees: {
           type: 'array',
           items: { type: 'string' },
-          description: 'GitHub usernames to assign to the PR (create only)',
+          description: 'Usernames on the repository\'s host to assign to the PR (create only)',
         },
         reviewers: {
           type: 'array',
           items: { type: 'string' },
-          description: 'GitHub usernames to request review from. Used by create and request_review.',
+          description: 'Usernames on the repository\'s host to request review from. Used by create and request_review.',
         },
         teamReviewers: {
           type: 'array',
           items: { type: 'string' },
-          description: 'GitHub team slugs to request review from (e.g., "backend-team"). Used by create and request_review.',
+          description: 'Team slugs on the repository\'s host to request review from (e.g., "backend-team"). ' +
+            'Used by create and request_review.',
         },
         labels: {
           type: 'array',

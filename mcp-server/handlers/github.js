@@ -1,6 +1,9 @@
 /**
- * GitHub Handlers
- * Handler functions for GitHub-related MCP tools
+ * Repository and pull request handlers
+ * Handler functions for list_repositories and manage_pull_request. The API
+ * resolves each repository's provider (GitHub or Forgejo/Gitea) from the
+ * linked repository row, so nothing here branches on the provider (#3497).
+ * The routes keep their /github/ prefix for compatibility.
  *
  * Consolidated: managePullRequest dispatches create/update/merge/close/request_review.
  */
@@ -12,7 +15,8 @@ import { callEzmodoAPI } from '../lib/http-client.js';
  * manage_pull_request action requires.
  *
  * This exists because that id was otherwise unknowable. It is
- * `installationId:owner/repo`, and no other tool exposes an installation id:
+ * `installationId:owner/repo` (`connectionId:owner/repo` for Forgejo/Gitea),
+ * and no other tool exposes that prefix:
  * get_project returns `settings.integrations: null`, get_current_project_context
  * has no repo fields, and GitHub will not tell an agent either — the endpoints
  * that would (`/repos/{owner}/{repo}/installation`, `/user/installations`) need

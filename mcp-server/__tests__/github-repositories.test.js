@@ -57,4 +57,23 @@ describe('GitHub tool definitions', () => {
     const repoId = tool('manage_pull_request').inputSchema.properties.repoId;
     expect(repoId.description).toContain('list_repositories');
   });
+
+  // E-310 #3497: the tools are provider-aware, so their descriptions must say
+  // which providers they cover and what webhook-only means for the caller.
+  it('names both providers and the instance on list_repositories', () => {
+    const d = tool('list_repositories').description;
+    expect(d).toContain('Forgejo/Gitea');
+    expect(d).toContain('connectionId:owner/repo');
+    expect(d).toContain('`instance`');
+    expect(d).toContain('webhook_only');
+  });
+
+  it('tells manage_pull_request callers what webhook-only and unsupported mean', () => {
+    const d = tool('manage_pull_request').description;
+    expect(d).toContain('Forgejo/Gitea');
+    expect(d).toContain(
+      'this repository is connected in webhook-only mode, so EzModo can\'t reach its server; act on the server directly',
+    );
+    expect(d).toContain('capability_unsupported');
+  });
 });
