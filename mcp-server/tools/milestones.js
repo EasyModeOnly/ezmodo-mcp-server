@@ -232,7 +232,11 @@ export const MILESTONE_TOOLS = [
         },
         includeProgress: {
           type: 'boolean',
-          description: 'If true, include progress data (overall percentage, epic breakdown)',
+          description: 'If true, include progress data (overall percentage, epic breakdown) and the forecast ' +
+            '(E-309): forecast {expectedDate, earliest, latest, ratePerWeek, remaining, addedPerWeek, creepDate, basis}, ' +
+            'onTrack (on_track|at_risk|off_track|unknown), state, stalled, lowData, a plain-language reason (say it ' +
+            'as given), and for a parent milestone children[] / ownEpics. The forecast counts tasks first reaching ' +
+            'in review or completed in the last 14 days; with too little history it gives counts only, no date',
         },
         // --- List filters (used when no milestoneId/milestoneSlug) ---
         type: {
