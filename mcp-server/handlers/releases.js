@@ -178,6 +178,11 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpReleaseToDev', {
       projectId: await projectIdFor(args, action), ...pick(args, ['deliverable', 'epicId', 'milestoneId', 'commitSha']),
     });
+  case 'list_dev_releases':
+    return callEzmodoAPI('mcpListDevReleases', {
+      projectId: await projectIdFor(args, action),
+      ...pick(args, ['deliverable', 'epicId', 'milestoneId', 'limit', 'offset']),
+    });
   case 'waive':
     need(args, ['candidateId', 'environment', 'targetType', 'targetId', 'reason'], action);
     return callEzmodoAPI('mcpCreateReleaseWaiver',

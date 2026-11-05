@@ -182,6 +182,14 @@ describe('Release Readiness tools (E-262)', () => {
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReleaseToDev', { projectId: 'p1', deliverable: 'api', epicId: 'e1' });
     });
 
+    it('list_dev_releases reads releases to dev back with paging (E-299 #3535)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ devReleases: [], hasMore: false });
+      await manageRelease({ action: 'list_dev_releases', projectId: 'p1', milestoneId: 'm1', limit: 5, offset: 10 });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListDevReleases', {
+        projectId: 'p1', milestoneId: 'm1', limit: 5, offset: 10,
+      });
+    });
+
     it('waive needs a reason', async () => {
       await expect(manageRelease({ action: 'waive', candidateId: 'c1', environment: 'prod', targetType: 'gate', targetId: 'g1' }))
         .rejects.toThrow(/reason/);
