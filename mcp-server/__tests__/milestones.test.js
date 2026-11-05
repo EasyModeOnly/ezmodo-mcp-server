@@ -388,4 +388,60 @@ describe('Milestone Operations', () => {
       await expect(getMilestone({ milestoneId: 'nonexistent', includeProgress: true })).rejects.toThrow('Milestone not found');
     });
   });
+  // E-309 #3483: milestone start date.
+  describe('startDate', () => {
+    it('passes startDate through on create', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestoneId: 'ms-s' });
+      const args = { projectId: 'proj-1', name: 'Q2', type: 'initiative', startDate: '2026-04-01T00:00:00Z', targetDate: '2026-06-30T00:00:00Z' };
+      await manageMilestone({ action: 'create', ...args });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateMilestone', args);
+    });
+
+    it('drops an empty startDate on create rather than sending an unparseable date', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestoneId: 'ms-s' });
+      await manageMilestone({ action: 'create', projectId: 'proj-1', name: 'Q2', type: 'initiative', startDate: '' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateMilestone', { projectId: 'proj-1', name: 'Q2', type: 'initiative' });
+    });
+
+    it('passes startDate through on update', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+      const args = { projectId: 'proj-1', milestoneId: 'ms-1', startDate: '2026-04-01T00:00:00Z' };
+      await manageMilestone({ action: 'update', ...args });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
+    });
+
+    it.each([[null], ['']])('turns startDate %p on update into clearStartDate', async (value) => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+      await manageMilestone({ action: 'update', projectId: 'proj-1', milestoneId: 'ms-1', startDate: value });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', {
+        projectId: 'proj-1', milestoneId: 'ms-1', clearStartDate: true,
+      });
+    });
+
+    it('passes clearStartDate through on update', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+      const args = { projectId: 'proj-1', milestoneId: 'ms-1', clearStartDate: true };
+      await manageMilestone({ action: 'update', ...args });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateMilestone', args);
+    });
+
+    it('returns startDate and effectiveStartDate from get_milestone', async () => {
+      const milestone = {
+        id: 'ms-1', slug: 'q2', effectiveStartDate: '2026-04-08T00:00:00Z', effectiveStartSource: 'epics',
+      };
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestone });
+      const result = await getMilestone({ projectId: 'proj-1', milestoneId: 'ms-1' });
+      expect(result.milestone.effectiveStartDate).toBe('2026-04-08T00:00:00Z');
+      expect(result.milestone.effectiveStartSource).toBe('epics');
+    });
+
+    it('documents startDate and clearStartDate on manage_milestone, and the effective start on get_milestone', () => {
+      const manage = MILESTONE_TOOLS.find((t) => t.name === 'manage_milestone');
+      const get = MILESTONE_TOOLS.find((t) => t.name === 'get_milestone');
+      expect(manage.inputSchema.properties.startDate.type).toBe('string');
+      expect(manage.inputSchema.properties.clearStartDate.type).toBe('boolean');
+      expect(get.description).toContain('effectiveStartDate');
+      expect(get.description).toContain('effectiveStartSource');
+    });
+  });
 });

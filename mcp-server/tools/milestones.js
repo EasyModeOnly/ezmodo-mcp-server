@@ -74,6 +74,17 @@ export const MILESTONE_TOOLS = [
           type: 'string',
           description: 'Target completion/release date (RFC3339, e.g., 2026-03-31T00:00:00Z) (create, update)',
         },
+        startDate: {
+          type: 'string',
+          description: 'When the milestone starts (RFC3339, e.g., 2026-01-05T00:00:00Z) (create, update). ' +
+            'Must not be after targetDate. On update, an empty string "" (or null) clears it. ' +
+            'Unset, reads report effectiveStartDate from the milestone\'s epics and nested milestones instead',
+        },
+        clearStartDate: {
+          type: 'boolean',
+          description: 'Remove the start date (update only). Same as startDate: "" or null; ' +
+            'wins over a startDate sent with it',
+        },
         parentMilestoneId: {
           type: 'string',
           description: 'Nest this milestone under an overarching parent milestone (tiered milestones, E-217). ' +
@@ -200,7 +211,10 @@ export const MILESTONE_TOOLS = [
       'Provide milestoneId (or milestoneSlug) for single lookup, or just projectId to list all. ' +
       'Optionally include progress data. ' +
       'Responses include `descriptionDocumentId` — the id of the backing rich-description Document ' +
-      'when the description has been promoted to one (E-189), otherwise omitted.',
+      'when the description has been promoted to one (E-189), otherwise omitted. ' +
+      '`startDate` is the milestone\'s own start, if set. `effectiveStartDate` is when it actually starts: ' +
+      '`startDate` if set, else the earliest start of its epics or of its nested milestones; ' +
+      '`effectiveStartSource` says which ("milestone" | "epics" | "children"). Both are omitted when nothing is dated.',
     inputSchema: {
       type: 'object',
       properties: {

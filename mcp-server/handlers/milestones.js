@@ -68,7 +68,7 @@ export async function getMilestone(args) {
 // --- Private helpers ---
 
 async function createMilestone(args) {
-  const result = await callEzmodoAPI('mcpCreateMilestone', args);
+  const result = await callEzmodoAPI('mcpCreateMilestone', dropEmptyStartDate(args));
   const webUrl = await buildMilestoneUrl(result?.slug);
   if (webUrl) result.webUrl = webUrl;
   return result;
@@ -82,7 +82,26 @@ async function fetchSingleMilestone(args) {
 }
 
 async function updateMilestone(args) {
-  return callEzmodoAPI('mcpUpdateMilestone', args);
+  return callEzmodoAPI('mcpUpdateMilestone', normalizeStartDateClear(args));
+}
+
+// On create there is nothing to clear: an empty startDate just means none,
+// and "" would not parse as a date on the API side.
+function dropEmptyStartDate(args) {
+  if (args.startDate !== null && args.startDate !== '') return args;
+  const { startDate: _omit, ...rest } = args;
+  return rest;
+}
+
+// The API reads a missing or null startDate as "unchanged" (as it does
+// targetDate), and clears only on clearStartDate (E-309 #3483). An agent
+// asked to remove the start date naturally sends null or "", so both become
+// the explicit flag here rather than silently doing nothing.
+function normalizeStartDateClear(args) {
+  if (!Object.prototype.hasOwnProperty.call(args, 'startDate')) return args;
+  const { startDate, ...rest } = args;
+  if (startDate === null || startDate === '') return { ...rest, clearStartDate: true };
+  return args;
 }
 
 async function listMilestones(args) {
