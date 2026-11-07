@@ -14,14 +14,17 @@ export const DOCUMENT_TOOLS = [
       'so pass the full document, not a fragment. ' +
       'To embed a diagram document, put its id in a ```diagram-ref fence (one id, nothing else); ' +
       'get_document returns embeds in that form, so they survive a get → edit → update. ' +
-      '(The legacy section model is gone — `sections` and the section ops were removed; sending them is an error.)',
+      '(The legacy section model is gone — `sections` and the section ops were removed; sending them is an error.) ' +
+      'action:"restore" with documentId + historyEntryId makes an older version current again; find the entry ' +
+      'with get_document includeHistory:true and check it with diffFrom first.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update'],
-          description: 'Action to perform',
+          enum: ['create', 'update', 'restore'],
+          description: 'Action to perform. "restore" makes a history entry the current version ' +
+            '(documentId + historyEntryId).',
         },
         // --- Identifiers ---
         projectId: {
@@ -39,7 +42,11 @@ export const DOCUMENT_TOOLS = [
         },
         documentId: {
           type: 'string',
-          description: 'Document ID (required for update)',
+          description: 'Document ID (required for update, restore)',
+        },
+        historyEntryId: {
+          type: 'string',
+          description: 'The history entry to restore (restore). Ids come from get_document includeHistory:true.',
         },
         // --- Create / Update fields ---
         title: {
@@ -209,7 +216,9 @@ export const DOCUMENT_TOOLS = [
       'Provide documentId (or projectId + slug) for single lookup. ' +
       'Provide just projectId to list all docs. ' +
       'Single-doc content is saved to .ezmodo/docs/ and returns a file path. ' +
-      'Optionally include version history or fetch a specific version.',
+      'History (single lookup): includeHistory lists versions, newest first, without their bodies; ' +
+      'historyEntryId reads one version; diffFrom (+ diffTo, omitted = current) compares two versions ' +
+      'as line hunks rather than two full bodies. Prefer a diff to reading two versions.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -247,18 +256,40 @@ export const DOCUMENT_TOOLS = [
           enum: ['draft', 'in_review', 'published', 'archived'],
           description: 'Filter by document status (list mode only)',
         },
-        // --- Version fields ---
+        // --- History fields (E-300) ---
+        includeHistory: {
+          type: 'boolean',
+          description: 'List the document\'s version history, newest first, without bodies (single lookup only)',
+        },
         includeVersions: {
           type: 'boolean',
-          description: 'If true, include version history for the document (single lookup only)',
+          description: 'Alias of includeHistory, kept for older callers',
+        },
+        historyEntryId: {
+          type: 'string',
+          description: 'Read one version: a history entry id from includeHistory (single lookup only)',
+        },
+        diffFrom: {
+          type: 'string',
+          description: 'Diff from this history entry id (single lookup only). Returns changed fields and ' +
+            'the content as line hunks.',
+        },
+        diffTo: {
+          type: 'string',
+          description: 'Diff to this history entry id. Omit to diff against the current version. Needs diffFrom.',
         },
         versionNumber: {
           type: 'number',
-          description: 'Specific version number to retrieve (single lookup only, e.g., 1, 2, 3)',
+          description: 'DEPRECATED, use historyEntryId. Versions have ids, not numbers: N reads the N-th ' +
+            'newest history entry (1 = newest). Kept for backwards compatibility (single lookup only).',
+        },
+        historyLimit: {
+          type: 'number',
+          description: 'Maximum number of history entries to list with includeHistory',
         },
         versionLimit: {
           type: 'number',
-          description: 'Maximum number of versions to return (default: 20, max: 100)',
+          description: 'Alias of historyLimit, kept for older callers',
         },
       },
     },

@@ -24,15 +24,18 @@ export const DESIGN_TOOLS = [
       'they do not contain them. Before authoring a new design, call get_design_system first to ' +
       'learn the established house style. To change an existing design, send `edits` ' +
       '(find-and-replace) rather than the whole html/css, plus expectedUpdatedAt. Create and ' +
-      'update return the design\'s summary and new updatedAt, not its markup.',
+      'update return the design\'s summary and new updatedAt, not its markup. action:"restore" makes ' +
+      'an older version current again (designId + historyEntryId + expectedUpdatedAt); find it with ' +
+      'get_design includeHistory:true and check it with diffFrom first.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'link', 'unlink'],
+          enum: ['create', 'update', 'delete', 'link', 'unlink', 'restore'],
           description: 'Action to perform. "link"/"unlink" attach/detach the design to an artifact ' +
-            '(pass designId + targetType + targetId).',
+            '(pass designId + targetType + targetId). "restore" makes a history entry the current ' +
+            'version (designId + historyEntryId + expectedUpdatedAt).',
         },
         // --- Identifiers ---
         organizationId: {
@@ -41,7 +44,12 @@ export const DESIGN_TOOLS = [
         },
         designId: {
           type: 'string',
-          description: 'Design ID (required for update, delete, link, unlink)',
+          description: 'Design ID (required for update, delete, link, unlink, restore)',
+        },
+        historyEntryId: {
+          type: 'string',
+          description: 'The history entry to restore (required for restore). Ids come from get_design ' +
+            'includeHistory:true.',
         },
         // --- Create / update fields ---
         kind: {
@@ -112,10 +120,10 @@ export const DESIGN_TOOLS = [
         },
         expectedUpdatedAt: {
           type: 'string',
-          description: 'The updatedAt you read the design at, copied exactly (update). When set, ' +
-            'the update is refused with a 409 if the design changed since, instead of silently ' +
-            'overwriting someone else\'s edit. On a 409, fetch it again, reapply your change and ' +
-            'retry with the new updatedAt. Always send it when updating a design you read earlier.',
+          description: 'The updatedAt you read the design at, copied exactly (update; required for ' +
+            'restore). When set, the update is refused with a 409 if the design changed since, instead ' +
+            'of silently overwriting someone else\'s edit. On a 409, fetch it again, reapply your change ' +
+            'and retry with the new updatedAt. Always send it when updating a design you read earlier.',
         },
         // --- link / unlink fields ---
         targetType: {
@@ -152,7 +160,10 @@ export const DESIGN_TOOLS = [
       '.ezmodo/designs/<slug>/ (index.html, styles.css, notes.md) and the response gives the paths ' +
       'instead: read the files you need, edit them, and push with manage_design update fromFiles:true. ' +
       'Elsewhere (or with inline:true) it is returned inline; then keep the updatedAt of any design ' +
-      'you intend to change and send it as expectedUpdatedAt.',
+      'you intend to change and send it as expectedUpdatedAt. History (designId): includeHistory lists ' +
+      'versions, newest first, without markup; historyEntryId returns one past version inline and ' +
+      'read-only (never written to the local files); diffFrom (+ diffTo, omitted = current) compares ' +
+      'versions as line hunks for html, css and description. Prefer a diff to reading two versions.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -194,6 +205,33 @@ export const DESIGN_TOOLS = [
           type: 'boolean',
           description: 'Replace local files that hold edits never pushed (designId / designIds). ' +
             'Default false: such files are left alone and the response says so.',
+        },
+        // --- History (designId, E-300) ---
+        includeHistory: {
+          type: 'boolean',
+          description: 'Also list the design\'s version history, newest first, without markup (designId)',
+        },
+        historyLimit: {
+          type: 'number',
+          description: 'Maximum number of history entries to list with includeHistory',
+        },
+        historyBefore: {
+          type: 'string',
+          description: 'includeHistory paging: list entries changed before this time. Pass the ' +
+            'historyNextBefore value from the previous page (given when historyHasMore is true).',
+        },
+        historyEntryId: {
+          type: 'string',
+          description: 'Return one past version inline (designId): a history entry id from includeHistory',
+        },
+        diffFrom: {
+          type: 'string',
+          description: 'Diff from this history entry id (designId). Returns changed fields and html, css ' +
+            'and description as line hunks.',
+        },
+        diffTo: {
+          type: 'string',
+          description: 'Diff to this history entry id. Omit to diff against the current version. Needs diffFrom.',
         },
         includeContent: {
           type: 'boolean',

@@ -9,6 +9,7 @@ import { findConfigPath } from '../lib/local-cache.js';
 import { ensureDirInside, isInside, writeFileNoFollow } from '../lib/local-paths.js';
 import { getLogger } from '../lib/logger.js';
 import { attachLinks } from '../lib/links-at-create.js';
+import { historyMode, summarizeEntry } from '../lib/version-history.js';
 
 /**
  * Dispatch manage_document actions to the appropriate handler
@@ -18,6 +19,7 @@ export async function manageDocument(args) {
   switch (action) {
   case 'create': return createDocument(params);
   case 'update': return updateDocument(params);
+  case 'restore': return restoreDocument(params);
   case 'create_version': throw new Error('Document versioning is not yet supported. Use the "update" action to modify documents.');
   default: throw new Error(`Unknown action: ${action}`);
   }
@@ -39,30 +41,52 @@ export async function manageDocumentTemplate(args) {
  * Unified get/list handler for documents.
  * - If documentId or slug is provided, returns a single document.
  * - Otherwise, lists all documents for the project with optional filters.
- * - Optionally includes version history or fetches a specific version.
+ * - Optionally lists the document's history, reads one version, or diffs two
+ *   (E-300 #3387 #3409).
  */
 export async function getDocument(args) {
-  const { docType, tags, status, includeVersions, versionNumber, versionLimit, ...rest } = args;
+  const {
+    docType, tags, status,
+    includeHistory, includeVersions, historyEntryId, versionNumber, versionLimit, historyLimit, diffFrom, diffTo,
+    ...rest
+  } = args;
   const isSingleLookup = rest.documentId || rest.slug;
+  const mode = historyMode({ includeHistory, includeVersions, historyEntryId, versionNumber, diffFrom, diffTo });
 
   if (isSingleLookup) {
-    // Specific version requested
-    if (versionNumber !== undefined) {
-      return fetchDocumentVersion({ documentId: rest.documentId, versionNumber });
+    if (mode === 'diff') {
+      const documentId = await resolveDocumentId(rest);
+      const params = { documentId, from: diffFrom };
+      if (diffTo != null) params.to = diffTo;
+      return callEzmodoAPI('mcpDiffDocumentHistory', params);
+    }
+    if (mode === 'entry') {
+      const documentId = await resolveDocumentId(rest);
+      return callEzmodoAPI('mcpGetDocumentHistoryEntry', { documentId, entryId: historyEntryId });
+    }
+    if (mode === 'nth') {
+      return fetchNthNewestVersion(await resolveDocumentId(rest), versionNumber);
     }
 
     const result = await fetchSingleDocument(rest);
 
-    // Include version history if requested
-    if (includeVersions) {
-      const versions = await listDocumentVersions({
-        documentId: rest.documentId || result?.document?.id,
-        limit: versionLimit,
-      });
-      result.versions = versions;
+    if (mode === 'list') {
+      const documentId = rest.documentId || result?.document?.id;
+      const params = { documentId };
+      const limit = historyLimit ?? versionLimit;
+      if (limit != null) params.limit = limit;
+      const listed = await callEzmodoAPI('mcpListDocumentHistory', params);
+      const entries = listed?.history ?? [];
+      result.history = entries.map((e) => summarizeEntry(e, DOCUMENT_CONTENT_FIELDS));
+      result.historyMessage = 'Each entry is a version, newest first. Read one with get_document ' +
+        'historyEntryId, compare with diffFrom/diffTo, or restore with manage_document action:"restore".';
     }
 
     return result;
+  }
+
+  if (mode) {
+    throw new Error('History needs a single document: pass documentId (or projectId + slug).');
   }
 
   // List mode
@@ -72,6 +96,49 @@ export async function getDocument(args) {
   if (status) listArgs.status = status;
 
   return getDocumentation(listArgs);
+}
+
+/** Bodies a history entry may carry; a list returns entries without them. */
+const DOCUMENT_CONTENT_FIELDS = ['content', 'body'];
+
+/**
+ * The document's id. History routes take an id, so a slug lookup resolves it
+ * first (without writing the current version to .ezmodo/docs).
+ */
+async function resolveDocumentId(args) {
+  if (args.documentId) return args.documentId;
+  const data = await callEzmodoAPI('mcpGetDocument', args);
+  const id = data?.document?.id;
+  if (!id) throw new Error(`Document not found for slug "${args.slug}".`);
+  return id;
+}
+
+/**
+ * `versionNumber` (kept for backwards compatibility, #3387): history entries
+ * have ids, not numbers, so N means the N-th newest entry, 1 being the newest.
+ */
+async function fetchNthNewestVersion(documentId, versionNumber) {
+  const listed = await callEzmodoAPI('mcpListDocumentHistory', { documentId, limit: versionNumber });
+  const entries = listed?.history ?? [];
+  const entry = entries[versionNumber - 1];
+  if (!entry?.id) {
+    throw new Error(
+      `Document ${documentId} has ${entries.length} version${entries.length === 1 ? '' : 's'} in its ` +
+        `history, so there is no version ${versionNumber}. versionNumber counts back from the newest (1).`
+    );
+  }
+  return callEzmodoAPI('mcpGetDocumentHistoryEntry', { documentId, entryId: entry.id });
+}
+
+/**
+ * manage_document action:"restore": make a history entry the current version.
+ */
+async function restoreDocument({ documentId, historyEntryId }) {
+  if (!documentId) throw new Error('documentId is required for restore');
+  if (!historyEntryId) {
+    throw new Error('historyEntryId is required for restore: list them with get_document includeHistory:true.');
+  }
+  return callEzmodoAPI('mcpRestoreDocumentHistory', { documentId, entryId: historyEntryId });
 }
 
 /**
@@ -217,16 +284,6 @@ async function updateDocument(args) {
  */
 export async function listOrgDocuments(args) {
   return callEzmodoAPI('mcpListOrgDocuments', args);
-}
-
-// Document Version helpers
-
-async function listDocumentVersions(args) {
-  return callEzmodoAPI('mcpListDocumentVersions', args);
-}
-
-async function fetchDocumentVersion(args) {
-  return callEzmodoAPI('mcpGetDocumentVersion', args);
 }
 
 // Document Template helpers

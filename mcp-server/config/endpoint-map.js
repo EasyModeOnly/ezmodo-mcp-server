@@ -160,9 +160,12 @@ export const ENDPOINT_MAP = {
   // Org-scoped (project-less) document listing (E-195)
   'mcpListOrgDocuments': { route: 'mcp/v1/org-documents', method: 'GET' },
 
-  // Document Versions (list/get only — create not yet implemented in Go API)
-  'mcpListDocumentVersions': { route: 'mcp/v1/document-versions', method: 'GET' },
-  'mcpGetDocumentVersion': { route: 'mcp/v1/document-versions/by-number', method: 'GET' },
+  // Document history (E-300). Versions are entries with ids, not numbers: the
+  // old document-versions routes never existed (#3387).
+  'mcpListDocumentHistory': { route: 'mcp/v1/document-history', method: 'GET' },
+  'mcpGetDocumentHistoryEntry': { route: 'mcp/v1/document-history/entry', method: 'GET' },
+  'mcpDiffDocumentHistory': { route: 'mcp/v1/document-history/diff', method: 'GET' },
+  'mcpRestoreDocumentHistory': { route: 'mcp/v1/document-history/restore', method: 'POST' },
 
   // Document Templates
   'mcpListDocumentTemplates': { route: 'mcp/v1/document-templates', method: 'GET' },
@@ -407,6 +410,11 @@ export const ENDPOINT_MAP = {
   'mcpDeleteDesign': { route: 'mcp/v1/designs', method: 'DELETE' },
   'mcpLinkDesign': { route: 'mcp/v1/designs/link', method: 'POST' },
   'mcpUnlinkDesign': { route: 'mcp/v1/designs/link', method: 'DELETE' },
+  // Design history (E-300 #3409)
+  'mcpListDesignHistory': { route: 'mcp/v1/design-history', method: 'GET' },
+  'mcpGetDesignHistoryEntry': { route: 'mcp/v1/design-history/entry', method: 'GET' },
+  'mcpDiffDesignHistory': { route: 'mcp/v1/design-history/diff', method: 'GET' },
+  'mcpRestoreDesignHistory': { route: 'mcp/v1/design-history/restore', method: 'POST' },
 
   // Catalogs (E-215) — org-level generalized code-derived catalogs, each versioned
   'mcpCreateCatalog': { route: 'mcp/v1/catalogs', method: 'POST' },

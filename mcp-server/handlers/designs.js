@@ -20,6 +20,7 @@ import {
   setAsideAndRefresh,
   writeDesignFiles,
 } from '../lib/design-files.js';
+import { historyMode, staleRestoreMessage, summarizeEntry } from '../lib/version-history.js';
 
 /**
  * Dispatch manage_design actions.
@@ -32,8 +33,9 @@ export async function manageDesign(args) {
   case 'delete': return deleteDesign(params);
   case 'link': return linkDesignArtifact(params);
   case 'unlink': return unlinkDesignArtifact(params);
+  case 'restore': return restoreDesign(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, or unlink.`);
+    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, or restore.`);
   }
 }
 
@@ -45,9 +47,17 @@ export async function manageDesign(args) {
 export async function getDesign(args) {
   const {
     includeLinks, designId, designIds, organizationId, linkedType, linkedId, inline, overwriteLocal,
+    includeHistory, historyEntryId, diffFrom, diffTo, historyLimit, historyBefore,
     ...filters
   } = args;
   const fileOpts = { inline, overwriteLocal };
+  const mode = historyMode({ includeHistory, historyEntryId, diffFrom, diffTo });
+  if (mode && !designId) {
+    throw new Error('History needs a single design: pass designId.');
+  }
+  if (mode === 'diff' || mode === 'entry') {
+    return getDesignVersion({ designId, organizationId, historyEntryId, diffFrom, diffTo });
+  }
 
   if (linkedType && linkedId) {
     const params = { linkedType, linkedId };
@@ -72,6 +82,9 @@ export async function getDesign(args) {
     if (includeLinks) {
       const links = await callEzmodoAPI('mcpListDesignLinks', { designId });
       result.links = links?.links ?? links;
+    }
+    if (mode === 'list') {
+      Object.assign(result, await listDesignHistory(result?.design?.id ?? designId, historyLimit, historyBefore));
     }
     return result;
   }
@@ -191,6 +204,56 @@ async function toLocal(design, { inline, overwriteLocal } = {}) {
 }
 
 /**
+ * The design's id. History routes take an id; designId may be a slug when
+ * organizationId is given (#3490), so that case resolves it first.
+ */
+async function resolveDesignId(designId, organizationId) {
+  if (!organizationId) return designId;
+  const fetched = await callEzmodoAPI('mcpGetDesign', { designId, organizationId });
+  const id = fetched?.design?.id;
+  if (!id) throw new Error(`Design not found: "${designId}".`);
+  return id;
+}
+
+/**
+ * One version (historyEntryId) or a diff (diffFrom/diffTo) of a design,
+ * returned inline: a past version is read-only, so it is never written over
+ * the editable files in .ezmodo/designs (E-300 #3409).
+ */
+async function getDesignVersion({ designId, organizationId, historyEntryId, diffFrom, diffTo }) {
+  const id = await resolveDesignId(designId, organizationId);
+  if (diffFrom != null) {
+    const params = { designId: id, from: diffFrom };
+    if (diffTo != null) params.to = diffTo;
+    return callEzmodoAPI('mcpDiffDesignHistory', params);
+  }
+  const entry = await callEzmodoAPI('mcpGetDesignHistoryEntry', { designId: id, entryId: historyEntryId });
+  return {
+    ...(entry && typeof entry === 'object' && !Array.isArray(entry) ? entry : { entry }),
+    message: 'A past version, returned inline and read-only: pushing local files never sends it. ' +
+      'To make it current, use manage_design action:"restore" with this historyEntryId and the ' +
+      'design\'s current updatedAt as expectedUpdatedAt.',
+  };
+}
+
+/** includeHistory: the design's versions, newest first, without their markup. */
+async function listDesignHistory(designId, limit, before) {
+  const params = { designId };
+  if (limit != null) params.limit = limit;
+  if (before != null) params.before = before;
+  const listed = await callEzmodoAPI('mcpListDesignHistory', params);
+  const entries = listed?.history ?? [];
+  const out = {
+    history: entries.map((e) => summarizeEntry(e, CONTENT_FIELDS)),
+    historyHasMore: Boolean(listed?.hasMore),
+  };
+  if (out.historyHasMore && entries.length > 0) {
+    out.historyNextBefore = entries[entries.length - 1].changedAt;
+  }
+  return out;
+}
+
+/**
  * Retrieve the design system (theme + components) for an org/project. Call this
  * first to learn the existing house style before authoring new UI.
  */
@@ -274,6 +337,38 @@ async function pushDesignFiles(args) {
     ...result,
     pushed: local.changed,
     localDir: local.dir,
+  };
+}
+
+/**
+ * manage_design action:"restore": make a history entry the current version,
+ * conditional on the version the agent read, as an update is (E-300 #3409).
+ */
+async function restoreDesign({ designId, historyEntryId, expectedUpdatedAt }) {
+  if (!designId) throw new Error('designId is required for restore');
+  if (!historyEntryId) {
+    throw new Error('historyEntryId is required for restore: list them with get_design includeHistory:true.');
+  }
+  if (!expectedUpdatedAt) {
+    throw new Error(
+      'expectedUpdatedAt is required for restore: the updatedAt you read the design at, from get_design. ' +
+        'It stops a restore from silently discarding an edit made since.'
+    );
+  }
+  let result;
+  try {
+    result = await callEzmodoAPI('mcpRestoreDesignHistory', { designId, entryId: historyEntryId, expectedUpdatedAt });
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    const e = new Error(staleRestoreMessage('design', designId, err.message));
+    e.status = 409;
+    throw e;
+  }
+  await withWebUrl(result?.design);
+  return {
+    ...result,
+    message: 'Restored. Any local files for this design in .ezmodo/designs still hold the version ' +
+      'before the restore: fetch it again with get_design before editing them.',
   };
 }
 
