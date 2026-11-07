@@ -1,6 +1,8 @@
 # EzModo MCP server
 
 The source of [`@ezmodo/mcp-server`](https://www.npmjs.com/package/@ezmodo/mcp-server):
+
+[![ezmodo MCP on StartupScores](https://startupscores.com/badge/ezmodo-mcp.svg?style=shield&v=combo&theme=dark)](https://startupscores.com/open-source/ezmodo-mcp)
 the Model Context Protocol server that gives an AI agent EzModo's work-tracking
 tools — tasks, epics, knowledge, commit links, features and the rest.
 
