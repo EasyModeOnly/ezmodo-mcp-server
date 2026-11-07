@@ -20,6 +20,8 @@ export async function manageDocument(args) {
   case 'create': return createDocument(params);
   case 'update': return updateDocument(params);
   case 'restore': return restoreDocument(params);
+  case 'submit_for_review': return reviewDocument('submit', params);
+  case 'withdraw_review': return reviewDocument('withdraw', params);
   case 'create_version': throw new Error('Document versioning is not yet supported. Use the "update" action to modify documents.');
   default: throw new Error(`Unknown action: ${action}`);
   }
@@ -139,6 +141,19 @@ async function restoreDocument({ documentId, historyEntryId }) {
     throw new Error('historyEntryId is required for restore: list them with get_document includeHistory:true.');
   }
   return callEzmodoAPI('mcpRestoreDocumentHistory', { documentId, entryId: historyEntryId });
+}
+
+/**
+ * manage_document action:"submit_for_review" / "withdraw_review" (E-304 #3454):
+ * ask a person to approve the document, optionally with a note for them, or
+ * take the request back. Agents have no publish or approve action.
+ */
+async function reviewDocument(action, { documentId, note }) {
+  const name = action === 'submit' ? 'submit_for_review' : 'withdraw_review';
+  if (!documentId) throw new Error(`documentId is required for ${name}`);
+  const params = { documentId, action };
+  if (action === 'submit' && note) params.note = note;
+  return callEzmodoAPI('mcpReviewDocument', params);
 }
 
 /**

@@ -19,15 +19,19 @@ export const DOCUMENT_TOOLS = [
       'get_document returns embeds in that form, so they survive a get → edit → update. ' +
       '(The legacy section model is gone — `sections` and the section ops were removed; sending them is an error.) ' +
       'action:"restore" with documentId + historyEntryId makes an older version current again; find the entry ' +
-      'with get_document includeHistory:true and check it with diffFrom first.',
+      'with get_document includeHistory:true and check it with diffFrom first. ' +
+      'Editing a PUBLISHED document makes it a draft and readers keep seeing the published copy: when your ' +
+      'change is ready, action:"submit_for_review" (documentId, optional note for the reviewer) asks a person ' +
+      'to approve and publish it; action:"withdraw_review" takes that back. Agents cannot publish.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'restore'],
+          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review'],
           description: 'Action to perform. "restore" makes a history entry the current version ' +
-            '(documentId + historyEntryId).',
+            '(documentId + historyEntryId). "submit_for_review" asks a person to approve and publish the ' +
+            'document (documentId, optional note); "withdraw_review" returns it to draft.',
         },
         // --- Identifiers ---
         projectId: {
@@ -46,6 +50,10 @@ export const DOCUMENT_TOOLS = [
         documentId: {
           type: 'string',
           description: 'Document ID (required for update, restore)',
+        },
+        note: {
+          type: 'string',
+          description: 'A short note for the reviewer: what you changed and why (submit_for_review)',
         },
         historyEntryId: {
           type: 'string',

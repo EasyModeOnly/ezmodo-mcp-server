@@ -166,6 +166,8 @@ export const ENDPOINT_MAP = {
   'mcpGetDocumentHistoryEntry': { route: 'mcp/v1/document-history/entry', method: 'GET' },
   'mcpDiffDocumentHistory': { route: 'mcp/v1/document-history/diff', method: 'GET' },
   'mcpRestoreDocumentHistory': { route: 'mcp/v1/document-history/restore', method: 'POST' },
+  // Submit a document for review or withdraw it; there is no publish (E-304 #3454).
+  'mcpReviewDocument': { route: 'mcp/v1/document-review', method: 'POST' },
 
   // Document Templates
   'mcpListDocumentTemplates': { route: 'mcp/v1/document-templates', method: 'GET' },
