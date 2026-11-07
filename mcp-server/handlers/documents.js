@@ -5,9 +5,9 @@
 
 import path from 'path';
 import { callEzmodoAPI } from '../lib/http-client.js';
-import { findConfigPath } from '../lib/local-cache.js';
-import { ensureDirInside, isInside, writeFileNoFollow } from '../lib/local-paths.js';
 import { getLogger } from '../lib/logger.js';
+import { readDocFile, refreshDocFile, safeFileStem, setAsideAndRefreshDoc, writeDocFile } from '../lib/doc-files.js';
+import { computeEdits } from '../lib/text-edits.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { historyMode, summarizeEntry } from '../lib/version-history.js';
 
@@ -167,67 +167,48 @@ async function getDocumentation(args) {
   return callEzmodoAPI('mcpGetDocumentation', args);
 }
 
-/**
- * The file name (without .md) a fetched document is saved under: its slug when
- * that is a plain slug, else its id when that is a plain id, else nothing.
- * Both come from the API and are attacker-influenced, so neither is trusted to
- * be a file name (E-297).
- */
-export function safeFileStem(slug, id) {
-  if (typeof slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return slug;
-  if (typeof id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(id)) return id;
-  return null;
-}
+// Kept exported from here for existing callers; it lives in lib/doc-files.js.
+export { safeFileStem };
 
 async function fetchSingleDocument(args) {
-  const data = await callEzmodoAPI('mcpGetDocument', args);
+  const { overwriteLocal, ...lookup } = args;
+  const data = await callEzmodoAPI('mcpGetDocument', lookup);
   const doc = data.document;
+  if (!doc || !doc.content) return data;
 
-  if (!doc) {
-    return data;
-  }
-
-  if (!doc.content) {
-    return data;
-  }
-
-  // Save content to <repo-config-dir>/docs/<slug-or-id>.md
-  const configPath = await findConfigPath();
-  if (!configPath) {
-    // No project config directory found — return as-is.
-    return data;
-  }
-
-  const configDir = path.dirname(configPath);
-  const docsDir = path.join(configDir, 'docs');
-  const stem = safeFileStem(doc.slug, doc.id);
-  const filePath = stem && path.resolve(docsDir, `${stem}.md`);
-  if (!filePath || !isInside(docsDir, filePath)) {
-    // A slug or id that is not a plain file name never becomes a path (E-297):
-    // "../../CLAUDE" would otherwise overwrite a file outside .ezmodo/docs.
-    getLogger().warn('Document has no safe file name; returning it inline', { id: doc.id });
-    return data;
-  }
-
+  let written;
   try {
-    // Neither .ezmodo/docs nor the file itself may be a symlink out of the
-    // checkout: a planted .ezmodo/docs/<slug>.md -> ~/.bashrc would turn a
-    // document fetch into a write anywhere (E-297).
-    await ensureDirInside(docsDir, path.dirname(configDir));
-    await writeFileNoFollow(filePath, doc.content);
+    // Saved to .ezmodo/docs/<slug-or-id>.md with a sidecar recording the
+    // version it was downloaded at (E-304 #3453). No checkout, or a slug that
+    // is not a safe file name (E-297), returns the content inline.
+    written = await writeDocFile(doc, { overwriteLocal });
   } catch (err) {
-    getLogger().warn('Failed to save document to local file', { error: err.message, filePath });
-    // Fall back to returning full content in response
+    getLogger().warn('Failed to save document to local file', { error: err.message, id: doc.id });
     return data;
   }
+  if (!written) return data;
 
-  // Return metadata + file path, omit heavy content from response
   const { content, ...metadata } = doc;
+  if (written.localChanges) {
+    return {
+      ...data,
+      document: metadata,
+      localFilePath: written.file,
+      localChanges: true,
+      message:
+        `NOT overwritten: ${written.file} has edits that were never pushed. Push them with ` +
+        `manage_document action:"update" documentId:"${doc.id}" fromFile:true, or pass ` +
+        'overwriteLocal:true to discard them and download the current version.',
+    };
+  }
   return {
     ...data,
     document: metadata,
-    localFilePath: filePath,
-    message: `Document content saved to ${filePath}. Use the Read tool to access it when needed.`,
+    localFilePath: written.file,
+    message:
+      `Document content saved to ${written.file}. Read it when needed. To change the document, edit ` +
+      `that file and push it with manage_document action:"update" documentId:"${doc.id}" fromFile:true: ` +
+      'only your changes are sent, and only if nobody saved the document since you downloaded it.',
   };
 }
 
@@ -275,7 +256,93 @@ async function updateDocument(args) {
     rest.removeRelatedItem = removeRelatedItem;
   }
 
+  if (rest.fromFile) {
+    const { fromFile, ...pushArgs } = rest;
+    return pushDocFile(pushArgs);
+  }
   return callEzmodoAPI('mcpUpdateDocument', rest);
+}
+
+/**
+ * `manage_document update fromFile:true` (E-304 #3453): push the edited
+ * `.ezmodo/docs` file as targeted edits, conditional on the version it was
+ * downloaded at. While the server still has that version, its markdown is the
+ * file as downloaded, so diffing it against the file gives the agent's
+ * changes; sending those as edits (not the whole text) means the server
+ * rebuilds only the blocks they touch, and comments on the rest stay put.
+ */
+async function pushDocFile(args) {
+  const { documentId } = args;
+  if (!documentId) throw new Error('documentId is required');
+  const inBoth = ['content', 'body', 'edits'].filter((k) => args[k] != null);
+  if (inBoth.length > 0) {
+    throw new Error(`fromFile pushes the local file; do not also send ${inBoth.join(', ')}.`);
+  }
+
+  const server = (await callEzmodoAPI('mcpGetDocument', { documentId }))?.document;
+  if (!server) throw new Error(`Document ${documentId} not found.`);
+  const local = await readDocFile(server);
+  const expectedUpdatedAt = args.expectedUpdatedAt ?? local.meta.updatedAt;
+
+  const otherChanges = Object.keys(args).some((k) => !['documentId', 'expectedUpdatedAt'].includes(k));
+  if (!local.changed && !otherChanges) {
+    return { documentId, localFilePath: local.file, message: 'No local changes to push.' };
+  }
+
+  const conflict = async (reason) => {
+    const aside = await setAsideAndRefreshDoc(local, server.updatedAt === local.meta.updatedAt
+      ? (await callEzmodoAPI('mcpGetDocument', { documentId })).document
+      : server);
+    const e = new Error(
+      `${reason} Nothing was pushed. ${local.file} now holds the current version, and yours is saved ` +
+        `beside it as ${path.basename(aside)}. Reapply your change to the current file, then push again.`
+    );
+    e.status = 409;
+    return e;
+  };
+
+  if (!sameInstant(server.updatedAt, expectedUpdatedAt)) {
+    throw await conflict(`Document ${documentId} was saved since you downloaded it (now ${server.updatedAt}).`);
+  }
+
+  const request = { ...args, expectedUpdatedAt };
+  if (local.changed) {
+    const edits = computeEdits(server.content ?? '', local.text);
+    if (edits.length > 0) request.edits = edits;
+  }
+
+  let result;
+  try {
+    result = await callEzmodoAPI('mcpUpdateDocument', request);
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    throw await conflict(`${err.message}.`);
+  }
+
+  // The file becomes the server's version, normalized as the server writes
+  // markdown, so the next diff starts from what the server holds.
+  const saved = (await callEzmodoAPI('mcpGetDocument', { documentId }))?.document;
+  if (saved) await refreshDocFile(local, saved);
+  return {
+    ...result,
+    pushed: request.edits?.length ?? 0,
+    localFilePath: local.file,
+  };
+}
+
+/** updatedAt values compare as instants: the API and the sidecar may format them differently. */
+function sameInstant(a, b) {
+  if (a == null || b == null) return false;
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return a === b;
+  // Date.parse keeps milliseconds only; compare the full strings when they agree there.
+  return ta === tb && fraction(a) === fraction(b);
+}
+
+function fraction(ts) {
+  const m = /\.(\d+)/.exec(String(ts));
+  return (m ? m[1] : '').replace(/0+$/, '');
 }
 
 /**

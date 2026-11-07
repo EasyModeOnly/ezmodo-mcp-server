@@ -25,10 +25,19 @@ jest.unstable_mockModule('fs/promises', () => ({
 
 // The no-follow writers open files with flags the fs mock above can't model;
 // route them to the same mocks so these tests keep asserting what was written.
+const mockReadFile = jest.fn().mockResolvedValue(null);
 jest.unstable_mockModule('../lib/local-paths.js', () => ({
   isInside: (root, target) => target === root || target.startsWith(`${root}/`),
   ensureDirInside: (dir) => mockMkdir(dir, { recursive: true }),
   writeFileNoFollow: (file, text) => mockWriteFile(file, text, 'utf-8'),
+  readFileNoFollow: (file) => mockReadFile(file),
+  ezmodoSubdir: async (name) => {
+    const config = await mockFindConfigPath();
+    if (!config) return null;
+    const dir = `${config.slice(0, config.lastIndexOf('/'))}/${name}`;
+    await mockMkdir(dir, { recursive: true });
+    return dir;
+  },
 }));
 
 // Mock logger

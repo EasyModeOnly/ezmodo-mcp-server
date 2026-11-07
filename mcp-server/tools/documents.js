@@ -10,8 +10,11 @@ export const DOCUMENT_TOOLS = [
     name: 'manage_document',
     description: 'Create or update documents. ' +
       'Provide markdown `content` — it is converted to the unified document body (E-192) automatically. ' +
-      'Markdown is the whole write contract: an update replaces the document body with what you send, ' +
-      'so pass the full document, not a fragment. ' +
+      'To CHANGE an existing document, prefer `edits` (find-and-replace on the markdown get_document ' +
+      'returns) or, in a checkout, edit the .ezmodo/docs file and send fromFile:true, plus ' +
+      'expectedUpdatedAt: only the parts you change are rewritten, comments on the rest stay attached, ' +
+      'and a save someone made since you read the document is not overwritten (409). Sending `content` ' +
+      'on update replaces the whole body. ' +
       'To embed a diagram document, put its id in a ```diagram-ref fence (one id, nothing else); ' +
       'get_document returns embeds in that form, so they survive a get → edit → update. ' +
       '(The legacy section model is gone — `sections` and the section ops were removed; sending them is an error.) ' +
@@ -57,6 +60,33 @@ export const DOCUMENT_TOOLS = [
           type: 'string',
           description: 'Document content in markdown format. Converted to the unified document body automatically. ' +
             'For a "diagram" document it is the diagram: mermaid source, bare or in a ```mermaid fence. (create, update)',
+        },
+        edits: {
+          type: 'array',
+          description: 'Targeted changes for update, applied in order, all or nothing (max 50). Each oldString ' +
+            'must occur exactly once in the document\'s markdown as get_document returns it; include ' +
+            'surrounding text when a phrase repeats. Not combined with content or fromFile, and not for ' +
+            'diagram documents. (update)',
+          items: {
+            type: 'object',
+            properties: {
+              oldString: { type: 'string', description: 'Exact text to replace; must match once' },
+              newString: { type: 'string', description: 'Replacement text ("" deletes)' },
+            },
+            required: ['oldString', 'newString'],
+          },
+        },
+        expectedUpdatedAt: {
+          type: 'string',
+          description: 'The document\'s updatedAt when you read it. The update is refused with 409 if the ' +
+            'document was saved since, instead of overwriting that save; read it again and reapply. ' +
+            'fromFile sends the downloaded version automatically. (update)',
+        },
+        fromFile: {
+          type: 'boolean',
+          description: 'Push your edits to the .ezmodo/docs file get_document wrote: only the changed parts ' +
+            'are sent, as edits, conditional on the version you downloaded. On a conflict the file is ' +
+            'refreshed to the current version and yours is kept beside it as <name>.mine.md. (update)',
         },
         type: {
           type: 'string',
@@ -215,7 +245,9 @@ export const DOCUMENT_TOOLS = [
     description: 'Retrieve a single document, or list all docs for a project. ' +
       'Provide documentId (or projectId + slug) for single lookup. ' +
       'Provide just projectId to list all docs. ' +
-      'Single-doc content is saved to .ezmodo/docs/ and returns a file path. ' +
+      'Single-doc content is saved to .ezmodo/docs/ and returns a file path; edit that file and push it ' +
+      'with manage_document update fromFile:true. A re-download never overwrites edits you have not pushed ' +
+      '(overwriteLocal:true discards them). ' +
       'History (single lookup): includeHistory lists versions, newest first, without their bodies; ' +
       'historyEntryId reads one version; diffFrom (+ diffTo, omitted = current) compares two versions ' +
       'as line hunks rather than two full bodies. Prefer a diff to reading two versions.',
@@ -233,6 +265,10 @@ export const DOCUMENT_TOOLS = [
         slug: {
           type: 'string',
           description: 'Document slug for single lookup (requires projectId)',
+        },
+        overwriteLocal: {
+          type: 'boolean',
+          description: 'Overwrite the .ezmodo/docs file even if it has edits that were never pushed (single lookup)',
         },
         format: {
           type: 'string',
