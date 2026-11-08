@@ -201,11 +201,15 @@ async function readLocalImage(filePath) {
  * local GCS emulator takes a POST with the bytes as the body (see
  * uploadToSignedUrl in web/src/services/storage.service.ts). The URL is a
  * credential, so it is never put in an error.
+ *
+ * `uploadHeaders` are the headers the URL was signed with (#3451), such as
+ * x-goog-content-length-range. GCS refuses the upload with 403 if any is
+ * missing, so every one is sent as given.
  */
-export async function uploadImageBytes({ uploadUrl, uploadMethod, contentType }, bytes, fetchImpl = globalThis.fetch) {
+export async function uploadImageBytes({ uploadUrl, uploadMethod, contentType, uploadHeaders }, bytes, fetchImpl = globalThis.fetch) {
   const response = await fetchImpl(uploadUrl, {
     method: uploadMethod || 'PUT',
-    headers: { 'Content-Type': contentType },
+    headers: { 'Content-Type': contentType, ...(uploadHeaders || {}) },
     body: bytes,
   });
   if (!response.ok) {

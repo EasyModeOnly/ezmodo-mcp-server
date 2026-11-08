@@ -116,6 +116,24 @@ describe('manage_document add_image (#3449): placement', () => {
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
   });
 
+  it('sends every header the upload URL was signed with (#3451)', async () => {
+    const uploadHeaders = {
+      'x-goog-content-length-range': '0,10485760',
+      'x-goog-meta-uploaded-by': 'user-1',
+    };
+    const base = mockCall.getMockImplementation();
+    mockCall.mockImplementation(async (op, params) => {
+      const r = await base(op, params);
+      return op === 'mcpDocumentImageUploadURL' ? { ...r, uploadHeaders } : r;
+    });
+    await add({ filePath: 'chart.png', append: true });
+    const { headers } = fetchMock.mock.calls[0][1];
+    for (const [name, value] of Object.entries(uploadHeaders)) {
+      expect(headers[name]).toBe(value);
+    }
+    expect(headers['Content-Type']).toBe('image/png');
+  });
+
   it('passes the API message through when a published doc became a draft', async () => {
     const base = mockCall.getMockImplementation();
     mockCall.mockImplementation(async (op, params) => {
