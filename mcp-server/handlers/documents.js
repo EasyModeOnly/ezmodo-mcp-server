@@ -14,6 +14,7 @@ import { loadImportFile, summarizeImport, validateImportArgs } from '../lib/doc-
 import { computeEdits } from '../lib/text-edits.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { historyMode, summarizeEntry } from '../lib/version-history.js';
+import { MAX_INLINE_BYTES, exportsRoot, safeExportFilename, writeExportFile } from '../lib/doc-exports.js';
 
 /**
  * Dispatch manage_document actions to the appropriate handler
@@ -28,9 +29,99 @@ export async function manageDocument(args) {
   case 'withdraw_review': return reviewDocument('withdraw', params);
   case 'add_image': return addImage(params);
   case 'import': return importDocuments(params);
+  case 'export': return exportDocuments(params);
   case 'create_version': throw new Error('Document versioning is not yet supported. Use the "update" action to modify documents.');
   default: throw new Error(`Unknown action: ${action}`);
   }
+}
+
+const EXPORT_FORMATS = new Set(['md', 'pdf']);
+const EXPORT_VERSIONS = new Set(['current', 'published']);
+
+/**
+ * The export request the API takes: exactly one target (documentId, else
+ * folderId, else projectId for the project's Documentation root), a format,
+ * and for folders whether to include subfolders and which version to export.
+ * Every refusal here happens before the network.
+ */
+export function exportRequest(args) {
+  const { documentId, folderId, projectId, format, includeSubfolders, version } = args;
+  if (documentId && folderId) {
+    throw new Error('Export one thing at a time: pass documentId OR folderId (or projectId alone for the ' +
+      'whole Documentation root), not both.');
+  }
+  if (!documentId && !folderId && !projectId) {
+    throw new Error('Pass what to export: documentId (one document), folderId (a folder), or projectId ' +
+      'alone (every document in the project).');
+  }
+  if (!EXPORT_FORMATS.has(format)) {
+    throw new Error('format must be "md" (Markdown: a .md, or a .zip with images and folders) or "pdf".');
+  }
+  if (version != null && !EXPORT_VERSIONS.has(version)) {
+    throw new Error('version must be "current" (drafts included) or "published" (published copies only).');
+  }
+  if (includeSubfolders != null && typeof includeSubfolders !== 'boolean') {
+    throw new Error('includeSubfolders must be true or false.');
+  }
+  const request = { format };
+  if (documentId) request.documentId = documentId;
+  else if (folderId) request.folderId = folderId;
+  else request.projectId = projectId;
+  if (!documentId) {
+    request.includeSubfolders = includeSubfolders ?? true;
+    request.version = version ?? 'current';
+  } else if (version) {
+    request.version = version;
+  }
+  return request;
+}
+
+/**
+ * manage_document action:"export" (E-305 #3458): a document as .md (or .zip
+ * when it has images) or .pdf; a folder or the project root as a .zip of
+ * Markdown or one PDF. In a checkout the file goes to .ezmodo/exports and the
+ * path comes back; over the remote connector the bytes come back inline, up to
+ * 5 MB.
+ */
+async function exportDocuments(args) {
+  const request = exportRequest(args);
+  const data = await callEzmodoAPI('mcpExportDocument', request);
+  if (!data || typeof data.contentBase64 !== 'string') {
+    throw new Error('The export came back empty; try again, or export from the web app.');
+  }
+  const bytes = Buffer.from(data.contentBase64, 'base64');
+  const contentType = data.contentType || 'application/octet-stream';
+  const filename = safeExportFilename(data.filename, contentType);
+  const summary = {
+    filename,
+    contentType,
+    sizeBytes: bytes.length,
+    documentCount: data.documentCount,
+  };
+
+  const root = await exportsRoot();
+  if (root) {
+    const filePath = await writeExportFile(root, filename, bytes);
+    return {
+      ...summary,
+      filename: path.basename(filePath),
+      filePath,
+      message: `Exported to ${filePath}.`,
+    };
+  }
+
+  if (bytes.length > MAX_INLINE_BYTES) {
+    throw new Error(
+      `The export is ${(bytes.length / (1024 * 1024)).toFixed(1)} MB, over the 5 MB that can be returned ` +
+        'over the remote connector. Export it from the web app instead (the document or folder ⋯ menu → ' +
+        'Export), or export a smaller folder.'
+    );
+  }
+  return {
+    ...summary,
+    contentBase64: data.contentBase64,
+    message: 'No local checkout, so the file is returned inline as base64 (contentBase64).',
+  };
 }
 
 /**

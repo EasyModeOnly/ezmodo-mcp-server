@@ -173,6 +173,7 @@ export const ENDPOINT_MAP = {
   'mcpInsertDocumentImage': { route: 'mcp/v1/documents/images', method: 'POST' },
   // Import Markdown files and zips of them as documents (#3456).
   'mcpImportDocuments': { route: 'mcp/v1/documents/import', method: 'POST' },
+  'mcpExportDocument': { route: 'mcp/v1/documents/export', method: 'POST' },
 
   // Document Templates
   'mcpListDocumentTemplates': { route: 'mcp/v1/document-templates', method: 'GET' },

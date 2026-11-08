@@ -33,25 +33,33 @@ export const DOCUMENT_TOOLS = [
       'documents are never changed: a clashing title gets " (imported)". Relative links between imported ' +
       'files become document links, and local images (PNG, JPEG, GIF, WebP, SVG; up to 10 MB each) become ' +
       'document images. Anything not carried over (external or broken links, other files) is listed in ' +
-      'notCarried. Call with dryRun:true first to see the plan without writing anything.',
+      'notCarried. Call with dryRun:true first to see the plan without writing anything. ' +
+      'action:"export" downloads documents as files: documentId (one document: format "md" gives a .md, or a ' +
+      '.zip with an images/ folder when it has images; "pdf" gives a PDF), folderId (a folder: "md" gives a ' +
+      '.zip of .md files with folders kept and links between them made relative, "pdf" one PDF with a ' +
+      'contents page), or projectId alone (every document in the project). Only documents you can read are ' +
+      'included, up to 500. In a checkout the file is written to .ezmodo/exports/ and its path returned; over ' +
+      'the remote connector it comes back as base64, up to 5 MB.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review', 'add_image', 'import'],
+          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review', 'add_image', 'import', 'export'],
           description: 'Action to perform. "restore" makes a history entry the current version ' +
             '(documentId + historyEntryId). "submit_for_review" asks a person to approve and publish the ' +
             'document (documentId, optional note); "withdraw_review" returns it to draft. "add_image" ' +
             'uploads an image and places it in the document (see filePath, base64, alt, afterHeading). ' +
             '"import" turns a .md/.markdown file or a .zip of them into draft documents and folders ' +
-            '(projectId, filePath or base64+name, optional folderId and dryRun).',
+            '(projectId, filePath or base64+name, optional folderId and dryRun). ' +
+            '"export" downloads a document, folder or the project root as Markdown or PDF (see format).',
         },
         // --- Identifiers ---
         projectId: {
           type: 'string',
           description: 'Project ID. Provide for a PROJECT-SCOPED document; required for import. ' +
-            'Mutually exclusive with organizationId — supply exactly one when creating.',
+            'Mutually exclusive with organizationId — supply exactly one when creating. For export, ' +
+            'projectId alone (no documentId or folderId) exports the whole Documentation root.',
         },
         organizationId: {
           type: 'string',
@@ -63,7 +71,7 @@ export const DOCUMENT_TOOLS = [
         },
         documentId: {
           type: 'string',
-          description: 'Document ID (required for update, restore, add_image)',
+          description: 'Document ID (required for update, restore, add_image; the document to export)',
         },
         note: {
           type: 'string',
@@ -72,6 +80,23 @@ export const DOCUMENT_TOOLS = [
         historyEntryId: {
           type: 'string',
           description: 'The history entry to restore (restore). Ids come from get_document includeHistory:true.',
+        },
+        // --- export (E-305 #3458) ---
+        format: {
+          type: 'string',
+          enum: ['md', 'pdf'],
+          description: 'Required for export. "md": a .md for one document (a .zip with images/ when it has ' +
+            'images), a .zip of .md files for a folder or the project root. "pdf": one PDF. (export)',
+        },
+        includeSubfolders: {
+          type: 'boolean',
+          description: 'Include the documents in subfolders (folder or project-root export; default true). (export)',
+        },
+        version: {
+          type: 'string',
+          enum: ['current', 'published'],
+          description: '"current" (default) exports what is there now, drafts included; "published" exports ' +
+            'each document\'s published copy and leaves out documents never published. (export)',
         },
         // --- add_image (#3449) and import (#3456) ---
         filePath: {
@@ -192,7 +217,8 @@ export const DOCUMENT_TOOLS = [
         folderId: {
           type: 'string',
           description: 'Folder ID to organize the document (create, update). For import, the folder the ' +
-            'imported documents and folders go into; omitted = the project root. (create, update, import)',
+            'imported documents and folders go into; omitted = the project root. For export, the folder to ' +
+            'export. (create, update, import, export)',
         },
         isIndex: {
           type: 'boolean',
