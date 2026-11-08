@@ -186,6 +186,7 @@ const remoteSafe = new Set(REMOTE_SAFE_TOOLS);
  * refused at dispatch and removed from the schema the remote surface lists.
  */
 export const REMOTE_REFUSED_ARGS = Object.freeze({
+  manage_document: Object.freeze(['filePath']),
   manage_test_suite: Object.freeze(['filePath']),
 });
 

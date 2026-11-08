@@ -168,6 +168,9 @@ export const ENDPOINT_MAP = {
   'mcpRestoreDocumentHistory': { route: 'mcp/v1/document-history/restore', method: 'POST' },
   // Submit a document for review or withdraw it; there is no publish (E-304 #3454).
   'mcpReviewDocument': { route: 'mcp/v1/document-review', method: 'POST' },
+  // Place an image in a document (#3449): a signed upload URL, then the insert.
+  'mcpDocumentImageUploadURL': { route: 'mcp/v1/documents/media/upload-url', method: 'POST' },
+  'mcpInsertDocumentImage': { route: 'mcp/v1/documents/images', method: 'POST' },
 
   // Document Templates
   'mcpListDocumentTemplates': { route: 'mcp/v1/document-templates', method: 'GET' },

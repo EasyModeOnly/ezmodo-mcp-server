@@ -6,7 +6,10 @@
 import path from 'path';
 import { callEzmodoAPI } from '../lib/http-client.js';
 import { getLogger } from '../lib/logger.js';
-import { readDocFile, refreshDocFile, safeFileStem, setAsideAndRefreshDoc, writeDocFile } from '../lib/doc-files.js';
+import {
+  findDownloadedDoc, readDocFile, refreshDocFile, safeFileStem, setAsideAndRefreshDoc, writeDocFile,
+} from '../lib/doc-files.js';
+import { loadImage, uploadImageBytes, validateAddImageArgs } from '../lib/doc-images.js';
 import { computeEdits } from '../lib/text-edits.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { historyMode, summarizeEntry } from '../lib/version-history.js';
@@ -22,6 +25,7 @@ export async function manageDocument(args) {
   case 'restore': return restoreDocument(params);
   case 'submit_for_review': return reviewDocument('submit', params);
   case 'withdraw_review': return reviewDocument('withdraw', params);
+  case 'add_image': return addImage(params);
   case 'create_version': throw new Error('Document versioning is not yet supported. Use the "update" action to modify documents.');
   default: throw new Error(`Unknown action: ${action}`);
   }
@@ -154,6 +158,78 @@ async function reviewDocument(action, { documentId, note }) {
   const params = { documentId, action };
   if (action === 'submit' && note) params.note = note;
   return callEzmodoAPI('mcpReviewDocument', params);
+}
+
+/**
+ * manage_document action:"add_image" (#3449): upload an image and place it in
+ * the document below the block holding the anchor. The server inserts it and
+ * saves; this side never edits markdown. Order matters: every refusal that
+ * needs no network happens first, then the unpushed-edits check, and only
+ * then is an upload URL requested.
+ */
+async function addImage(args) {
+  validateAddImageArgs(args);
+  const { documentId, alt, caption, afterHeading, afterText, append, expectedUpdatedAt } = args;
+  const image = await loadImage(args);
+
+  // The local copy's edits are diffed against the server on the next push;
+  // with an image placed in between, that push would drop the image.
+  const local = await findDownloadedDoc(documentId);
+  if (local?.changed) {
+    throw new Error(
+      `${local.file} has edits that were never pushed. Push them first with manage_document ` +
+        `action:"update" documentId:"${documentId}" fromFile:true (or re-download with get_document ` +
+        'overwriteLocal:true to discard them), then add the image. Adding it now would make your next ' +
+        'push drop it.'
+    );
+  }
+
+  const ticket = await callEzmodoAPI('mcpDocumentImageUploadURL', {
+    documentId, filename: image.filename, contentType: image.contentType,
+  });
+  if (ticket?.maxBytes && image.bytes.length > ticket.maxBytes) {
+    throw new Error(`The image is ${image.bytes.length} bytes; the limit is ${ticket.maxBytes}.`);
+  }
+  await uploadImageBytes({ ...ticket, contentType: ticket.contentType || image.contentType }, image.bytes);
+
+  const request = { documentId, objectPath: ticket.objectPath, alt: alt.trim() };
+  if (caption) request.caption = caption;
+  if (afterHeading) request.afterHeading = afterHeading;
+  else if (afterText) request.afterText = afterText;
+  else if (append) request.append = true;
+  if (expectedUpdatedAt) request.expectedUpdatedAt = expectedUpdatedAt;
+
+  let placed;
+  try {
+    placed = await callEzmodoAPI('mcpInsertDocumentImage', request);
+  } catch (err) {
+    if (err.status !== 409) throw err;
+    const e = new Error(
+      `${err.message}. The image was not placed: read the document again with get_document and retry ` +
+        'with its updatedAt as expectedUpdatedAt.'
+    );
+    e.status = 409;
+    throw e;
+  }
+
+  const result = {
+    documentId: placed?.documentId ?? documentId,
+    imageUrl: placed?.imageUrl,
+    updatedAt: placed?.updatedAt,
+    status: placed?.status,
+  };
+  if (local && placed?.content != null) {
+    try {
+      await refreshDocFile(local, {
+        id: result.documentId, slug: placed.slug, updatedAt: placed.updatedAt, content: placed.content,
+      });
+      result.localFilePath = local.file;
+    } catch (err) {
+      getLogger().warn('Failed to refresh local document file after add_image', { error: err.message, id: documentId });
+    }
+  }
+  if (placed?.message) result.message = placed.message;
+  return result;
 }
 
 /**

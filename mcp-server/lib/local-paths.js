@@ -74,6 +74,34 @@ export async function readFileNoFollow(file) {
   }
 }
 
+/**
+ * A file's bytes, read the way readFileNoFollow reads text: refuses a symlink
+ * in the last component, and anything that is not a regular file. When the
+ * file is larger than `maxBytes` it is not read at all: the error carries
+ * `code: 'ETOOBIG'` and the file's `size`, so a caller can word the refusal.
+ * Missing files throw (ENOENT), unlike readFileNoFollow: a caller asking for
+ * bytes named the file, so its absence is an error.
+ */
+export async function readBytesNoFollow(file, { maxBytes = Infinity } = {}) {
+  let handle;
+  try {
+    handle = await fs.open(file, fsConstants.O_RDONLY | NOFOLLOW);
+    const stat = await handle.stat();
+    if (!stat.isFile()) throw new Error(`${file} is not a regular file`);
+    if (stat.size > maxBytes) {
+      const err = new Error(`${file} is ${stat.size} bytes, over the ${maxBytes}-byte limit`);
+      err.code = 'ETOOBIG';
+      err.size = stat.size;
+      throw err;
+    }
+    return await handle.readFile();
+  } catch (err) {
+    throw symlinkRefusal(file, err);
+  } finally {
+    await handle?.close();
+  }
+}
+
 /** Write text to a file, creating or truncating it; refuses to write through a symlink. */
 export async function writeFileNoFollow(file, text) {
   let handle;

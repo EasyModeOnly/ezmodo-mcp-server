@@ -15,6 +15,7 @@
  */
 
 import crypto from 'crypto';
+import fs from 'fs/promises';
 import path from 'path';
 import { ezmodoSubdir, isInside, readFileNoFollow, writeFileNoFollow } from './local-paths.js';
 
@@ -118,6 +119,40 @@ export async function readDocFile(doc) {
     );
   }
   return { file: p.file, paths: p, meta, text, changed: hash(text) !== meta.hash };
+}
+
+/**
+ * The local copy of a document, found by id alone (no API call): the file,
+ * its sidecar, its text and whether it was edited since download. Null when
+ * there is no checkout or the document was never downloaded here. Sidecars
+ * that cannot be read (a symlink, bad JSON) are skipped: they are not this
+ * document's.
+ */
+export async function findDownloadedDoc(documentId) {
+  const root = await docsRoot();
+  if (!root || !documentId) return null;
+  let names;
+  try {
+    names = await fs.readdir(root);
+  } catch {
+    return null;
+  }
+  for (const name of names) {
+    if (!name.endsWith('.meta.json')) continue;
+    const p = pathsFor(root, name.slice(0, -'.meta.json'.length));
+    if (!p) continue;
+    let meta;
+    try {
+      meta = await readMeta(p.meta);
+    } catch {
+      continue;
+    }
+    if (meta?.id !== documentId) continue;
+    const text = await readFileNoFollow(p.file);
+    if (text == null) return null;
+    return { file: p.file, paths: p, meta, text, changed: hash(text) !== meta.hash };
+  }
+  return null;
 }
 
 /** After a push, the file holds the server's version again. */

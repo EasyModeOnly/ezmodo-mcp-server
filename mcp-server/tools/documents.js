@@ -22,16 +22,20 @@ export const DOCUMENT_TOOLS = [
       'with get_document includeHistory:true and check it with diffFrom first. ' +
       'Editing a PUBLISHED document makes it a draft and readers keep seeing the published copy: when your ' +
       'change is ready, action:"submit_for_review" (documentId, optional note for the reviewer) asks a person ' +
-      'to approve and publish it; action:"withdraw_review" takes that back. Agents cannot publish.',
+      'to approve and publish it; action:"withdraw_review" takes that back. Agents cannot publish. ' +
+      'action:"add_image" uploads an image (PNG, JPEG, GIF or WebP, up to 10 MB; no SVG) and places it ' +
+      'below the block holding an anchor: documentId, alt, one of filePath or base64+mimeType, and one of ' +
+      'afterHeading, afterText or append:true.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review'],
+          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review', 'add_image'],
           description: 'Action to perform. "restore" makes a history entry the current version ' +
             '(documentId + historyEntryId). "submit_for_review" asks a person to approve and publish the ' +
-            'document (documentId, optional note); "withdraw_review" returns it to draft.',
+            'document (documentId, optional note); "withdraw_review" returns it to draft. "add_image" ' +
+            'uploads an image and places it in the document (see filePath, base64, alt, afterHeading).',
         },
         // --- Identifiers ---
         projectId: {
@@ -49,7 +53,7 @@ export const DOCUMENT_TOOLS = [
         },
         documentId: {
           type: 'string',
-          description: 'Document ID (required for update, restore)',
+          description: 'Document ID (required for update, restore, add_image)',
         },
         note: {
           type: 'string',
@@ -58,6 +62,49 @@ export const DOCUMENT_TOOLS = [
         historyEntryId: {
           type: 'string',
           description: 'The history entry to restore (restore). Ids come from get_document includeHistory:true.',
+        },
+        // --- add_image (#3449) ---
+        filePath: {
+          type: 'string',
+          description: 'The image to add, as a file in this checkout: relative to the project root (the ' +
+            'directory holding .ezmodo) or absolute inside it. Symlinks and files outside the checkout are ' +
+            'refused. Works only in a local checkout; over the remote connector send base64. PNG, JPEG, GIF ' +
+            'or WebP, up to 10 MB; the extension must match the image. (add_image)',
+        },
+        base64: {
+          type: 'string',
+          description: 'The image to add, base64-encoded (a data: URL prefix is allowed), with mimeType. ' +
+            'Use instead of filePath, and always over the remote connector. (add_image)',
+        },
+        mimeType: {
+          type: 'string',
+          enum: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+          description: 'The base64 image\'s type; required with base64 and must match its bytes. (add_image)',
+        },
+        alt: {
+          type: 'string',
+          description: 'Required for add_image: alt text describing what the image shows, for readers who ' +
+            'cannot see it (not a file name, not "image").',
+        },
+        caption: {
+          type: 'string',
+          description: 'Optional caption shown under the image. (add_image)',
+        },
+        afterHeading: {
+          type: 'string',
+          description: 'Place the image below this heading: its text without the leading #s, e.g. ' +
+            '"Architecture". Must match exactly one heading. Exactly one of afterHeading, afterText, ' +
+            'append. (add_image)',
+        },
+        afterText: {
+          type: 'string',
+          description: 'Place the image below the block (paragraph, list, table…) containing this text. It ' +
+            'must occur exactly once in the markdown get_document returns; include surrounding words when ' +
+            'a phrase repeats. A bad anchor is refused (400) and nothing changes. (add_image)',
+        },
+        append: {
+          type: 'boolean',
+          description: 'true places the image at the end of the document. (add_image)',
         },
         // --- Create / Update fields ---
         title: {
@@ -88,7 +135,7 @@ export const DOCUMENT_TOOLS = [
           type: 'string',
           description: 'The document\'s updatedAt when you read it. The update is refused with 409 if the ' +
             'document was saved since, instead of overwriting that save; read it again and reapply. ' +
-            'fromFile sends the downloaded version automatically. (update)',
+            'fromFile sends the downloaded version automatically. (update, add_image)',
         },
         fromFile: {
           type: 'boolean',

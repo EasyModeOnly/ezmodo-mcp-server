@@ -31,6 +31,8 @@ jest.unstable_mockModule('../lib/local-paths.js', () => ({
   ensureDirInside: (dir) => mockMkdir(dir, { recursive: true }),
   writeFileNoFollow: (file, text) => mockWriteFile(file, text, 'utf-8'),
   readFileNoFollow: (file) => mockReadFile(file),
+  readBytesNoFollow: jest.fn(),
+  resolveInsideRoot: jest.fn(),
   ezmodoSubdir: async (name) => {
     const config = await mockFindConfigPath();
     if (!config) return null;
