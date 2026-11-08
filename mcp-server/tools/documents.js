@@ -305,7 +305,11 @@ export const DOCUMENT_TOOLS = [
       '(overwriteLocal:true discards them). ' +
       'History (single lookup): includeHistory lists versions, newest first, without their bodies; ' +
       'historyEntryId reads one version; diffFrom (+ diffTo, omitted = current) compares two versions ' +
-      'as line hunks rather than two full bodies. Prefer a diff to reading two versions.',
+      'as line hunks rather than two full bodies. Prefer a diff to reading two versions. ' +
+      'A single lookup returns `access`: restricted (not everyone in the organization can read it), ' +
+      'restrictedBy (document, folder or project), public, and yourRole (viewer or editor). When it is ' +
+      'restricted, `accessNotice` says so: don\'t copy its content where other people can read it. ' +
+      'Who can read a document is managed with get_access / manage_access entityType:"document".',
     inputSchema: {
       type: 'object',
       properties: {

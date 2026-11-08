@@ -229,3 +229,15 @@ describe('manageAccess update_settings payload', () => {
     expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateAccess', { ...BASE, accessList: [] });
   });
 });
+
+describe('access tool text for documents (#3560)', () => {
+  it('names the document roles and the narrower-than-folder rule', async () => {
+    const { ACCESS_TOOLS } = await import('../tools/access.js');
+    const get = ACCESS_TOOLS.find((t) => t.name === 'get_access');
+    const manage = ACCESS_TOOLS.find((t) => t.name === 'manage_access');
+    expect(get.description).toContain('"Can view" (viewer)');
+    expect(get.description).toContain('"Can edit" (member)');
+    expect(manage.description).toContain('only narrower than the folder');
+    expect(manage.description).not.toContain('documents inside a folder inherit from that folder');
+  });
+});

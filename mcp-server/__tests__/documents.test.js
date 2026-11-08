@@ -47,7 +47,7 @@ jest.unstable_mockModule('../lib/logger.js', () => ({
   getLogger: () => ({ warn: jest.fn(), debug: jest.fn(), info: jest.fn(), error: jest.fn() }),
 }));
 
-const { manageDocument, getDocument, safeFileStem } = await import('../handlers/documents.js');
+const { manageDocument, getDocument, safeFileStem, accessNotice } = await import('../handlers/documents.js');
 
 describe('Document Operations', () => {
   afterEach(() => {
@@ -594,5 +594,31 @@ describe('Document links (E-225)', () => {
     expect(tool.description).toContain('```diagram-ref');
     expect(tool.inputSchema.properties.content.description).toMatch(/mermaid source/);
     expect(tool.inputSchema.properties.type.description).toMatch(/content is mermaid source/);
+  });
+});
+
+describe('get_document access summary (#3560)', () => {
+  beforeEach(() => mockCallEzmodoAPI.mockReset());
+
+  it('says nothing for an open document', () => {
+    expect(accessNotice({ restricted: false, yourRole: 'editor' })).toBeUndefined();
+    expect(accessNotice(undefined)).toBeUndefined();
+  });
+
+  it('names where the restriction is set', () => {
+    expect(accessNotice({ restricted: true, restrictedBy: 'folder' })).toContain('who can open its folder');
+    expect(accessNotice({ restricted: true, restrictedBy: 'document' })).toContain('its own access list');
+    expect(accessNotice({ restricted: true, restrictedBy: 'project' })).toContain('members of its project');
+    expect(accessNotice({ restricted: true })).toContain("Don't copy its content");
+  });
+
+  it('passes access through and adds the notice on a single lookup', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({
+      document: { id: 'd1', title: 'Q4 hiring plan' },
+      access: { restricted: true, restrictedBy: 'document', public: false, yourRole: 'viewer' },
+    });
+    const res = await getDocument({ documentId: 'd1' });
+    expect(res.access).toEqual({ restricted: true, restrictedBy: 'document', public: false, yourRole: 'viewer' });
+    expect(res.accessNotice).toContain('Restricted');
   });
 });

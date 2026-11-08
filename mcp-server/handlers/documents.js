@@ -261,9 +261,28 @@ async function getDocumentation(args) {
 // Kept exported from here for existing callers; it lives in lib/doc-files.js.
 export { safeFileStem };
 
+/**
+ * A sentence for the agent when the document isn't open to the whole
+ * organization (E-320 #3560): the API's `access` summary says where the
+ * restriction is set, and an agent that copies such a document into an open or
+ * public one leaks it.
+ */
+export function accessNotice(summary) {
+  if (!summary?.restricted) return undefined;
+  const where = {
+    document: 'only the people on its own access list',
+    folder: 'only the people who can open its folder',
+    project: 'only the members of its project',
+  }[summary.restrictedBy] || 'only some people in the organization';
+  return `Restricted: ${where} can read this document. Don't copy its content into a document, task, ` +
+    'comment or message that other people can read without asking your person first.';
+}
+
 async function fetchSingleDocument(args) {
   const { overwriteLocal, ...lookup } = args;
-  const data = await callEzmodoAPI('mcpGetDocument', lookup);
+  const fetched = await callEzmodoAPI('mcpGetDocument', lookup);
+  const notice = accessNotice(fetched?.access);
+  const data = notice ? { ...fetched, accessNotice: notice } : fetched;
   const doc = data.document;
   if (!doc || !doc.content) return data;
 

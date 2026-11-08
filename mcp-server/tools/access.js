@@ -49,7 +49,11 @@ export const ACCESS_TOOLS = [
       'entity\'s own unresolved settings, which is included only when you hold ' +
       'admin on the entity. Requires at least viewer access to the entity itself. ' +
       'Supported entity types: ' + ACCESS_ENTITY_TYPES.join(', ') + '. ' +
-      'To ask whether a specific role is held, use manage_access action:"check".',
+      'To ask whether a specific role is held, use manage_access action:"check". ' +
+      'For a document (entityType "document"): the web\'s "Everyone in the organization" is ' +
+      'inheritFromParent true (it follows its folder, else its project), "Only people I choose" is ' +
+      'inheritFromParent false with an access list, and the roles people see are "Can view" (viewer) ' +
+      'and "Can edit" (member).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -74,8 +78,13 @@ export const ACCESS_TOOLS = [
       'with the `write:access` scope — a key that can edit an entity cannot ' +
       'change who may see it unless it was issued that scope explicitly. ' +
       'Note that some entities cannot carry their own access: projects do not ' +
-      'support publicAccess, nested folders inherit from their root folder, and ' +
-      'documents inside a folder inherit from that folder.',
+      'support publicAccess, and nested folders inherit from their root folder. ' +
+      'Documents: share with viewer ("Can view") or member ("Can edit"); a document\'s owner and org ' +
+      'admins always keep access. A document inside a folder can have its own list, but only narrower ' +
+      'than the folder: each person must already hold that role on the folder, teams are refused (share ' +
+      'the folder instead), and it cannot be made public on its own. Restricting is not the same as ' +
+      'internet publishing (publicAccess, usually set on a folder): send publicAccess unchanged so a ' +
+      'restriction does not switch it on or off.',
     inputSchema: {
       type: 'object',
       properties: {
