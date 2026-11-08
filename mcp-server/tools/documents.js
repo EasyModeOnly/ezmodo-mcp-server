@@ -25,22 +25,32 @@ export const DOCUMENT_TOOLS = [
       'to approve and publish it; action:"withdraw_review" takes that back. Agents cannot publish. ' +
       'action:"add_image" uploads an image (PNG, JPEG, GIF or WebP, up to 10 MB; no SVG) and places it ' +
       'below the block holding an anchor: documentId, alt, one of filePath or base64+mimeType, and one of ' +
-      'afterHeading, afterText or append:true.',
+      'afterHeading, afterText or append:true. ' +
+      'action:"import" brings Markdown in: projectId, optional folderId (default the project root), and ' +
+      'one .md/.markdown file or a .zip of them, as filePath or base64+name. Each .md becomes a DRAFT ' +
+      'document titled by its first "# Heading" (else its file name); folders in the zip become folders; ' +
+      'a README.md or index.md becomes its folder\'s index page when the folder has none. Existing ' +
+      'documents are never changed: a clashing title gets " (imported)". Relative links between imported ' +
+      'files become document links, and local images (PNG, JPEG, GIF, WebP, SVG; up to 10 MB each) become ' +
+      'document images. Anything not carried over (external or broken links, other files) is listed in ' +
+      'notCarried. Call with dryRun:true first to see the plan without writing anything.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review', 'add_image'],
+          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review', 'add_image', 'import'],
           description: 'Action to perform. "restore" makes a history entry the current version ' +
             '(documentId + historyEntryId). "submit_for_review" asks a person to approve and publish the ' +
             'document (documentId, optional note); "withdraw_review" returns it to draft. "add_image" ' +
-            'uploads an image and places it in the document (see filePath, base64, alt, afterHeading).',
+            'uploads an image and places it in the document (see filePath, base64, alt, afterHeading). ' +
+            '"import" turns a .md/.markdown file or a .zip of them into draft documents and folders ' +
+            '(projectId, filePath or base64+name, optional folderId and dryRun).',
         },
         // --- Identifiers ---
         projectId: {
           type: 'string',
-          description: 'Project ID. Provide for a PROJECT-SCOPED document. ' +
+          description: 'Project ID. Provide for a PROJECT-SCOPED document; required for import. ' +
             'Mutually exclusive with organizationId — supply exactly one when creating.',
         },
         organizationId: {
@@ -63,18 +73,30 @@ export const DOCUMENT_TOOLS = [
           type: 'string',
           description: 'The history entry to restore (restore). Ids come from get_document includeHistory:true.',
         },
-        // --- add_image (#3449) ---
+        // --- add_image (#3449) and import (#3456) ---
         filePath: {
           type: 'string',
-          description: 'The image to add, as a file in this checkout: relative to the project root (the ' +
-            'directory holding .ezmodo) or absolute inside it. Symlinks and files outside the checkout are ' +
-            'refused. Works only in a local checkout; over the remote connector send base64. PNG, JPEG, GIF ' +
-            'or WebP, up to 10 MB; the extension must match the image. (add_image)',
+          description: 'A file in this checkout: relative to the project root (the directory holding ' +
+            '.ezmodo) or absolute inside it. Symlinks and files outside the checkout are refused. Works ' +
+            'only in a local checkout; over the remote connector send base64. For add_image, the image: ' +
+            'PNG, JPEG, GIF or WebP, up to 10 MB; the extension must match the image. For import, a .md, ' +
+            '.markdown or .zip file, up to 22 MB for import. (add_image, import)',
         },
         base64: {
           type: 'string',
-          description: 'The image to add, base64-encoded (a data: URL prefix is allowed), with mimeType. ' +
-            'Use instead of filePath, and always over the remote connector. (add_image)',
+          description: 'The file\'s bytes, base64-encoded (a data: URL prefix is allowed). Use instead of ' +
+            'filePath, and always over the remote connector. For add_image, the image, with mimeType; for ' +
+            'import, the .md/.markdown/.zip file, with name. (add_image, import)',
+        },
+        name: {
+          type: 'string',
+          description: 'The base64 file\'s name, e.g. "handbook.zip" or "guide.md"; required with base64. ' +
+            'Its extension (.md, .markdown or .zip) says how the bytes are read. (import)',
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'true returns the plan (documents, folders, renames, links, notCarried) without ' +
+            'writing anything. Recommended before a real import. (import)',
         },
         mimeType: {
           type: 'string',
@@ -169,7 +191,8 @@ export const DOCUMENT_TOOLS = [
         },
         folderId: {
           type: 'string',
-          description: 'Folder ID to organize the document (create, update)',
+          description: 'Folder ID to organize the document (create, update). For import, the folder the ' +
+            'imported documents and folders go into; omitted = the project root. (create, update, import)',
         },
         isIndex: {
           type: 'boolean',

@@ -201,6 +201,26 @@ export function refusedRemoteArgs(toolName, args) {
   return refused.filter((name) => args && args[name] !== undefined && args[name] !== null);
 }
 
+/**
+ * What to send instead of a refused local-file argument, per tool and action.
+ * A generic "send the content" is no help when the action takes the content
+ * under a different name.
+ */
+const REMOTE_REFUSAL_HINTS = Object.freeze({
+  manage_document: Object.freeze({
+    import: 'For action:"import", pass base64 (the file\'s bytes, base64-encoded) and name ' +
+      '(its file name, e.g. "handbook.zip") instead.',
+    add_image: 'For action:"add_image", pass base64 and mimeType instead.',
+  }),
+});
+
+/** The error message for a remote call that passed refused local-file arguments. */
+export function remoteRefusalMessage(toolName, args, refused) {
+  const hint = REMOTE_REFUSAL_HINTS[toolName]?.[args?.action] ?? 'Send the file\'s content instead.';
+  return `${refused.join(', ')} names a file on the machine running the server and is not ` +
+    `accepted over this connection. ${hint}`;
+}
+
 /** `tool` with the arguments the remote surface refuses taken out of its schema. */
 export function withoutRefusedArgs(tool) {
   const refused = REMOTE_REFUSED_ARGS[tool.name];

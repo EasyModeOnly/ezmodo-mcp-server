@@ -171,6 +171,8 @@ export const ENDPOINT_MAP = {
   // Place an image in a document (#3449): a signed upload URL, then the insert.
   'mcpDocumentImageUploadURL': { route: 'mcp/v1/documents/media/upload-url', method: 'POST' },
   'mcpInsertDocumentImage': { route: 'mcp/v1/documents/images', method: 'POST' },
+  // Import Markdown files and zips of them as documents (#3456).
+  'mcpImportDocuments': { route: 'mcp/v1/documents/import', method: 'POST' },
 
   // Document Templates
   'mcpListDocumentTemplates': { route: 'mcp/v1/document-templates', method: 'GET' },

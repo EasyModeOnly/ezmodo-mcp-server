@@ -9,7 +9,7 @@ import { jest, beforeEach } from '@jest/globals';
 const mockHandler = jest.fn().mockResolvedValue({ success: true });
 
 jest.unstable_mockModule('../handlers/index.js', () => ({
-  HANDLERS: { manage_test_suite: mockHandler },
+  HANDLERS: { manage_test_suite: mockHandler, manage_document: mockHandler },
 }));
 
 jest.unstable_mockModule('../tools/index.js', () => ({
@@ -19,6 +19,14 @@ jest.unstable_mockModule('../tools/index.js', () => ({
     inputSchema: {
       type: 'object',
       properties: { action: { type: 'string' }, filePath: { type: 'string' }, content: { type: 'string' } },
+      required: ['action'],
+    },
+  }, {
+    name: 'manage_document',
+    description: 'x',
+    inputSchema: {
+      type: 'object',
+      properties: { action: { type: 'string' }, filePath: { type: 'string' }, base64: { type: 'string' } },
       required: ['action'],
     },
   }],
@@ -101,6 +109,22 @@ describe('local-file arguments over the connector (E-297)', () => {
     expect(tools[0].inputSchema.properties.filePath).toBeDefined();
     await call('tools/call', {
       name: 'manage_test_suite', arguments: { action: 'import_results', projectId: 'p1', filePath: 'out/j.xml' },
+    });
+    expect(mockHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses manage_document import with filePath and points at base64 + name (#3456)', async () => {
+    const call = dispatcher(createServer({ surface: 'remote' }));
+    const outcome = await attempt(call('tools/call', {
+      name: 'manage_document',
+      arguments: { action: 'import', projectId: 'p1', filePath: 'docs/handbook.zip' },
+    }));
+    expect(errorText(outcome)).toMatch(/not accepted over this connection\. For action:"import", pass base64 .* and name/);
+    expect(mockHandler).not.toHaveBeenCalled();
+
+    await call('tools/call', {
+      name: 'manage_document',
+      arguments: { action: 'import', projectId: 'p1', base64: 'eA==', name: 'a.md' },
     });
     expect(mockHandler).toHaveBeenCalledTimes(1);
   });

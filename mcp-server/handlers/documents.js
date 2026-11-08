@@ -10,6 +10,7 @@ import {
   findDownloadedDoc, readDocFile, refreshDocFile, safeFileStem, setAsideAndRefreshDoc, writeDocFile,
 } from '../lib/doc-files.js';
 import { loadImage, uploadImageBytes, validateAddImageArgs } from '../lib/doc-images.js';
+import { loadImportFile, summarizeImport, validateImportArgs } from '../lib/doc-import.js';
 import { computeEdits } from '../lib/text-edits.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { historyMode, summarizeEntry } from '../lib/version-history.js';
@@ -26,6 +27,7 @@ export async function manageDocument(args) {
   case 'submit_for_review': return reviewDocument('submit', params);
   case 'withdraw_review': return reviewDocument('withdraw', params);
   case 'add_image': return addImage(params);
+  case 'import': return importDocuments(params);
   case 'create_version': throw new Error('Document versioning is not yet supported. Use the "update" action to modify documents.');
   default: throw new Error(`Unknown action: ${action}`);
   }
@@ -230,6 +232,27 @@ async function addImage(args) {
   }
   if (placed?.message) result.message = placed.message;
   return result;
+}
+
+/**
+ * manage_document action:"import" (#3456): send one .md/.markdown file or a
+ * .zip of them to the API, which turns files into draft documents and zip
+ * folders into folders, and reports what it made and what it could not carry
+ * over. Every refusal that needs no network happens before the upload.
+ */
+async function importDocuments(args) {
+  validateImportArgs(args);
+  const file = await loadImportFile(args);
+  const request = {
+    projectId: args.projectId,
+    name: file.name,
+    contentBase64: file.bytes.toString('base64'),
+    dryRun: args.dryRun === true,
+  };
+  if (args.folderId) request.folderId = args.folderId;
+
+  const report = await callEzmodoAPI('mcpImportDocuments', request);
+  return { summary: summarizeImport(report), ...report };
 }
 
 /**
