@@ -537,7 +537,7 @@ export const ENDPOINT_MAP = {
   'mcpCreateTestCase': { route: 'mcp/v1/testing/cases', method: 'POST' },
   'mcpUpdateTestCase': { route: 'mcp/v1/testing/cases', method: 'PUT' },
   'mcpDeleteTestCase': { route: 'mcp/v1/testing/cases', method: 'DELETE' },
-  'mcpRecordTestRun': { route: 'mcp/v1/testing/runs', method: 'POST' },
+  'mcpRecordTestRun': { route: 'mcp/v1/testing/case/runs', method: 'POST' }, // own path: /testing/runs POST is start_run (#3613)
   'mcpGetTestingSummary': { route: 'mcp/v1/testing/summary', method: 'GET' },
   'mcpGetTestingConfidence': { route: 'mcp/v1/testing/confidence', method: 'GET' },
   'mcpGetTestingTrend': { route: 'mcp/v1/testing/trend', method: 'GET' },

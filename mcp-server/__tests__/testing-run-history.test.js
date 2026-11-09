@@ -61,6 +61,22 @@ describe('manage_test_case bulk', () => {
   });
 });
 
+describe('record_run route (#3613)', () => {
+  it('has its own path, distinct from every other POST', () => {
+    expect(ENDPOINT_MAP.mcpRecordTestRun).toEqual({ route: 'mcp/v1/testing/case/runs', method: 'POST' });
+    // Two tools on one method+route is how record_run ended up at start_run.
+    const seen = new Map();
+    for (const [name, { route, method }] of Object.entries(ENDPOINT_MAP)) {
+      if (!route || !method || route.includes('{')) continue;
+      const key = `${method} ${route}`;
+      if (seen.has(key) && /testing/.test(route)) {
+        throw new Error(`${name} and ${seen.get(key)} share ${key}`);
+      }
+      seen.set(key, name);
+    }
+  });
+});
+
 describe('project-level runs (E-278 #3032)', () => {
   it('start_run with one suiteId goes to the project runs endpoint as suiteIds', async () => {
     const { manageTestSuite } = await import('../handlers/testing.js');
