@@ -326,6 +326,17 @@ describe('manage_document add_image: schema and routes', () => {
     expect(props.filePath.description).toMatch(/remote connector/);
   });
 
+  // #3582: the help-page-screenshots skill reaches only Claude Code, so the
+  // rules that keep people's data out of a public page ride on the tool itself.
+  it('carries the screenshot rules for clients without the plugin', () => {
+    const description = DOCUMENT_TOOLS.find((t) => t.name === 'manage_document').description;
+    expect(description).toMatch(/one screenshot per step/);
+    expect(description).toMatch(/real customer data/);
+    expect(description).toMatch(/secrets \(keys, tokens, passwords/);
+    expect(description).toMatch(/do not blur/);
+    expect(description).toMatch(/Alt text says what the image shows/);
+  });
+
   it('maps to the API routes', () => {
     expect(ENDPOINT_MAP.mcpDocumentImageUploadURL).toEqual({ route: 'mcp/v1/documents/media/upload-url', method: 'POST' });
     expect(ENDPOINT_MAP.mcpInsertDocumentImage).toEqual({ route: 'mcp/v1/documents/images', method: 'POST' });

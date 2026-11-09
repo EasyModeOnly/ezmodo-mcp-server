@@ -28,7 +28,14 @@ export const DOCUMENT_TOOLS = [
       'to approve and publish it; action:"withdraw_review" takes that back. Agents cannot publish. ' +
       'action:"add_image" uploads an image (PNG, JPEG, GIF or WebP, up to 10 MB; no SVG) and places it ' +
       'below the block holding an anchor: documentId, alt, one of filePath or base64+mimeType, and one of ' +
-      'afterHeading, afterText or append:true. ' +
+      'afterHeading, afterText or append:true. For a help page or how-to: one screenshot per step where the ' +
+      'reader must find something on screen, cropped to that element and what surrounds it, placed right after ' +
+      'the step; none for typed-only steps or decoration. Look at each image before uploading, since a ' +
+      'published page is public: never one showing real customer data (names, emails, real workspace titles, ' +
+      'anything from production), secrets (keys, tokens, passwords, signed URLs, even partly masked) or the ' +
+      'person\'s own private things (other tabs, notifications, their email). Use a test workspace, crop it ' +
+      'out or skip the image; do not blur. Alt text says what the image shows and why it matters for the ' +
+      'step, in a sentence. ' +
       'action:"import" brings Markdown in: projectId, optional folderId (default the project root), and ' +
       'one .md/.markdown file or a .zip of them, as filePath or base64+name. Each .md becomes a DRAFT ' +
       'document titled by its first "# Heading" (else its file name); folders in the zip become folders; ' +
