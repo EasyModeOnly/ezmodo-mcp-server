@@ -30,7 +30,7 @@ export async function manageDocument(args) {
   case 'add_image': return addImage(params);
   case 'import': return importDocuments(params);
   case 'export': return exportDocuments(params);
-  case 'create_version': throw new Error('Document versioning is not yet supported. Use the "update" action to modify documents.');
+  case 'create_version': return createVersion(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -238,6 +238,21 @@ async function restoreDocument({ documentId, historyEntryId }) {
     throw new Error('historyEntryId is required for restore: list them with get_document includeHistory:true.');
   }
   return callEzmodoAPI('mcpRestoreDocumentHistory', { documentId, entryId: historyEntryId });
+}
+
+/**
+ * manage_document action:"create_version" (#3572): save the document as it is
+ * now as a named version. The API records a noted history entry
+ * (documents.Service.CreateHistoryEntry), which is never coalesced into later
+ * edits, so it stays a checkpoint. This used to throw "not yet supported"
+ * long after the API supported it (#3404).
+ */
+async function createVersion({ documentId, note, changeNote }) {
+  if (!documentId) throw new Error('documentId is required for create_version');
+  const params = { documentId };
+  const label = (changeNote ?? note ?? '').trim();
+  if (label) params.changeNote = label;
+  return callEzmodoAPI('mcpCreateDocumentHistoryEntry', params);
 }
 
 /**

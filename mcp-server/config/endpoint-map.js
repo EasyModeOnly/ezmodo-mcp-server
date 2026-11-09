@@ -164,6 +164,7 @@ export const ENDPOINT_MAP = {
   // old document-versions routes never existed (#3387).
   'mcpListDocumentHistory': { route: 'mcp/v1/document-history', method: 'GET' },
   'mcpGetDocumentHistoryEntry': { route: 'mcp/v1/document-history/entry', method: 'GET' },
+  'mcpCreateDocumentHistoryEntry': { route: 'mcp/v1/document-history', method: 'POST' }, // manage_document create_version (#3572)
   'mcpDiffDocumentHistory': { route: 'mcp/v1/document-history/diff', method: 'GET' },
   'mcpRestoreDocumentHistory': { route: 'mcp/v1/document-history/restore', method: 'POST' },
   // Submit a document for review or withdraw it; there is no publish (E-304 #3454).

@@ -164,6 +164,37 @@ describe('get_document history', () => {
   });
 });
 
+describe('manage_document create_version (#3572)', () => {
+  it('posts a named version to document-history', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+
+    await manageDocument({ action: 'create_version', documentId: 'doc-1', note: '  Before the pricing rewrite ' });
+
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocumentHistoryEntry', {
+      documentId: 'doc-1',
+      changeNote: 'Before the pricing rewrite',
+    });
+    expect(ENDPOINT_MAP.mcpCreateDocumentHistoryEntry).toEqual({ route: 'mcp/v1/document-history', method: 'POST' });
+  });
+
+  it('sends no note when none is given', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+    await manageDocument({ action: 'create_version', documentId: 'doc-1' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDocumentHistoryEntry', { documentId: 'doc-1' });
+  });
+
+  it('needs a documentId', async () => {
+    await expect(manageDocument({ action: 'create_version' })).rejects.toThrow(/documentId is required/);
+    expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+  });
+
+  it('is offered by the tool', () => {
+    const tool = DOCUMENT_TOOLS.find((t) => t.name === 'manage_document');
+    expect(tool.inputSchema.properties.action.enum).toContain('create_version');
+    expect(tool.description).toMatch(/create_version/);
+  });
+});
+
 describe('manage_document restore', () => {
   it('restores a history entry', async () => {
     mockCallEzmodoAPI.mockResolvedValueOnce({ document: { id: 'doc-1' } });

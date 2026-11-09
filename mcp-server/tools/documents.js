@@ -18,6 +18,9 @@ export const DOCUMENT_TOOLS = [
       'To embed a diagram document, put its id in a ```diagram-ref fence (one id, nothing else); ' +
       'get_document returns embeds in that form, so they survive a get → edit → update. ' +
       '(The legacy section model is gone — `sections` and the section ops were removed; sending them is an error.) ' +
+      'action:"create_version" (documentId, optional note) saves the document as it is now as a named ' +
+      'version, kept in its history as a checkpoint and never merged into later edits; use it before a ' +
+      'risky change or to mark a milestone. ' +
       'action:"restore" with documentId + historyEntryId makes an older version current again; find the entry ' +
       'with get_document includeHistory:true and check it with diffFrom first. ' +
       'Editing a PUBLISHED document makes it a draft and readers keep seeing the published copy: when your ' +
@@ -45,8 +48,9 @@ export const DOCUMENT_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'restore', 'submit_for_review', 'withdraw_review', 'add_image', 'import', 'export'],
-          description: 'Action to perform. "restore" makes a history entry the current version ' +
+          enum: ['create', 'update', 'create_version', 'restore', 'submit_for_review', 'withdraw_review', 'add_image', 'import', 'export'],
+          description: 'Action to perform. "create_version" saves the current document as a named version ' +
+            '(documentId, optional note). "restore" makes a history entry the current version ' +
             '(documentId + historyEntryId). "submit_for_review" asks a person to approve and publish the ' +
             'document (documentId, optional note); "withdraw_review" returns it to draft. "add_image" ' +
             'uploads an image and places it in the document (see filePath, base64, alt, afterHeading). ' +
@@ -71,11 +75,12 @@ export const DOCUMENT_TOOLS = [
         },
         documentId: {
           type: 'string',
-          description: 'Document ID (required for update, restore, add_image; the document to export)',
+          description: 'Document ID (required for update, create_version, restore, add_image; the document to export)',
         },
         note: {
           type: 'string',
-          description: 'A short note for the reviewer: what you changed and why (submit_for_review)',
+          description: 'A short note: for the reviewer, what you changed and why (submit_for_review); ' +
+            'or the name of the version, e.g. "Before the pricing rewrite" (create_version)',
         },
         historyEntryId: {
           type: 'string',
