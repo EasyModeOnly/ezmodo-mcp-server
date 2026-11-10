@@ -222,7 +222,7 @@ export function permissionRequired({ reason, requiredScope, consentScope, surfac
     action =
       `Tell the user this needs '${needed}', which this server does not ask for by default. ` +
       `To allow it: start the editor with EZMODO_OAUTH_SCOPES="${scopes}" in its environment, ` +
-      "then call `authenticate` with action \"sign_out\" and again with action \"login\", and approve " +
+      'then call `authenticate` with action "sign_out" and again with action "login", and approve ' +
       `'${needed}' on the consent screen. Or do this one change in the web app (${CONFIG.webUrl}).`;
   }
   return {
