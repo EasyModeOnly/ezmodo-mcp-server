@@ -387,7 +387,13 @@ export const TESTING_TOOLS = [
         },
         commitSha: {
           type: 'string',
-          description: 'Commit under test, when there is no candidate (start_run)',
+          description: 'Commit under test, when there is no candidate (start_run, import_results)',
+        },
+        deliverable: {
+          type: 'string',
+          description: 'import_results: key of the deliverable whose build was tested (api, web). When several ' +
+            'deliverables are built from one commit, the run counts for this one\'s candidate instead of whichever ' +
+            'reported last',
         },
         notes: {
           type: 'string',

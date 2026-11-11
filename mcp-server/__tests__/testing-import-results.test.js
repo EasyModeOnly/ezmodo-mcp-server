@@ -23,6 +23,16 @@ describe('manage_test_suite import_results (E-278 #3043)', () => {
     });
   });
 
+  it('sends the deliverable whose build was tested (#3655)', async () => {
+    await manageTestSuite({
+      action: 'import_results', projectId: 'p1', content: '<testsuite/>', suite: 'smoke',
+      commitSha: 'c60b167c', deliverable: 'api',
+    });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpImportTestResults', {
+      projectId: 'p1', content: '<testsuite/>', suite: 'smoke', commitSha: 'c60b167c', deliverable: 'api',
+    });
+  });
+
   it('reads filePath locally and sends it base64 with its name', async () => {
     const readFile = jest.fn().mockResolvedValue(Buffer.from('<testsuites/>'));
     const stat = jest.fn().mockResolvedValue({ size: 13 });

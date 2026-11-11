@@ -275,7 +275,7 @@ export async function importTestResults(
 ) {
   requireFields(args, ['projectId'], 'import_results');
   const {
-    projectId, filePath, content, format, suite, suiteId, environment, commitSha, releaseCandidateId, runId, unmatched,
+    projectId, filePath, content, format, suite, suiteId, environment, commitSha, releaseCandidateId, deliverable, runId, unmatched,
   } = args;
   if (!filePath && !content) {
     throw new Error('import_results needs filePath or content');
@@ -302,6 +302,7 @@ export async function importTestResults(
     ...(environment ? { environment } : {}),
     ...(commitSha ? { commitSha } : {}),
     ...(releaseCandidateId ? { releaseCandidateId } : {}),
+    ...(deliverable ? { deliverable } : {}),
     ...(runId ? { runId } : {}),
     ...(unmatched ? { unmatched } : {}),
     ...(fileName ? { fileName } : {}),
