@@ -26,6 +26,29 @@ speaks stdio MCP; only the file it goes in differs. Keep `@latest`: npx
 re-resolves the tag on every launch, so you pick up new releases without
 editing the config.
 
+If you have the ezmodo CLI installed, it can write the entry for you:
+
+```bash
+ezmodo mcp install --client cursor     # or vscode, gemini, codex, windsurf, zed
+ezmodo mcp uninstall --client cursor   # removes it again
+ezmodo mcp status                      # lists every client and whether it has it
+```
+
+It writes the client's user-level config and keeps the other entries in it:
+
+| Client | `--client` | File (macOS / Linux) | Key |
+|---|---|---|---|
+| Cursor | `cursor` | `~/.cursor/mcp.json` | `mcpServers` |
+| VS Code | `vscode` | `~/Library/Application Support/Code/User/mcp.json` / `~/.config/Code/User/mcp.json` | `servers` |
+| Gemini CLI | `gemini` | `~/.gemini/settings.json` | `mcpServers` |
+| Codex CLI | `codex` | `~/.codex/config.toml` (or `$CODEX_HOME/config.toml`) | `[mcp_servers.ezmodo]` |
+| Windsurf | `windsurf` | `~/.codeium/windsurf/mcp_config.json` | `mcpServers` |
+| Zed | `zed` | `~/.config/zed/settings.json` | `context_servers` |
+
+On Windows the files sit under `%USERPROFILE%`, or `%APPDATA%` for VS Code and
+Zed. A JSON file with comments or trailing commas is never rewritten: the
+command prints the block to paste in by hand instead.
+
 **Claude Desktop, claude.ai, iOS and Android need nothing installed**: add
 `https://ezmodo.com/mcp` as a custom connector and sign in.
 
