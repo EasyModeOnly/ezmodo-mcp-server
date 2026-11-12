@@ -3,13 +3,15 @@
  * Handler functions for the Designs MCP tools (the in-product living design system).
  *
  * A Design is an AI-authored HTML/CSS artifact (kind ∈ theme|component|page) that
- * captures the house style. Designs are org-level (project_id nullable) and LINK
- * to features and other artifacts via the generic link graph. These handlers are
+ * captures the house style. A design belongs to a project (E-326); the workspace's
+ * shared-library project holds what every project sees. Designs LINK to features
+ * and other artifacts via the generic link graph. These handlers are
  * thin wrappers over /api/mcp/v1/designs; dispatch and validation happen
  * server-side in core/designs.Service.
  */
 
 import path from 'path';
+import { localProjectFor } from '../lib/local-project.js';
 import { callEzmodoAPI } from '../lib/http-client.js';
 import { getLogger } from '../lib/logger.js';
 import { attachLinks } from '../lib/links-at-create.js';
@@ -260,7 +262,10 @@ async function listDesignHistory(designId, limit, before) {
 export async function getDesignSystem(args) {
   const params = {};
   if (args.organizationId) params.organizationId = args.organizationId;
-  if (args.projectId) params.projectId = args.projectId;
+  // Scoped to this checkout's project unless told otherwise (#3676): unscoped,
+  // the theme may belong to another project.
+  const projectId = args.projectId || (await localProjectFor(args.organizationId));
+  if (projectId) params.projectId = projectId;
   return callEzmodoAPI('mcpGetDesignSystem', params);
 }
 
@@ -269,6 +274,11 @@ export async function getDesignSystem(args) {
 async function createDesign(args) {
   // `links` is applied by the MCP layer after the design exists (E-225).
   const { links, ...createArgs } = args;
+  // A design belongs to a project (E-326): default to this checkout's.
+  if (!createArgs.projectId) {
+    const local = await localProjectFor(createArgs.organizationId);
+    if (local) createArgs.projectId = local;
+  }
   const result = await callEzmodoAPI('mcpCreateDesign', createArgs);
   await withWebUrl(result?.design);
 

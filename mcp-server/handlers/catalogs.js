@@ -11,6 +11,7 @@
  */
 
 import { callEzmodoAPI } from '../lib/http-client.js';
+import { localProjectFor } from '../lib/local-project.js';
 
 /**
  * Dispatch manage_catalog actions.
@@ -109,6 +110,11 @@ export async function listCatalogItems(args) {
 // --- Private helpers ---
 
 async function createCatalog(args) {
+  // A catalog belongs to a project (E-326): default to this checkout's.
+  if (!args.projectId) {
+    const local = await localProjectFor(args.organizationId);
+    if (local) args = { ...args, projectId: local };
+  }
   return callEzmodoAPI('mcpCreateCatalog', args);
 }
 

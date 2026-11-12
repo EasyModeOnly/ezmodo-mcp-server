@@ -1,6 +1,6 @@
 /**
  * Catalog Tools (E-215)
- * MCP tools for org-level Catalogs — a generalized, code-derived catalog.
+ * MCP tools for project Catalogs — a generalized, code-derived catalog.
  * Generalizes the Database Schema entity (E-196): a versioned, checksum-gated
  * snapshot of a list that lives in code (kind = notifications | analytics_events
  * | db_schema | custom), with a GENERIC { columns, items } shape.
@@ -78,7 +78,7 @@ const SOURCE_SCHEMA = {
 export const CATALOG_TOOLS = [
   {
     name: 'manage_catalog',
-    description: 'Create, update, or delete an org-level Catalog, link/unlink it to other artifacts, ' +
+    description: 'Create, update, or delete a project\'s Catalog, link/unlink it to other artifacts, ' +
       'or push a new versioned snapshot of its contents. A Catalog is a generalized, code-derived ' +
       'catalog (kind = notifications | analytics_events | db_schema | screens | custom); its versions are ' +
       'immutable { columns, items } snapshots.\n\n' +
@@ -128,7 +128,9 @@ export const CATALOG_TOOLS = [
         },
         projectId: {
           type: 'string',
-          description: 'Project ID to scope the catalog to. Omit for an org-wide catalog (create, update)',
+          description: 'The project the catalog belongs to (create, update). On create, omitted = this ' +
+            'checkout\'s project, else the workspace\'s shared library; with neither the create is ' +
+            'refused. Catalogs every project uses go in the shared library.',
         },
         catalogId: {
           type: 'string',

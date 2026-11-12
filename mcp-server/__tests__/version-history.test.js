@@ -11,6 +11,8 @@ jest.unstable_mockModule('../lib/http-client.js', () => ({
 const mockFindConfigPath = jest.fn(async () => null);
 jest.unstable_mockModule('../lib/local-cache.js', () => ({
   findConfigPath: mockFindConfigPath,
+  // The design handlers read the checkout's project (#3676); none here.
+  readConfig: async () => null,
 }));
 
 const mockWriteDesignFiles = jest.fn(async () => null);

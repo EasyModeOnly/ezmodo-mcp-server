@@ -25,6 +25,13 @@ jest.unstable_mockModule('../lib/web-url.js', () => ({
   buildDesignUrl: mockBuildDesignUrl,
 }));
 
+// This checkout's project (#3676); undefined unless a test sets one, so the
+// real .ezmodo/config.json never leaks in.
+const mockLocalProjectFor = jest.fn(async () => undefined);
+jest.unstable_mockModule('../lib/local-project.js', () => ({
+  localProjectFor: mockLocalProjectFor,
+}));
+
 const { manageDesign, getDesign, listDesigns, getDesignSystem, MAX_DESIGN_IDS } = await import('../handlers/designs.js');
 
 describe('Design Operations', () => {
@@ -41,6 +48,27 @@ describe('Design Operations', () => {
 
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDesign', params);
       expect(result.design.id).toBe('des-1');
+    });
+
+    it('defaults a create to this checkout\'s project (#3676)', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ design: { id: 'des-2' } });
+
+      await manageDesign({ action: 'create', organizationId: 'org-1', name: 'Card', kind: 'component' });
+
+      expect(mockLocalProjectFor).toHaveBeenCalledWith('org-1');
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDesign',
+        expect.objectContaining({ projectId: 'proj-local' }));
+    });
+
+    it('keeps an explicit projectId over the checkout\'s', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ design: { id: 'des-3' } });
+
+      await manageDesign({ action: 'create', organizationId: 'org-1', name: 'Card', kind: 'component', projectId: 'lib-1' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateDesign',
+        expect.objectContaining({ projectId: 'lib-1' }));
     });
 
     it('should update a design', async () => {
@@ -335,6 +363,17 @@ describe('Design Operations', () => {
   });
 
   describe('getDesignSystem', () => {
+    it('scopes to this checkout\'s project when none is given (#3676)', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ theme: null, components: [] });
+
+      await getDesignSystem({ organizationId: 'org-1' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesignSystem', {
+        organizationId: 'org-1', projectId: 'proj-local',
+      });
+    });
+
     it('should pass organizationId and projectId through', async () => {
       mockCallEzmodoAPI.mockResolvedValueOnce({ theme: null, components: [] });
 

@@ -3,9 +3,10 @@
  * MCP tools for Designs (the in-product living design system).
  *
  * A Design is an AI-authored HTML/CSS artifact that captures the product's house
- * style. kind ∈ theme|component|page. Designs are org-level (projectId nullable)
- * and LINK to features and other artifacts via the generic link graph — they do
- * not contain them.
+ * style. kind ∈ theme|component|page. A design belongs to a project (E-326); what
+ * a workspace shares lives in its shared-library project, which every project
+ * sees. Designs LINK to features and other artifacts via the generic link graph —
+ * they do not contain them.
  *
  * An agent should read the design system (get_design_system) to learn the
  * established house style before authoring or designing any new UI, so new
@@ -20,8 +21,9 @@ export const DESIGN_TOOLS = [
     name: 'manage_design',
     description: 'Create, update, or delete a Design (an AI-authored HTML/CSS artifact in the living ' +
       'design system: kind theme|component|page, name, html, css, status), or link/unlink it to ' +
-      'existing artifacts. Designs are org-level and LINK to features/epics/tasks/milestones/etc., ' +
-      'they do not contain them. Before authoring a new design, call get_design_system first to ' +
+      'existing artifacts. A design belongs to a project; designs every project should use (the ' +
+      'house theme, shared components) go in the workspace\'s shared-library project. Designs LINK ' +
+      'to features/epics/tasks/milestones/etc., they do not contain them. Before authoring a new design, call get_design_system first to ' +
       'learn the established house style. To change an existing design, send `edits` ' +
       '(find-and-replace) rather than the whole html/css, plus expectedUpdatedAt. Create and ' +
       'update return the design\'s summary and new updatedAt, not its markup. action:"restore" makes ' +
@@ -90,8 +92,9 @@ export const DESIGN_TOOLS = [
         },
         projectId: {
           type: 'string',
-          description: 'Scope the design to a project. Omit/empty = cross-project / org-wide ' +
-            '(create, update)',
+          description: 'The project the design belongs to (create, update). On create, omitted = ' +
+            'this checkout\'s project, else the workspace\'s shared library; with neither the ' +
+            'create is refused. Cannot be cleared: there are no org-wide designs.',
         },
         fromFiles: {
           type: 'boolean',
@@ -288,7 +291,8 @@ export const DESIGN_TOOLS = [
         },
         includeOrgWide: {
           type: 'boolean',
-          description: 'When filtering by projectId, also include org-wide (project-less) designs',
+          description: 'When filtering by projectId, also include the designs that project sees from ' +
+            'the workspace\'s shared library',
         },
         includeContent: {
           type: 'boolean',
@@ -309,8 +313,10 @@ export const DESIGN_TOOLS = [
       'the house style as an INDEX: the chosen theme with its CSS tokens, plus one short row per ' +
       'component and other theme (id, name, status, summary, size, updatedAt). Drafts are included ' +
       'and labelled; deprecated designs are left out. It does not include component markup: pick the ' +
-      'components relevant to what you are building and fetch them with get_design designIds. Pass ' +
-      'projectId, or you get every project\'s designs and a theme that may belong to another project.',
+      'components relevant to what you are building and fetch them with get_design designIds. Scoped ' +
+      'to a project (its own designs plus the shared library\'s): projectId, defaulting to this ' +
+      'checkout\'s project. Unscoped (remote, no projectId) you get every project\'s designs and a ' +
+      'theme that may belong to another project.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -320,8 +326,8 @@ export const DESIGN_TOOLS = [
         },
         projectId: {
           type: 'string',
-          description: 'Scope the design system to a project: its own designs plus org-wide ones. ' +
-            'Recommended; omitting it spans every project in the org.',
+          description: 'Scope the design system to a project: its own designs plus the shared ' +
+            'library\'s. Defaults to this checkout\'s project; with none, it spans every project.',
         },
       },
       required: ['organizationId'],

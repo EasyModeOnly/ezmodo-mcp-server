@@ -6,6 +6,13 @@ jest.unstable_mockModule('../lib/http-client.js', () => ({
   callEzmodoAPI: mockCallEzmodoAPI,
 }));
 
+// This checkout's project (#3676); undefined unless a test sets one, so the
+// real .ezmodo/config.json never leaks in.
+const mockLocalProjectFor = jest.fn(async () => undefined);
+jest.unstable_mockModule('../lib/local-project.js', () => ({
+  localProjectFor: mockLocalProjectFor,
+}));
+
 const { manageCatalog, getCatalog, listCatalogs, listCatalogItems, getCatalogDiff } = await import('../handlers/catalogs.js');
 
 describe('Catalog Operations', () => {
@@ -22,6 +29,16 @@ describe('Catalog Operations', () => {
 
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateCatalog', params);
       expect(result.catalog.id).toBe('cat-1');
+    });
+
+    it('defaults a create to this checkout\'s project (#3676)', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockCallEzmodoAPI.mockResolvedValueOnce({ catalog: { id: 'cat-2' } });
+
+      await manageCatalog({ action: 'create', organizationId: 'org-1', name: 'Events', kind: 'analytics_events' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateCatalog',
+        expect.objectContaining({ projectId: 'proj-local' }));
     });
 
     it('should discover screens for a project (E-258)', async () => {
