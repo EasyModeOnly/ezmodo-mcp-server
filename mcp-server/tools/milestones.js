@@ -214,7 +214,11 @@ export const MILESTONE_TOOLS = [
       'when the description has been promoted to one (E-189), otherwise omitted. ' +
       '`startDate` is the milestone\'s own start, if set. `effectiveStartDate` is when it actually starts: ' +
       '`startDate` if set, else the earliest start of its epics or of its nested milestones; ' +
-      '`effectiveStartSource` says which ("milestone" | "epics" | "children"). Both are omitted when nothing is dated.',
+      '`effectiveStartSource` says which ("milestone" | "epics" | "children"). ' +
+      'Both are omitted when nothing is dated. ' +
+      'A single lookup also returns `freezeHistory`: the last 5 changes of the milestone\'s freeze, newest first, ' +
+      'each {state, freezeType, previousState, previousType, actorType, actorName, at, onRelease}. ' +
+      'Read it to answer who set or lifted a freeze, and when; `onRelease` means releasing the milestone lifted it.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -443,5 +443,15 @@ describe('Milestone Operations', () => {
       expect(get.description).toContain('effectiveStartDate');
       expect(get.description).toContain('effectiveStartSource');
     });
+
+    it('passes freezeHistory through and documents it on get_milestone (#3691)', async () => {
+      const freezeHistory = [{ state: 'off', previousState: 'on', previousType: 'stabilization', actorType: 'human', actorName: 'Jo', at: '2026-11-12T09:30:00Z', onRelease: true }];
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, milestone: { id: 'ms-1', freezeHistory } });
+      const result = await getMilestone({ projectId: 'proj-1', milestoneId: 'ms-1' });
+      expect(result.milestone.freezeHistory).toEqual(freezeHistory);
+      const get = MILESTONE_TOOLS.find((t) => t.name === 'get_milestone');
+      expect(get.description).toContain('freezeHistory');
+      expect(get.description).toContain('onRelease');
+    });
   });
 });
