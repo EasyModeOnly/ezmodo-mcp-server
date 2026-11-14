@@ -414,6 +414,7 @@ export const ENDPOINT_MAP = {
   'mcpListDesigns': { route: 'mcp/v1/designs', method: 'GET' },
   'mcpGetDesign': { route: 'mcp/v1/designs/by-id', method: 'GET' },
   'mcpGetDesignSystem': { route: 'mcp/v1/designs/system', method: 'GET' },
+  'mcpSetThemePaths': { route: 'mcp/v1/designs/paths', method: 'PUT' },
   'mcpListDesignLinks': { route: 'mcp/v1/designs/links', method: 'GET' },
   'mcpUpdateDesign': { route: 'mcp/v1/designs', method: 'PUT' },
   'mcpDeleteDesign': { route: 'mcp/v1/designs', method: 'DELETE' },

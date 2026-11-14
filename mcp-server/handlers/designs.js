@@ -12,6 +12,7 @@
 
 import path from 'path';
 import { localProjectFor } from '../lib/local-project.js';
+import { localRepoPath } from '../lib/local-repo-path.js';
 import { callEzmodoAPI } from '../lib/http-client.js';
 import { getLogger } from '../lib/logger.js';
 import { attachLinks } from '../lib/links-at-create.js';
@@ -36,8 +37,9 @@ export async function manageDesign(args) {
   case 'link': return linkDesignArtifact(params);
   case 'unlink': return unlinkDesignArtifact(params);
   case 'restore': return restoreDesign(params);
+  case 'paths': return setThemePaths(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, or restore.`);
+    throw new Error(`Unknown action: ${action}. Expected create, update, delete, link, unlink, restore, or paths.`);
   }
 }
 
@@ -258,18 +260,38 @@ async function listDesignHistory(designId, limit, before) {
 /**
  * Retrieve the design system (theme + components) for an org/project. Call this
  * first to learn the existing house style before authoring new UI.
+ *
+ * `path` picks the theme (E-328 #3694): a project can have several, each
+ * owning code paths, and the one owning the longest prefix of the path wins.
+ * The agent should pass the file it is about to write. Without one, and when
+ * the call is about THIS checkout's project, the working directory relative
+ * to the git root stands in. A path in this repository means nothing for
+ * another project, so it is never filled for one.
  */
 export async function getDesignSystem(args) {
   const params = {};
   if (args.organizationId) params.organizationId = args.organizationId;
   // Scoped to this checkout's project unless told otherwise (#3676): unscoped,
   // the theme may belong to another project.
-  const projectId = args.projectId || (await localProjectFor(args.organizationId));
+  const local = await localProjectFor(args.organizationId);
+  const projectId = args.projectId || local;
   if (projectId) params.projectId = projectId;
+  const repoPath = args.path || (projectId && projectId === local ? localRepoPath() : undefined);
+  if (repoPath) params.path = repoPath;
   return callEzmodoAPI('mcpGetDesignSystem', params);
 }
 
 // --- Private helpers ---
+
+// Add, remove or replace the code paths a theme owns (E-328 #3694), like
+// manage_feature action:"paths". Repo-relative files or folders; another
+// active theme in the project owning one of them is refused with the
+// conflicts named.
+async function setThemePaths({ designId, pathsMode, paths }) {
+  if (!designId) throw new Error('designId is required for action "paths"');
+  if (!Array.isArray(paths)) throw new Error('paths must be an array of repo-relative files or folders');
+  return callEzmodoAPI('mcpSetThemePaths', { designId, mode: pathsMode || 'add', paths });
+}
 
 async function createDesign(args) {
   // `links` is applied by the MCP layer after the design exists (E-225).

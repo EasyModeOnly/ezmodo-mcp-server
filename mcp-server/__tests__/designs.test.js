@@ -32,6 +32,13 @@ jest.unstable_mockModule('../lib/local-project.js', () => ({
   localProjectFor: mockLocalProjectFor,
 }));
 
+// The working directory relative to the git root (E-328); undefined unless a
+// test sets one, so the real checkout's cwd never leaks in.
+const mockLocalRepoPath = jest.fn(() => undefined);
+jest.unstable_mockModule('../lib/local-repo-path.js', () => ({
+  localRepoPath: mockLocalRepoPath,
+}));
+
 const { manageDesign, getDesign, listDesigns, getDesignSystem, MAX_DESIGN_IDS } = await import('../handlers/designs.js');
 
 describe('Design Operations', () => {
@@ -390,6 +397,93 @@ describe('Design Operations', () => {
       await getDesignSystem({ organizationId: 'org-1' });
 
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesignSystem', { organizationId: 'org-1' });
+    });
+
+    // E-328 #3694: the theme is picked by path.
+    it('fills path from the working directory in a subdir of this checkout', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockLocalRepoPath.mockReturnValueOnce('mobile/lib');
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+
+      await getDesignSystem({ organizationId: 'org-1' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesignSystem', {
+        organizationId: 'org-1', projectId: 'proj-local', path: 'mobile/lib',
+      });
+    });
+
+    it('sends no path at the repository root', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockLocalRepoPath.mockReturnValueOnce(undefined);
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+
+      await getDesignSystem({ organizationId: 'org-1' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesignSystem', {
+        organizationId: 'org-1', projectId: 'proj-local',
+      });
+    });
+
+    it('sends no path outside a checkout (the remote connector)', async () => {
+      mockLocalRepoPath.mockReturnValue('should-not-be-read');
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+
+      await getDesignSystem({ organizationId: 'org-1', projectId: 'proj-1' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesignSystem', {
+        organizationId: 'org-1', projectId: 'proj-1',
+      });
+      mockLocalRepoPath.mockReset();
+      mockLocalRepoPath.mockImplementation(() => undefined);
+    });
+
+    it('never fills a path for another project than this checkout\'s', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockLocalRepoPath.mockReturnValueOnce('web/src');
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+
+      await getDesignSystem({ organizationId: 'org-1', projectId: 'proj-other' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesignSystem', {
+        organizationId: 'org-1', projectId: 'proj-other',
+      });
+    });
+
+    it('an explicit path wins over the working directory', async () => {
+      mockLocalProjectFor.mockResolvedValueOnce('proj-local');
+      mockLocalRepoPath.mockReturnValueOnce('mobile');
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+
+      await getDesignSystem({ organizationId: 'org-1', path: 'web/src/components/marketing/hero.tsx' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetDesignSystem', {
+        organizationId: 'org-1', projectId: 'proj-local', path: 'web/src/components/marketing/hero.tsx',
+      });
+    });
+  });
+
+  describe('manage_design action:"paths" (E-328)', () => {
+    it('sends designId, mode and paths, defaulting to add', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ designId: 'd1', paths: ['mobile'] });
+
+      const result = await manageDesign({ action: 'paths', designId: 'd1', paths: ['mobile/'] });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSetThemePaths', { designId: 'd1', mode: 'add', paths: ['mobile/'] });
+      expect(result.paths).toEqual(['mobile']);
+    });
+
+    it('passes pathsMode through', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ designId: 'd1', paths: [] });
+
+      await manageDesign({ action: 'paths', designId: 'd1', paths: [], pathsMode: 'replace' });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSetThemePaths', { designId: 'd1', mode: 'replace', paths: [] });
+    });
+
+    it('refuses a call without designId or paths', async () => {
+      await expect(manageDesign({ action: 'paths', paths: ['x'] })).rejects.toThrow('designId');
+      await expect(manageDesign({ action: 'paths', designId: 'd1' })).rejects.toThrow('paths');
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
     });
   });
 });

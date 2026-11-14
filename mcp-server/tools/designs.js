@@ -28,16 +28,21 @@ export const DESIGN_TOOLS = [
       '(find-and-replace) rather than the whole html/css, plus expectedUpdatedAt. Create and ' +
       'update return the design\'s summary and new updatedAt, not its markup. action:"restore" makes ' +
       'an older version current again (designId + historyEntryId + expectedUpdatedAt); find it with ' +
-      'get_design includeHistory:true and check it with diffFrom first.',
+      'get_design includeHistory:true and check it with diffFrom first. action:"paths" sets the code ' +
+      'paths a THEME owns (designId + paths + pathsMode), so a project can have several themes: ' +
+      'get_design_system picks the one owning the longest prefix of the file being written.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'delete', 'link', 'unlink', 'restore'],
+          enum: ['create', 'update', 'delete', 'link', 'unlink', 'restore', 'paths'],
           description: 'Action to perform. "link"/"unlink" attach/detach the design to an artifact ' +
             '(pass designId + targetType + targetId). "restore" makes a history entry the current ' +
-            'version (designId + historyEntryId + expectedUpdatedAt).',
+            'version (designId + historyEntryId + expectedUpdatedAt). "paths" adds, removes or ' +
+            'replaces the repo-relative files/folders a theme owns (designId + paths + pathsMode); ' +
+            'a theme with no paths is its project\'s default. Only themes own paths; a component ' +
+            'belongs to the theme above it (parentDesignId).',
         },
         // --- Identifiers ---
         organizationId: {
@@ -46,7 +51,7 @@ export const DESIGN_TOOLS = [
         },
         designId: {
           type: 'string',
-          description: 'Design ID (required for update, delete, link, unlink, restore)',
+          description: 'Design ID (required for update, delete, link, unlink, restore, paths)',
         },
         historyEntryId: {
           type: 'string',
@@ -150,6 +155,21 @@ export const DESIGN_TOOLS = [
             '(create; requires linkToType)',
         },
         links: LINKS_ARRAY_SCHEMA,
+        // --- paths fields (E-328) ---
+        paths: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Repo-relative files or folders the theme owns (required for paths), e.g. ' +
+            '["web/src/components/marketing/", "mobile/"]. Normalized like feature paths. Two active ' +
+            'themes in one project cannot own the same path: the call is refused naming the theme ' +
+            'that has it.',
+        },
+        pathsMode: {
+          type: 'string',
+          enum: ['add', 'remove', 'replace'],
+          description: 'How "paths" applies (default "add"). "replace" makes the list the theme\'s ' +
+            'entire path set; an empty list clears it, making it a default.',
+        },
       },
       required: ['action'],
     },
@@ -313,7 +333,11 @@ export const DESIGN_TOOLS = [
       'the house style as an INDEX: the chosen theme with its CSS tokens, plus one short row per ' +
       'component and other theme (id, name, status, summary, size, updatedAt). Drafts are included ' +
       'and labelled; deprecated designs are left out. It does not include component markup: pick the ' +
-      'components relevant to what you are building and fetch them with get_design designIds. Scoped ' +
+      'components relevant to what you are building and fetch them with get_design designIds. A ' +
+      'project can have several themes, each owning code paths: pass `path`, the file you are about ' +
+      'to write, and you get the theme that owns it (themeReason says why) with its components ' +
+      'first, then components for any surface; other themes\' components come last under ' +
+      'otherSurfaces. Scoped ' +
       'to a project (its own designs plus the shared library\'s): projectId, defaulting to this ' +
       'checkout\'s project. Unscoped (remote, no projectId) you get every project\'s designs and a ' +
       'theme that may belong to another project.',
@@ -328,6 +352,13 @@ export const DESIGN_TOOLS = [
           type: 'string',
           description: 'Scope the design system to a project: its own designs plus the shared ' +
             'library\'s. Defaults to this checkout\'s project; with none, it spans every project.',
+        },
+        path: {
+          type: 'string',
+          description: 'The repo-relative file you are about to write, e.g. ' +
+            '"web/src/components/marketing/pricing-hero.tsx". Picks the theme owning its longest ' +
+            'prefix, else the project default. Pass it: it is the precise answer. Omitted in a local ' +
+            'checkout of this project, your working directory relative to the repo root is used.',
         },
       },
       required: ['organizationId'],
