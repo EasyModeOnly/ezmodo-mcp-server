@@ -2,8 +2,8 @@
  * Background Agents Tools (E-150)
  *
  * Control-plane tools for EzModo's background hygiene agents. The agents
- * themselves (Stale Sentinel, Dependency Mapper, Related Linker, Duplicate
- * Hunter) run on EzModo's infra; these tools let an MCP client (e.g. the
+ * themselves (Stale Sentinel, Dependency Mapper, Related Linker) run on
+ * EzModo's infra; these tools let an MCP client (e.g. the
  * user's Claude) review and act on what they produced.
  */
 
@@ -14,7 +14,7 @@ export const AGENT_TOOLS = [
       'List pending background-agent suggestions for the current organization. ' +
       'Returns the newest first — review and either accept_agent_suggestion or ' +
       'reject_agent_suggestion each one. Action types: \'link\' (create entity_link), ' +
-      '\'archive\' (set tasks.archived=true), \'merge\' / \'unblock_check\' / \'enrich\' ' +
+      '\'archive\' (set tasks.archived=true), \'unblock_check\' / \'enrich\' ' +
       '(no destructive side effect on accept — intent only).',
     inputSchema: {
       type: 'object',
@@ -41,7 +41,7 @@ export const AGENT_TOOLS = [
         },
         action: {
           type: 'string',
-          enum: ['link', 'archive', 'merge', 'unblock_check', 'enrich', 'status_change', 'verify_link', 'regenerate_how_it_works'],
+          enum: ['link', 'archive', 'unblock_check', 'enrich', 'status_change', 'verify_link', 'regenerate_how_it_works'],
           description:
             'Narrow to one suggestion verb. action="link" is what a ' +
             'links-focused review asks for — the queue is shared with every ' +
@@ -107,7 +107,7 @@ export const AGENT_TOOLS = [
     name: 'run_agent_now',
     description:
       'Manually enqueue an agent run, bypassing the scheduler\'s cadence. ' +
-      'Useful for testing or for \'check this entity for duplicates now\' ' +
+      'Useful for testing or for \'check this entity now\' ' +
       'flows. The agent type must be registered server-side. Quota is ' +
       'respected — if the org has exhausted its monthly suggestion cap the ' +
       'run completes with status=\'quota_exhausted\' and zero new suggestions.',
@@ -117,7 +117,7 @@ export const AGENT_TOOLS = [
       properties: {
         agentType: {
           type: 'string',
-          enum: ['stale_sentinel', 'dependency_mapper', 'related_linker', 'duplicate_hunter'],
+          enum: ['stale_sentinel', 'dependency_mapper', 'related_linker'],
         },
         scope: {
           type: 'object',
@@ -146,7 +146,7 @@ export const AGENT_TOOLS = [
       properties: {
         agentType: {
           type: 'string',
-          enum: ['stale_sentinel', 'dependency_mapper', 'related_linker', 'duplicate_hunter'],
+          enum: ['stale_sentinel', 'dependency_mapper', 'related_linker'],
         },
         enabled: { type: 'boolean' },
         cadenceSeconds: {
