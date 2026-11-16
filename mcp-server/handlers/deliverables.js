@@ -109,6 +109,18 @@ export async function manageDeliverable(args = {}) {
     return callEzmodoAPI('mcpBumpDeliverables', {
       projectId: await projectIdFor(args, action), items: bumpItems(args), ...pick(args, ['release']),
     });
+  case 'report_bump': {
+    // A bump made here, not by EzModo (#3824): recorded so the release shows
+    // the PR, and so a project with no connected repo has a version on main.
+    need(args, ['deliverable', 'version'], action);
+    if (args.state !== undefined && !['opened', 'merged'].includes(args.state)) {
+      throw new Error('report_bump state must be opened or merged.');
+    }
+    return callEzmodoAPI('mcpReportDeliverableBump', {
+      projectId: await projectIdFor(args, action), source: 'agent',
+      ...pick(args, ['deliverable', 'version', 'number', 'url', 'branch', 'repo', 'commitSha', 'state', 'source']),
+    });
+  }
   default:
     throw new Error(`Unknown action: ${action}`);
   }

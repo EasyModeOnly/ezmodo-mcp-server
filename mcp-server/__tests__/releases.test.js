@@ -190,6 +190,46 @@ describe('Release Readiness tools (E-262)', () => {
       });
     });
 
+    describe('stale releases and bulk abandon (#3795, #3840)', () => {
+      it('maps both endpoints and offers both actions', () => {
+        expect(ENDPOINT_MAP.mcpStaleReleases).toEqual({ route: 'mcp/v1/releases/releases/stale', method: 'GET' });
+        expect(ENDPOINT_MAP.mcpAbandonReleases).toEqual({ route: 'mcp/v1/releases/releases/abandon', method: 'POST' });
+        const tool = TOOLS.find((t) => t.name === 'manage_release');
+        expect(tool.inputSchema.properties.action.enum).toEqual(expect.arrayContaining(['stale', 'abandon_stale']));
+        expect(tool.inputSchema.properties.releaseIds.type).toBe('array');
+      });
+
+      it('stale lists the project\'s releases that need attention', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({ releases: [], counts: { total: 0 } });
+        await manageRelease({ action: 'stale', projectId: 'p1' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpStaleReleases', { projectId: 'p1' });
+      });
+
+      it('abandon_stale abandons only the releases named', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({ abandoned: ['r1'], skipped: [{ releaseId: 'r2', reason: 'already shipped' }] });
+        const res = await manageRelease({ action: 'abandon_stale', projectId: 'p1', releaseIds: ['r1', 'r2'] });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpAbandonReleases', { projectId: 'p1', releaseIds: ['r1', 'r2'] });
+        expect(res.skipped[0].reason).toBe('already shipped');
+      });
+
+      it('abandon_stale refuses without releaseIds rather than abandon everything stale', async () => {
+        await expect(manageRelease({ action: 'abandon_stale', projectId: 'p1' })).rejects.toThrow(/releaseIds/);
+        await expect(manageRelease({ action: 'abandon_stale', projectId: 'p1', releaseIds: [] })).rejects.toThrow(/releaseIds/);
+        expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+      });
+    });
+
+    it('report_deployment passes deployedAt through (#3847)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({});
+      await manageRelease({
+        action: 'report_deployment', projectId: 'p1', environment: 'production', status: 'success',
+        deliverable: 'site', version: '1.6.0', source: 'manual', deployedAt: '2026-11-15T09:30:00Z',
+      });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReportReleaseDeployment', expect.objectContaining({
+        deployedAt: '2026-11-15T09:30:00Z', source: 'manual',
+      }));
+    });
+
     describe('release runs (E-331 #3804)', () => {
       it('maps every run endpoint', () => {
         for (const name of ['mcpPreviewReleaseRun', 'mcpStartReleaseRun', 'mcpCurrentReleaseRun', 'mcpGetReleaseRun', 'mcpStopReleaseRun']) {

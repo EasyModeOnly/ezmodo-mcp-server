@@ -38,7 +38,11 @@ export const DECISION_TOOLS = [
       'optionally decision (the answer in plain words) and rejectedReasons {choiceId: why}. ' +
       '"hold_task" makes a task wait until the decision is made (it is blocked, and released on ' +
       'decide); "release_task" undoes that. Do not decide on someone\'s behalf unless they asked ' +
-      'you to — add a pick instead.',
+      'you to — add a pick instead.\n\n' +
+      'A DECISION ON A TASK (E-333): when a choice holds up the task you are on, create with taskId ' +
+      'instead of epicId (plus question, choices, recommendation; blocking:true to hold the task ' +
+      'until it is decided). It goes to the Inbox of requestedFrom, which defaults to the person you ' +
+      'work for; answering it decides it. Read the outcome with list_questions or get_decision.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -167,7 +171,12 @@ export const DECISION_TOOLS = [
         taskId: {
           type: 'string',
           description: 'Task whose knowledge item to promote (required for promote_from_knowledge), ' +
-            'or the task to hold back / release (hold_task, release_task)',
+            'the task to hold back / release (hold_task, release_task), or the task to ask a ' +
+            'decision on (create; instead of epicId)',
+        },
+        blocking: {
+          type: 'boolean',
+          description: 'With taskId on create: hold the task blocked until the decision is made',
         },
         knowledgeId: {
           type: 'string',

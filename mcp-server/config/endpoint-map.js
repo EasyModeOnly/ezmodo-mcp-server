@@ -361,10 +361,15 @@ export const ENDPOINT_MAP = {
   // the bump PR, the wizard's version plan and EzModo-assigned next version.
   'mcpDeliverableVersionsOnMain': { route: 'mcp/v1/deliverables/versions', method: 'GET' },
   'mcpBumpDeliverables': { route: 'mcp/v1/deliverables/bump', method: 'POST' },
+  // A bump an agent or the CLI made, recorded (#3824).
+  'mcpReportDeliverableBump': { route: 'mcp/v1/deliverables/bumps', method: 'POST' },
   'mcpReleaseVersionPlan': { route: 'mcp/v1/releases/versions', method: 'GET' },
   'mcpReleaseNextVersion': { route: 'mcp/v1/releases/next-version', method: 'GET' },
   'mcpListReleases': { route: 'mcp/v1/releases/releases', method: 'GET' },
   'mcpLiveNow': { route: 'mcp/v1/releases/releases/live', method: 'GET' },
+  // Needs attention and bulk abandon (#3795, #3840).
+  'mcpStaleReleases': { route: 'mcp/v1/releases/releases/stale', method: 'GET' },
+  'mcpAbandonReleases': { route: 'mcp/v1/releases/releases/abandon', method: 'POST' },
   'mcpCreateRelease': { route: 'mcp/v1/releases/releases', method: 'POST' },
   'mcpLookupRelease': { route: 'mcp/v1/releases/releases/lookup', method: 'GET' },
   'mcpReleaseTaskShipping': { route: 'mcp/v1/releases/tasks/{taskId}/shipping', method: 'GET' },
@@ -416,6 +421,11 @@ export const ENDPOINT_MAP = {
   'mcpDecideDecision': { route: 'mcp/v1/decisions/decide', method: 'POST' },
   'mcpHoldTaskForDecision': { route: 'mcp/v1/decisions/holds', method: 'POST' },
   'mcpReleaseTaskFromDecision': { route: 'mcp/v1/decisions/holds', method: 'DELETE' },
+  // Questions on tasks (E-333 #3829): manage_question, list_questions.
+  'mcpCreateQuestion': { route: 'mcp/v1/questions', method: 'POST' },
+  'mcpUpdateQuestion': { route: 'mcp/v1/questions', method: 'PUT' },
+  'mcpWithdrawQuestion': { route: 'mcp/v1/questions/withdraw', method: 'POST' },
+  'mcpListQuestions': { route: 'mcp/v1/questions', method: 'GET' },
 
   // Recurring task schedules (E-211) — "what task to create, on what cadence".
   'mcpCreateRecurringTask': { route: 'mcp/v1/recurring-tasks', method: 'POST' },

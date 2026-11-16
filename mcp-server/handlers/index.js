@@ -14,6 +14,7 @@ import * as releaseHandlers from './releases.js';
 import * as deliverableHandlers from './deliverables.js';
 import * as featureHandlers from './features.js';
 import * as decisionHandlers from './decisions.js';
+import * as questionHandlers from './questions.js';
 import * as designHandlers from './designs.js';
 import * as catalogHandlers from './catalogs.js';
 import * as unmappedPathHandlers from './unmapped-paths.js';
@@ -88,6 +89,8 @@ export const HANDLERS = {
   // Decisions / ADRs (E-170)
   manage_decision: decisionHandlers.manageDecision,
   get_decision: decisionHandlers.getDecision,
+  manage_question: questionHandlers.manageQuestion,
+  list_questions: questionHandlers.listQuestions,
 
   // Recurring task schedules + work templates (E-211)
   manage_recurring_task: recurringTaskHandlers.manageRecurringTask,

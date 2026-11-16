@@ -38,6 +38,7 @@ describe('manage_deliverable (E-280)', () => {
     expect(isRemoteSafe('manage_deliverable')).toBe(true);
     expect(tool.inputSchema.properties.action.enum).toEqual([
       'list', 'create', 'update', 'paths', 'route', 'delete', 'versions', 'version_on_main', 'next_version', 'bump',
+      'report_bump',
     ]);
   });
 
@@ -56,7 +57,7 @@ describe('manage_deliverable (E-280)', () => {
       'mcpReleaseTaskShipping', 'mcpGetRelease', 'mcpUpdateRelease', 'mcpCreateReleaseCandidateForRelease',
       'mcpAddReleaseChecklistItemForRelease', 'mcpApplyReleaseChecklistForRelease', 'mcpGetReleaseContents',
       'mcpDeriveReleaseContents', 'mcpAddReleaseContent', 'mcpRemoveReleaseContent', 'mcpReleaseChangelog',
-      'mcpLookupReleaseCandidate', 'mcpLiveNow', 'mcpDeliverableVersionsOnMain', 'mcpBumpDeliverables', 'mcpReleaseVersionPlan',
+      'mcpLookupReleaseCandidate', 'mcpLiveNow', 'mcpDeliverableVersionsOnMain', 'mcpBumpDeliverables', 'mcpReportDeliverableBump', 'mcpReleaseVersionPlan',
       'mcpReleaseNextVersion',
     ];
     expect(used.filter((e) => !ENDPOINT_MAP[e])).toEqual([]);
@@ -165,6 +166,24 @@ describe('manage_deliverable (E-280)', () => {
     await expect(manageDeliverable({ action: 'bump', projectId: 'p1', deliverable: 'cli' })).rejects.toThrow(/bump needs items/);
     await expect(manageDeliverable({ action: 'bump', projectId: 'p1', items: [{ deliverable: 'cli' }] }))
       .rejects.toThrow(/each need deliverable and version/);
+  });
+
+  it('report_bump records a bump made outside EzModo (#3824)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({ state: 'opened' });
+    await manageDeliverable({ action: 'report_bump', projectId: 'p1', deliverable: 'api', version: '1.6.0',
+      number: 41, url: 'https://github.com/emo/app/pull/41', branch: 'release/api-v1.6.0' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReportDeliverableBump', {
+      projectId: 'p1', source: 'agent', deliverable: 'api', version: '1.6.0', number: 41,
+      url: 'https://github.com/emo/app/pull/41', branch: 'release/api-v1.6.0',
+    });
+    await manageDeliverable({ action: 'report_bump', projectId: 'p1', deliverable: 'api', version: '1.6.0', state: 'merged' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReportDeliverableBump', {
+      projectId: 'p1', source: 'agent', deliverable: 'api', version: '1.6.0', state: 'merged',
+    });
+    await expect(manageDeliverable({ action: 'report_bump', projectId: 'p1', deliverable: 'api' }))
+      .rejects.toThrow(/needs version/);
+    await expect(manageDeliverable({ action: 'report_bump', projectId: 'p1', deliverable: 'api', version: '1', state: 'closed' }))
+      .rejects.toThrow(/opened or merged/);
   });
 
   it('delete by key', async () => {

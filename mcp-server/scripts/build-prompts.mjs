@@ -49,7 +49,8 @@ const OUTPUT_PATH = join(here, '..', 'prompts', 'commands.generated.js');
  *
  * `submit` is local-only: it reads git SHAs and links commits, neither of which
  * exists on a hosted server. Serving it remotely would hand someone a checklist
- * whose third step cannot be done.
+ * whose third step cannot be done. `release` is local-only for the same reason:
+ * it edits version files, commits and opens a PR in a checkout (E-331 #3809).
  */
 export const COMMANDS = [
   { file: 'start.md', name: 'start', surfaces: ['local', 'remote'] },
@@ -57,6 +58,7 @@ export const COMMANDS = [
   { file: 'submit.md', name: 'submit', surfaces: ['local'] },
   { file: 'untracked.md', name: 'untracked', surfaces: ['local', 'remote'] },
   { file: 'catch-up.md', name: 'catch-up', surfaces: ['local', 'remote'] },
+  { file: 'release.md', name: 'release', surfaces: ['local'] },
 ];
 
 /** Split YAML-ish frontmatter from the body. Only the two keys we use. */

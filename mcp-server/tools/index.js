@@ -15,6 +15,7 @@ import { MILESTONE_TOOLS } from './milestones.js';
 import { RELEASE_TOOLS } from './releases.js';
 import { FEATURE_TOOLS } from './features.js';
 import { DECISION_TOOLS } from './decisions.js';
+import { QUESTION_TOOLS } from './questions.js';
 import { DESIGN_TOOLS } from './designs.js';
 import { CATALOG_TOOLS } from './catalogs.js';
 import { UNMAPPED_PATH_TOOLS } from './unmapped-paths.js';
@@ -60,6 +61,7 @@ export const TOOLS = [
   ...RELEASE_TOOLS,
   ...FEATURE_TOOLS,
   ...DECISION_TOOLS,
+  ...QUESTION_TOOLS,
   ...DESIGN_TOOLS,
   ...CATALOG_TOOLS,
   ...UNMAPPED_PATH_TOOLS,

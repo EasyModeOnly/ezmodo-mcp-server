@@ -74,9 +74,10 @@ describe('skill references', () => {
 });
 
 describe('surface filtering', () => {
-  it('serves the five commands locally', () => {
+  it('serves the six commands locally', () => {
     expect(listPrompts('local').map((p) => p.name).sort()).toEqual([
       'catch-up',
+      'release',
       'resume',
       'start',
       'submit',
@@ -86,6 +87,11 @@ describe('surface filtering', () => {
 
   it('withholds submit remotely — it reads git SHAs and links commits', () => {
     expect(listPrompts('remote').map((p) => p.name)).not.toContain('submit');
+  });
+
+  it('withholds release remotely — it edits version files and commits in a checkout (#3809)', () => {
+    expect(listPrompts('remote').map((p) => p.name)).not.toContain('release');
+    expect(getPromptContent('release', { arguments: '1.6.0' }, 'local')).toContain('1.6.0');
   });
 
   it('serves catch-up remotely — catch_up pages by cursor over the connector (#3181)', () => {

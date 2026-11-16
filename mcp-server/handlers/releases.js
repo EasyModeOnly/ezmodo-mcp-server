@@ -372,7 +372,7 @@ export async function manageRelease(args = {}) {
       source: 'mcp',
       ...pick(args, [
         'projectId', 'environment', 'status', 'deliverable', 'version', 'candidate', 'commitSha', 'url', 'source',
-        'externalId', 'awaiting', 'note',
+        'externalId', 'awaiting', 'note', 'deployedAt',
       ]),
     });
 
@@ -384,6 +384,20 @@ export async function manageRelease(args = {}) {
   case 'live_now':
     // What each environment runs, per deliverable (#3794): "what's on staging?"
     return callEzmodoAPI('mcpLiveNow', { projectId: await projectIdFor(args, action) });
+  case 'stale':
+    // Needs attention (#3795): open releases that are superseded, whose
+    // milestone shipped without them, or idle with no milestone.
+    return callEzmodoAPI('mcpStaleReleases', { projectId: await projectIdFor(args, action) });
+  case 'abandon_stale': {
+    // Bulk abandon (#3840): only the releases named, never "everything stale",
+    // so the agent shows the list from stale and the user picks.
+    if (!Array.isArray(args.releaseIds) || args.releaseIds.length === 0) {
+      throw new Error('abandon_stale needs releaseIds (from stale): name the releases to abandon.');
+    }
+    return callEzmodoAPI('mcpAbandonReleases', {
+      projectId: await projectIdFor(args, action), releaseIds: args.releaseIds,
+    });
+  }
   case 'create_release':
     need(args, ['version'], action);
     return callEzmodoAPI('mcpCreateRelease', {

@@ -187,7 +187,10 @@ export const RELEASE_TOOLS = [
       'candidate? (id or version label), commitSha?, environment?, url?, source?, externalId?); ' +
       'report_deployment (projectId, environment, status: pending|waiting|in_progress|success|failure|cancelled, ' +
       'candidate?, commitSha?, url?, source?, externalId?, awaiting?: approval|npm|store and note? with status waiting ' +
-      '— what holds a deploy that left CI but is not out, and who acts). Reports are idempotent: sending the same one again ' +
+      '— what holds a deploy that left CI but is not out, and who acts; deployedAt? (RFC 3339) for a person ' +
+      'recording a deploy after the fact, not in the future nor over 90 days ago; a write:releases-only key ' +
+      'may not send it). ' +
+      'Reports are idempotent: sending the same one again ' +
       'updates it. Both reports also take deliverable + version to name the build (with candidate? as a label ' +
       'within that release). ' +
       'RELEASES (E-280) — a release is a deliverable (see manage_deliverable) at a version; projectId defaults to ' +
@@ -200,6 +203,12 @@ export const RELEASE_TOOLS = [
       '1.5.0+build.3, candidateStatus, commitSha, url, deployedAt) and ahead (newer than the next environment). ' +
       'Answers "what\'s on staging?". Dev deploys without a version bump are not reported, so dev can run ' +
       'newer code); ' +
+      'stale (projectId? — Needs attention: planned or in-progress releases that are superseded by a higher ' +
+      'version in production, whose milestone shipped without them, or idle 30+ days with no milestone, each with ' +
+      'its reason and counts per reason); ' +
+      'abandon_stale (releaseIds[], projectId? — abandons each named planned or in-progress release, as ' +
+      'update_release status:abandoned would one at a time, and returns {abandoned, skipped[{releaseId, reason}]}; ' +
+      'at most 100. Show the user stale\'s list and abandon only the ones they pick; builds and history stay); ' +
       'create_release (version, deliverable?, milestoneId?, notes? — returns the existing release at that version ' +
       'if there is one); ' +
       'get_release (the release page: route environments, candidates, checklist, contents, effective gates; the ' +
@@ -231,7 +240,8 @@ export const RELEASE_TOOLS = [
             'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
             'list_templates', 'save_template', 'get_settings', 'save_settings',
             'report_check', 'report_deployment',
-            'list_releases', 'live_now', 'create_release', 'get_release', 'update_release', 'get_contents',
+            'list_releases', 'live_now', 'stale', 'abandon_stale', 'create_release', 'get_release', 'update_release',
+            'get_contents',
             'derive_contents',
             'add_content', 'remove_content', 'release_changelog', 'task_shipping',
           ],
@@ -385,6 +395,14 @@ export const RELEASE_TOOLS = [
         },
         version: { type: 'string', description: 'Release version, e.g. "0.23.0": with deliverable, names a release' },
         releaseId: { type: 'string', description: 'Release id (a deliverable at a version)' },
+        releaseIds: {
+          type: 'array', items: { type: 'string' }, description: 'abandon_stale: the releases to abandon (from stale)',
+        },
+        deployedAt: {
+          type: 'string',
+          description: 'report_deployment: when it was deployed (RFC 3339), if not now; for a person recording a ' +
+            'deploy after the fact',
+        },
         epicId: {
           type: 'string',
           description: 'release_to_dev: the epic the release is for (optional). preview_run / start / run_status: the epic to try on Development',
@@ -463,7 +481,12 @@ export const RELEASE_TOOLS = [
       'build should carry when EzModo assigns it, held by its release until it ships, plus the next build label); ' +
       'bump (items: [{deliverable, version}] or deliverable + version, release? — on a connected repo EzModo ' +
       'opens one PR with one commit per deliverable, or dispatches the deliverable\'s bump workflow; it never ' +
-      'merges. Without a connected repo, edit the files yourself from versioning.files and open the PR).',
+      'merges. Without a connected repo, edit the files yourself from versioning.files and open the PR, then ' +
+      'report_bump); ' +
+      'report_bump (deliverable, version, number?, url?, branch?, repo?, commitSha?, state?: opened|merged, ' +
+      'source? — records a bump you made: the PR you opened (opened until you report it again with state merged), ' +
+      'or a commit straight on main (merged). The release page and the release run show it, and with no ' +
+      'connected repo version_on_main answers from the last merged one).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -471,7 +494,7 @@ export const RELEASE_TOOLS = [
           type: 'string',
           enum: [
             'list', 'create', 'update', 'paths', 'route', 'delete',
-            'versions', 'version_on_main', 'next_version', 'bump',
+            'versions', 'version_on_main', 'next_version', 'bump', 'report_bump',
           ],
           description: 'Action to perform',
         },
@@ -551,6 +574,16 @@ export const RELEASE_TOOLS = [
           },
         },
         release: { type: 'string', description: 'bump: the release this is for, named in the PR title' },
+        number: { type: 'number', description: 'report_bump: the bump PR\'s number' },
+        url: { type: 'string', description: 'report_bump: the bump PR\'s address' },
+        branch: { type: 'string', description: 'report_bump: the bump branch, e.g. release/api-v1.6.0' },
+        repo: { type: 'string', description: 'report_bump: owner/name' },
+        commitSha: { type: 'string', description: 'report_bump: the bump commit' },
+        state: {
+          type: 'string', enum: ['opened', 'merged'],
+          description: 'report_bump: default opened with a PR, merged without one',
+        },
+        source: { type: 'string', description: 'report_bump: who made it, e.g. agent or cli (default agent)' },
       },
       required: ['action'],
     },
