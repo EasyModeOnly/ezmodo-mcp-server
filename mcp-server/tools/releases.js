@@ -118,6 +118,27 @@ export const RELEASE_TOOLS = [
       'to answer "how is the release going?"); ' +
       'stop_run (runId, reason? — cancels every step that hasn\'t started; merged bumps and running deploys aren\'t ' +
       'undone, and notes say what to close by hand). ' +
+      'BLOCKED RELEASES (E-331 #3805) — a release is named by releaseId, or deliverable + version: ' +
+      'problems (the release\'s reported problems with state open|fix_in_review|closed|waived|after_release and the ' +
+      'stop each holds, heldBy: other deliverables\' problems that hold everything, blocked, and once shipped ' +
+      'afterRelease: {hotfix, rollback}); ' +
+      'report_problem (title, description?, environment? — the stop it was found on, default the furthest the build ' +
+      'reached; candidateId?, priority? (default high), holdAll? — files a release-blocking bug linked to the ' +
+      'release and holds the stops after that one until the bug is fixed or the problem waived. Before Production ' +
+      'the fix is the next build of the SAME version (+build.N), which starts from the first stop again; a bug in ' +
+      'review holds only the build it was found on. On a shipped release it holds nothing: offer hotfix or ' +
+      'rollback); ' +
+      'hold_all (blockerId, holdAll? default true — pause every other deliverable of the milestone until it is ' +
+      'fixed; false resumes them); ' +
+      'waive_problem (blockerId, reason — go on despite it; the bug stays open); ' +
+      'drop (milestoneId? or next: true — take the deliverable out of its milestone, to that milestone, the next ' +
+      'open one, or none; a running run stops waiting for it. A milestone completes when every deliverable shipped ' +
+      'or was dropped); ' +
+      'retry_deploy (environment? — start the deploy workflow again for the current build\'s FAILED deploy); ' +
+      'hotfix (the Release wizard\'s request for a shipped release: this deliverable at the next version in its ' +
+      'scheme — pass its run to preview_run); ' +
+      'rollback (environment? default production — dispatches the deliverable\'s rollback workflow to the release ' +
+      'before this one; only when it has one, and only on the user\'s explicit instruction). ' +
       'waive (candidateId, environment, targetType: gate|checklist_item|epic, targetId, reason, ' +
       'evidenceType?: none|link|note|feature_flag, evidence?: {url}|{text}|{flagKey}) — feature_flag evidence is ' +
       'verified: the flag must be served OFF in that environment, or the waiver does not hold; ' +
@@ -158,6 +179,8 @@ export const RELEASE_TOOLS = [
       'deployWorkflow?: {provider: github|forgejo, repo: owner/name, workflow: file name e.g. api-deploy.yml, ref?: ' +
       'branch, default main} — the CI workflow that deploys this deliverable to dev, deliverable only and never ' +
       'inherited, clearDeployWorkflow: true removes it; ' +
+      'rollbackWorkflow?: same shape — the workflow rollback dispatches (inputs environment, version, commit), ' +
+      'deliverable only, clearRollbackWorkflow: true removes it; ' +
       'a field left out is unchanged); ' +
       'save_template (projectId, name, items[], templateId? to replace, isDefault?, orgWide?); ' +
       'report_check (projectId, name, status: pending|running|success|failure|cancelled|skipped, ' +
@@ -201,6 +224,7 @@ export const RELEASE_TOOLS = [
           enum: [
             'create_candidate', 'update_candidate', 'promote', 'sign_off', 'approve', 'cancel_approval', 'release_to_dev',
             'list_dev_releases', 'preview_run', 'start', 'run_status', 'stop_run',
+            'problems', 'report_problem', 'hold_all', 'waive_problem', 'drop', 'retry_deploy', 'hotfix', 'rollback',
             'waive', 'revoke_waiver',
             'apply_checklist', 'add_checklist_item', 'assign_steps', 'set_item_state', 'update_checklist_item',
             'delete_checklist_item', 'item_to_task',
@@ -320,6 +344,28 @@ export const RELEASE_TOOLS = [
           type: 'boolean',
           description: 'save_settings with deliverable: remove its deploy workflow',
         },
+        rollbackWorkflow: {
+          type: 'object',
+          description: 'save_settings with deliverable: the CI workflow rollback dispatches (inputs environment, ' +
+            'version, commit). Not inherited',
+          properties: {
+            provider: { type: 'string', enum: ['github', 'forgejo'] },
+            repo: { type: 'string', description: 'owner/name' },
+            workflow: { type: 'string', description: 'Workflow file name, e.g. rollback.yml' },
+            ref: { type: 'string', description: 'Branch to dispatch on (default main)' },
+          },
+          required: ['provider', 'repo', 'workflow'],
+        },
+        clearRollbackWorkflow: {
+          type: 'boolean',
+          description: 'save_settings with deliverable: remove its rollback workflow',
+        },
+        blockerId: { type: 'string', description: 'hold_all / waive_problem: the reported problem (from problems)' },
+        holdAll: {
+          type: 'boolean',
+          description: 'report_problem: also hold every deliverable of the milestone. hold_all: on (default) or off',
+        },
+        next: { type: 'boolean', description: 'drop: move it to the project\'s next open milestone' },
         items: { type: 'array', items: { type: 'object' }, description: 'save_template items: [{key?, title, phase, ownerId?, notes?, runbookUrl?, autoCheck?}]' },
         isDefault: { type: 'boolean' },
         orgWide: { type: 'boolean' },
@@ -344,6 +390,11 @@ export const RELEASE_TOOLS = [
           description: 'release_to_dev: the epic the release is for (optional). preview_run / start / run_status: the epic to try on Development',
         },
         runId: { type: 'string', description: 'run_status / stop_run: the release run' },
+        priority: {
+          type: 'string',
+          enum: ['low', 'medium', 'high', 'urgent'],
+          description: 'report_problem: the bug\'s priority (default high)',
+        },
         target: {
           type: 'string',
           enum: ['first_stop', 'staging', 'all'],
@@ -402,7 +453,9 @@ export const RELEASE_TOOLS = [
       'csproj, version_file, go_const, or pattern with a line containing {version}; deliverables listing the same ' +
       'file bump together), tagPattern? ("cli-v{version}"), buildLabel: build (+build.N) | rc (-rc.N, for npm) | ' +
       'store (a store build number), repo?: {provider, repo, branch?}, bumpWorkflow?: {provider, repo, workflow, ' +
-      'ref?}} — sent whole, it replaces the settings. ' +
+      'ref?}, bumpGroup? (a name: deliverables with the same one are bumped together, in one PR or one run of a ' +
+      'member\'s bump workflow, e.g. "cli" for cli, mcp-server and the plugin)} — sent whole, it replaces the ' +
+      'settings. ' +
       'versions (deliverable, check? — last shipped, suggested next versions and hotfix in its scheme, open ' +
       'releases holding a version, and whether check is valid and newer); ' +
       'version_on_main (deliverable — what each version file holds on the connected repo\'s base branch); ' +
@@ -476,6 +529,7 @@ export const RELEASE_TOOLS = [
                 ref: { type: 'string' },
               },
             },
+            bumpGroup: { type: 'string', description: 'Deliverables with the same bumpGroup are bumped together' },
           },
         },
         check: {

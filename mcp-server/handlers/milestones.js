@@ -12,6 +12,7 @@
 
 import { callEzmodoAPI } from '../lib/http-client.js';
 import { buildMilestoneUrl } from '../lib/web-url.js';
+import { moveOutDeferredFromMilestone } from './move-out-deferred.js';
 
 /**
  * Dispatch manage_milestone actions to the appropriate handler
@@ -32,6 +33,7 @@ export async function manageMilestone(args) {
   case 'release': return releaseMilestone(params);
   case 'freeze': return setMilestoneFreeze(params, true);
   case 'unfreeze': return setMilestoneFreeze(params, false);
+  case 'move_out_deferred': return moveOutDeferredFromMilestone(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }

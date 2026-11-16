@@ -242,6 +242,62 @@ describe('Release Readiness tools (E-262)', () => {
       });
     });
 
+    describe('blocked releases (E-331 #3805)', () => {
+      it('maps every blocker endpoint and lists the actions', () => {
+        for (const name of ['mcpReleaseProblems', 'mcpReportReleaseProblem', 'mcpDropRelease', 'mcpRetryReleaseDeploy',
+          'mcpReleaseHotfix', 'mcpRollbackRelease', 'mcpUpdateReleaseBlocker', 'mcpWaiveReleaseBlocker']) {
+          expect(ENDPOINT_MAP[name]).toBeDefined();
+        }
+        const tool = TOOLS.find((t) => t.name === 'manage_release');
+        expect(tool.inputSchema.properties.action.enum).toEqual(expect.arrayContaining(
+          ['problems', 'report_problem', 'hold_all', 'waive_problem', 'drop', 'retry_deploy', 'hotfix', 'rollback']));
+      });
+
+      it('report_problem needs a title and sends where it was found', async () => {
+        await expect(manageRelease({ action: 'report_problem', releaseId: 'rel1' })).rejects.toThrow(/title/);
+        mockCallEzmodoAPI.mockResolvedValueOnce({ blocker: { id: 'b1' } });
+        await manageRelease({
+          action: 'report_problem', releaseId: 'rel1', title: 'List crashes', environment: 'staging', holdAll: true,
+        });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReportReleaseProblem', {
+          id: 'rel1', title: 'List crashes', environment: 'staging', holdAll: true,
+        });
+      });
+
+      it('report_problem finds the release by deliverable + version', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({ release: { id: 'rel9' } })
+          .mockResolvedValueOnce({ blocker: { id: 'b1' } });
+        await manageRelease({
+          action: 'report_problem', projectId: 'p1', deliverable: 'web', version: '1.6.0', title: 'x',
+        });
+        expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReportReleaseProblem', { id: 'rel9', title: 'x' });
+      });
+
+      it('drop moves the release to the next milestone', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({ movedTo: { id: 'm2' } });
+        await manageRelease({ action: 'drop', releaseId: 'rel1', next: true, reason: 'not ready' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDropRelease',
+          { id: 'rel1', next: true, reason: 'not ready' });
+      });
+
+      it('hold_all defaults to on; waive_problem needs a reason', async () => {
+        mockCallEzmodoAPI.mockResolvedValue({});
+        await manageRelease({ action: 'hold_all', blockerId: 'b1' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateReleaseBlocker', { id: 'b1', holdAll: true });
+        await manageRelease({ action: 'hold_all', blockerId: 'b1', holdAll: false });
+        expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpUpdateReleaseBlocker', { id: 'b1', holdAll: false });
+        await expect(manageRelease({ action: 'waive_problem', blockerId: 'b1' })).rejects.toThrow(/reason/);
+      });
+
+      it('save_settings takes a rollback workflow', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({});
+        const w = { provider: 'forgejo', repo: 'emo/ezmodo', workflow: 'rollback.yml' };
+        await manageRelease({ action: 'save_settings', projectId: 'p1', deliverable: 'api', rollbackWorkflow: w });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpSaveReleaseSettings',
+          { projectId: 'p1', deliverable: 'api', rollbackWorkflow: w });
+      });
+    });
+
     it('waive needs a reason', async () => {
       await expect(manageRelease({ action: 'waive', candidateId: 'c1', environment: 'prod', targetType: 'gate', targetId: 'g1' }))
         .rejects.toThrow(/reason/);

@@ -30,10 +30,11 @@ function sendsASetting(args) {
   const isBool = (v) => typeof v === 'boolean';
   const forDeliverable = !!args.deliverable;
   const mode = forDeliverable ? args.completeTasksOn != null : !!args.completeTasksOn;
-  const resets = forDeliverable && ['inheritHoldDeploys', 'inheritDevDeploys', 'inheritAutoReleaseDev', 'clearDeployWorkflow']
-    .some((k) => args[k] === true);
+  const resets = forDeliverable && ['inheritHoldDeploys', 'inheritDevDeploys', 'inheritAutoReleaseDev',
+    'clearDeployWorkflow', 'clearRollbackWorkflow'].some((k) => args[k] === true);
+  const isObject = (v) => v != null && typeof v === 'object';
   return mode || resets || isBool(args.holdDeploys) || isBool(args.autoReleaseDev) || !!args.devDeploys ||
-    (args.deployWorkflow != null && typeof args.deployWorkflow === 'object');
+    isObject(args.deployWorkflow) || isObject(args.rollbackWorkflow);
 }
 
 /**
@@ -212,6 +213,35 @@ export async function manageRelease(args = {}) {
   case 'stop_run':
     need(args, ['runId'], action);
     return callEzmodoAPI('mcpStopReleaseRun', { id: args.runId, ...pick(args, ['reason']) });
+  // Release blockers (E-331 #3805).
+  case 'problems':
+    return callEzmodoAPI('mcpReleaseProblems', { id: await releaseIdFor(args, action) });
+  case 'report_problem':
+    need(args, ['title'], action);
+    return callEzmodoAPI('mcpReportReleaseProblem', {
+      id: await releaseIdFor(args, action),
+      ...pick(args, ['title', 'description', 'environment', 'candidateId', 'priority', 'holdAll']),
+    });
+  case 'hold_all':
+    need(args, ['blockerId'], action);
+    return callEzmodoAPI('mcpUpdateReleaseBlocker', { id: args.blockerId, holdAll: args.holdAll !== false });
+  case 'waive_problem':
+    need(args, ['blockerId', 'reason'], action);
+    return callEzmodoAPI('mcpWaiveReleaseBlocker', { id: args.blockerId, reason: args.reason });
+  case 'drop':
+    return callEzmodoAPI('mcpDropRelease', {
+      id: await releaseIdFor(args, action), ...pick(args, ['milestoneId', 'next', 'reason']),
+    });
+  case 'retry_deploy':
+    return callEzmodoAPI('mcpRetryReleaseDeploy', {
+      id: await releaseIdFor(args, action), ...pick(args, ['environment']),
+    });
+  case 'hotfix':
+    return callEzmodoAPI('mcpReleaseHotfix', { id: await releaseIdFor(args, action) });
+  case 'rollback':
+    return callEzmodoAPI('mcpRollbackRelease', {
+      id: await releaseIdFor(args, action), ...pick(args, ['environment']),
+    });
   case 'list_dev_releases':
     return callEzmodoAPI('mcpListDevReleases', {
       projectId: await projectIdFor(args, action),
@@ -314,11 +344,13 @@ export async function manageRelease(args = {}) {
     // to the project's (E-280 #3084, #3091; E-299 #3362).
     need(args, ['projectId'], action);
     if (!sendsASetting(args)) {
-      throw new Error(`${action} needs completeTasksOn, holdDeploys, devDeploys, autoReleaseDev or deployWorkflow.`);
+      throw new Error(`${action} needs completeTasksOn, holdDeploys, devDeploys, autoReleaseDev, deployWorkflow ` +
+        'or rollbackWorkflow.');
     }
     return callEzmodoAPI('mcpSaveReleaseSettings', pick(args, [
       'projectId', 'completeTasksOn', 'holdDeploys', 'inheritHoldDeploys', 'devDeploys', 'inheritDevDeploys',
-      'autoReleaseDev', 'inheritAutoReleaseDev', 'deployWorkflow', 'clearDeployWorkflow', 'deliverable',
+      'autoReleaseDev', 'inheritAutoReleaseDev', 'deployWorkflow', 'clearDeployWorkflow', 'rollbackWorkflow',
+      'clearRollbackWorkflow', 'deliverable',
     ]));
   }
   case 'save_template':

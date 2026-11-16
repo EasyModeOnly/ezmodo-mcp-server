@@ -17,6 +17,7 @@ import { buildEpicUrl } from '../lib/web-url.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { attachLinkUpdates, hasLinkUpdates } from '../lib/link-updates.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
+import { moveOutDeferredFromEpic } from './move-out-deferred.js';
 
 // Statuses an epic may be created in (#3224). "active" is accepted only with
 // `tasks`; the API enforces the same rule and answers 400 otherwise.
@@ -71,9 +72,10 @@ export async function manageEpic(args) {
   case 'add_editor': return manageEpicEditor('add', params);
   case 'remove_editor': return manageEpicEditor('remove', params);
   case 'release': return releaseEpic(params);
+  case 'move_out_deferred': return moveOutDeferredFromEpic(params);
   default: throw new Error(
     `Unknown action: ${action}. Expected create, update, generate_how_it_works, apply_how_it_works, ` +
-    'add_editor, remove_editor or release.',
+    'add_editor, remove_editor, release or move_out_deferred.',
   );
   }
 }

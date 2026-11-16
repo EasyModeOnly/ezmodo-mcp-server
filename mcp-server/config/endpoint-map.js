@@ -49,6 +49,9 @@ export const ENDPOINT_MAP = {
   // Release this epic (E-262 #3067): milestone + epic + first candidate in
   // one call. {id} is the epic id.
   'mcpReleaseEpic': { route: 'mcp/v1/epics/{id}/release', method: 'POST' },
+  // Move deferred work out (#3819). {id} is the epic id, or the milestone id or slug.
+  'mcpMoveOutDeferredFromEpic': { route: 'mcp/v1/epics/{id}/deferred/move-out', method: 'POST' },
+  'mcpMoveOutDeferredFromMilestone': { route: 'mcp/v1/milestones/{id}/deferred/move-out', method: 'POST' },
 
   // Tasks
   'mcpCreateTask': { route: 'mcp/v1/tasks', method: 'POST' },
@@ -336,6 +339,15 @@ export const ENDPOINT_MAP = {
   'mcpCurrentReleaseRun': { route: 'mcp/v1/releases/runs', method: 'GET' },
   'mcpGetReleaseRun': { route: 'mcp/v1/releases/runs/{id}', method: 'GET' },
   'mcpStopReleaseRun': { route: 'mcp/v1/releases/runs/{id}/stop', method: 'POST' },
+  // Release blockers (E-331 #3805)
+  'mcpReleaseProblems': { route: 'mcp/v1/deliverable-releases/{id}/problems', method: 'GET' },
+  'mcpReportReleaseProblem': { route: 'mcp/v1/deliverable-releases/{id}/problems', method: 'POST' },
+  'mcpDropRelease': { route: 'mcp/v1/deliverable-releases/{id}/drop', method: 'POST' },
+  'mcpRetryReleaseDeploy': { route: 'mcp/v1/deliverable-releases/{id}/retry-deploy', method: 'POST' },
+  'mcpReleaseHotfix': { route: 'mcp/v1/deliverable-releases/{id}/hotfix', method: 'GET' },
+  'mcpRollbackRelease': { route: 'mcp/v1/deliverable-releases/{id}/rollback', method: 'POST' },
+  'mcpUpdateReleaseBlocker': { route: 'mcp/v1/releases/blockers/{id}', method: 'PATCH' },
+  'mcpWaiveReleaseBlocker': { route: 'mcp/v1/releases/blockers/{id}/waive', method: 'POST' },
   'mcpLookupReleaseCandidate': { route: 'mcp/v1/releases/candidates/lookup', method: 'GET' },
   // Deliverables and releases (E-280). A deliverable is a release axis only:
   // work never links to one; it reaches one through a release's contents.

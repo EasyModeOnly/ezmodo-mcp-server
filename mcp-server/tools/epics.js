@@ -14,6 +14,7 @@
 
 import { LINKS_ARRAY_SCHEMA, RELATED_ITEM_SCHEMA } from './link-params.js';
 import { TASK_ITEM_PROPERTIES } from './task-item-schema.js';
+import { MOVE_OUT_DEFERRED_DESCRIPTION, MOVE_OUT_DEFERRED_PROPERTIES } from './move-out-deferred-params.js';
 
 // A link staged on a plan or planned task before it exists (#2199, #2752).
 // Mirrors the desktop LinkDraft shape so a plan an AI saves back keeps the
@@ -59,6 +60,7 @@ export const EPIC_TOOLS = [
           type: 'string',
           enum: [
             'create', 'update', 'generate_how_it_works', 'apply_how_it_works', 'how_it_works_context', 'add_editor', 'remove_editor', 'release',
+            'move_out_deferred',
           ],
           description: 'Action to perform. "release" (epicId, version) ships one epic on its own: it ' +
             'creates a version milestone, adds the epic to it and, unless newCandidate is false, its first ' +
@@ -79,13 +81,14 @@ export const EPIC_TOOLS = [
             '(no model call). Prefer writing the summary yourself: read how_it_works_context, then ' +
             '"apply_how_it_works" (BYO-AI) persists a summary YOU ' +
             'authored: pass markdown + sources; the server validates your cited sources against the real ' +
-            'grounded context (dropping fabricated ones) before saving — no server model call.',
+            'grounded context (dropping fabricated ones) before saving — no server model call. ' +
+            MOVE_OUT_DEFERRED_DESCRIPTION.replace('in scope', 'in the epic'),
         },
         // --- Identifiers ---
         epicId: {
           type: 'string',
           description: 'Epic ID (required for update, generate_how_it_works, apply_how_it_works, how_it_works_context, ' +
-            'add_editor, remove_editor, release)',
+            'add_editor, remove_editor, release, move_out_deferred)',
         },
         // --- release ---
         version: {
@@ -195,6 +198,8 @@ export const EPIC_TOOLS = [
           description: 'Hex color for visual identification (e.g., "#3B82F6"). Set to empty string to remove on update.',
         },
         links: LINKS_ARRAY_SCHEMA,
+        // --- move_out_deferred ---
+        ...MOVE_OUT_DEFERRED_PROPERTIES,
         // --- Create-only: the epic's breakdown, created in the same request ---
         tasks: {
           type: 'array',

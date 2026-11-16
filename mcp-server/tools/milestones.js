@@ -11,6 +11,7 @@
  */
 
 import { LINKS_ARRAY_SCHEMA } from './link-params.js';
+import { MOVE_OUT_DEFERRED_DESCRIPTION, MOVE_OUT_DEFERRED_PROPERTIES } from './move-out-deferred-params.js';
 
 export const MILESTONE_TOOLS = [
   {
@@ -22,7 +23,8 @@ export const MILESTONE_TOOLS = [
       '"release" releases the milestone to an environment: when that environment has release gates it needs a ' +
       'release candidate (candidateId, else the newest active one) and is REFUSED while a required gate fails — ' +
       'see get_release_readiness and manage_release. "freeze" / "unfreeze" set the milestone freeze ' +
-      '(freezeType: milestone-freeze | testing-only | stabilization | full-freeze).',
+      '(freezeType: milestone-freeze | testing-only | stabilization | full-freeze). ' +
+      MOVE_OUT_DEFERRED_DESCRIPTION,
     inputSchema: {
       type: 'object',
       properties: {
@@ -33,7 +35,7 @@ export const MILESTONE_TOOLS = [
             'link_epic', 'unlink_epic',
             'generate_changelog', 'draft_whats_new', 'reorder_epics',
             'link_suite', 'unlink_suite',
-            'release', 'freeze', 'unfreeze',
+            'release', 'freeze', 'unfreeze', 'move_out_deferred',
           ],
           description: 'Action to perform',
         },
@@ -44,7 +46,7 @@ export const MILESTONE_TOOLS = [
         },
         milestoneId: {
           type: 'string',
-          description: 'Milestone ID (required for update, delete, link_epic, unlink_epic, generate_changelog, ' +
+          description: 'Milestone ID (required for update, delete, link_epic, unlink_epic, generate_changelog, move_out_deferred, ' +
             'draft_whats_new, reorder_epics, link_suite, unlink_suite)',
         },
         milestoneSlug: {
@@ -197,6 +199,8 @@ export const MILESTONE_TOOLS = [
           type: 'string',
           description: 'Why the milestone is frozen (freeze)',
         },
+        // --- move_out_deferred fields ---
+        ...MOVE_OUT_DEFERRED_PROPERTIES,
       },
       required: ['action', 'projectId'],
     },
