@@ -285,9 +285,10 @@ export const DESIGN_TOOLS = [
   },
   {
     name: 'list_designs',
-    description: 'List an organization\'s Designs, optionally filtered by project, kind, or status. ' +
-      'Returns one summary row per design (id, name, kind, status, summary, size, updatedAt), not ' +
-      'its markup: fetch the ones you need with get_design designIds.',
+    description: 'List an organization\'s Designs, optionally filtered by project, kind, status, theme ' +
+      'surface, source or a search. Returns one summary row per design (id, name, kind, status, summary, ' +
+      'size, updatedAt), not its markup: fetch the ones you need with get_design designIds. Paged: the ' +
+      'answer carries total, hasMore and deprecatedCount; pass offset to read further.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -319,9 +320,42 @@ export const DESIGN_TOOLS = [
           description: 'Return full html/css/description for every design instead of summaries ' +
             '(default false). This can be very large; prefer get_design designIds.',
         },
+        statuses: {
+          type: 'array',
+          items: { type: 'string', enum: ['draft', 'active', 'deprecated'] },
+          description: 'Keep designs in any of these statuses, e.g. ["active", "draft"] (instead of status)',
+        },
+        search: {
+          type: 'string',
+          description: 'Case-insensitive substring of the name, slug or description',
+        },
+        theme: {
+          type: 'string',
+          description: 'Theme surface: a theme design id (that theme and the designs whose parent chain reaches it ' +
+            'first), or "any" for designs under no theme',
+        },
+        source: {
+          type: 'string',
+          enum: ['project', 'library'],
+          description: 'With projectId: only the project\'s own designs, or only the shared library\'s',
+        },
+        sortBy: {
+          type: 'string',
+          enum: ['name', 'kind', 'status', 'createdAt', 'updatedAt'],
+          description: 'Sort field (default createdAt, newest first)',
+        },
+        sortDir: {
+          type: 'string',
+          enum: ['asc', 'desc'],
+          description: 'Sort direction',
+        },
         limit: {
           type: 'number',
-          description: 'Maximum number of results',
+          description: 'Page size (default 200, max 500)',
+        },
+        offset: {
+          type: 'number',
+          description: 'Rows to skip, for the next page',
         },
       },
       required: ['organizationId'],

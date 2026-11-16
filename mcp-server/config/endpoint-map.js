@@ -329,6 +329,13 @@ export const ENDPOINT_MAP = {
   'mcpReleaseToDev': { route: 'mcp/v1/releases/release-to-dev', method: 'POST' },
   // Releases to dev read back, with each run's outcome (E-299 #3535).
   'mcpListDevReleases': { route: 'mcp/v1/releases/release-to-dev', method: 'GET' },
+  // Release runs (E-331 #3804): the Release wizard's preview and start, a
+  // run's progress, and stop. {id} is the run id.
+  'mcpPreviewReleaseRun': { route: 'mcp/v1/releases/runs/preview', method: 'POST' },
+  'mcpStartReleaseRun': { route: 'mcp/v1/releases/runs', method: 'POST' },
+  'mcpCurrentReleaseRun': { route: 'mcp/v1/releases/runs', method: 'GET' },
+  'mcpGetReleaseRun': { route: 'mcp/v1/releases/runs/{id}', method: 'GET' },
+  'mcpStopReleaseRun': { route: 'mcp/v1/releases/runs/{id}/stop', method: 'POST' },
   'mcpLookupReleaseCandidate': { route: 'mcp/v1/releases/candidates/lookup', method: 'GET' },
   // Deliverables and releases (E-280). A deliverable is a release axis only:
   // work never links to one; it reaches one through a release's contents.
@@ -338,7 +345,14 @@ export const ENDPOINT_MAP = {
   'mcpSetDeliverablePaths': { route: 'mcp/v1/deliverables/paths', method: 'PUT' },
   'mcpSetDeliverableRoute': { route: 'mcp/v1/deliverables/route', method: 'PUT' },
   'mcpDeleteDeliverable': { route: 'mcp/v1/deliverables', method: 'DELETE' },
+  // Versioning per deliverable (E-331 #3808): what its files hold on main,
+  // the bump PR, the wizard's version plan and EzModo-assigned next version.
+  'mcpDeliverableVersionsOnMain': { route: 'mcp/v1/deliverables/versions', method: 'GET' },
+  'mcpBumpDeliverables': { route: 'mcp/v1/deliverables/bump', method: 'POST' },
+  'mcpReleaseVersionPlan': { route: 'mcp/v1/releases/versions', method: 'GET' },
+  'mcpReleaseNextVersion': { route: 'mcp/v1/releases/next-version', method: 'GET' },
   'mcpListReleases': { route: 'mcp/v1/releases/releases', method: 'GET' },
+  'mcpLiveNow': { route: 'mcp/v1/releases/releases/live', method: 'GET' },
   'mcpCreateRelease': { route: 'mcp/v1/releases/releases', method: 'POST' },
   'mcpLookupRelease': { route: 'mcp/v1/releases/releases/lookup', method: 'GET' },
   'mcpReleaseTaskShipping': { route: 'mcp/v1/releases/tasks/{taskId}/shipping', method: 'GET' },

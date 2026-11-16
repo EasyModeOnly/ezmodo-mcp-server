@@ -190,6 +190,58 @@ describe('Release Readiness tools (E-262)', () => {
       });
     });
 
+    describe('release runs (E-331 #3804)', () => {
+      it('maps every run endpoint', () => {
+        for (const name of ['mcpPreviewReleaseRun', 'mcpStartReleaseRun', 'mcpCurrentReleaseRun', 'mcpGetReleaseRun', 'mcpStopReleaseRun']) {
+          expect(ENDPOINT_MAP[name]).toBeDefined();
+        }
+      });
+
+      it('lists the run actions on manage_release', () => {
+        const tool = TOOLS.find((t) => t.name === 'manage_release');
+        expect(tool.inputSchema.properties.action.enum).toEqual(expect.arrayContaining(['preview_run', 'start', 'run_status', 'stop_run']));
+      });
+
+      it('start sends the milestone, target and picked versions; keys become objects', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({ id: 'r1', status: 'running' });
+        await manageRelease({
+          action: 'start', milestoneId: 'm1', target: 'staging', freeze: true,
+          deliverables: ['api', { deliverable: 'web', version: '1.6.0' }],
+        });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpStartReleaseRun', {
+          milestoneId: 'm1', target: 'staging', freeze: true,
+          deliverables: [{ deliverable: 'api' }, { deliverable: 'web', version: '1.6.0' }],
+        });
+      });
+
+      it('preview_run of an epic sends its project', async () => {
+        mockCallEzmodoAPI.mockResolvedValueOnce({ canStart: true });
+        await manageRelease({ action: 'preview_run', projectId: 'p1', epicId: 'e1' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpPreviewReleaseRun', { epicId: 'e1', projectId: 'p1' });
+      });
+
+      it('start needs a milestone or an epic', async () => {
+        await expect(manageRelease({ action: 'start' })).rejects.toThrow(/milestoneId/);
+        expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+      });
+
+      it('run_status reads a run by id, or the milestone\'s current one', async () => {
+        mockCallEzmodoAPI.mockResolvedValue({});
+        await manageRelease({ action: 'run_status', runId: 'r1' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpGetReleaseRun', { id: 'r1' });
+        await manageRelease({ action: 'run_status', milestoneId: 'm1' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCurrentReleaseRun', { milestoneId: 'm1' });
+        await expect(manageRelease({ action: 'run_status' })).rejects.toThrow(/runId/);
+      });
+
+      it('stop_run needs the run and passes the reason', async () => {
+        await expect(manageRelease({ action: 'stop_run' })).rejects.toThrow(/runId/);
+        mockCallEzmodoAPI.mockResolvedValueOnce({ status: 'stopped' });
+        await manageRelease({ action: 'stop_run', runId: 'r1', reason: 'wrong version' });
+        expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpStopReleaseRun', { id: 'r1', reason: 'wrong version' });
+      });
+    });
+
     it('waive needs a reason', async () => {
       await expect(manageRelease({ action: 'waive', candidateId: 'c1', environment: 'prod', targetType: 'gate', targetId: 'g1' }))
         .rejects.toThrow(/reason/);
@@ -295,11 +347,11 @@ describe('Release Readiness tools (E-262)', () => {
   });
 
   describe('manage_milestone release / freeze', () => {
-    it('release passes the candidate and deferred confirmation', async () => {
+    it('release passes the candidate, and no deferred confirmation (#3818)', async () => {
       mockCallEzmodoAPI.mockResolvedValueOnce({});
       await manageMilestone({ action: 'release', projectId: 'p1', milestoneId: 'm1', environment: 'production', candidateId: '1.4.0-rc.2', confirmDeferred: true });
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpReleaseMilestone', {
-        projectId: 'p1', milestoneId: 'm1', environment: 'production', candidateId: '1.4.0-rc.2', confirmDeferred: true,
+        projectId: 'p1', milestoneId: 'm1', environment: 'production', candidateId: '1.4.0-rc.2',
       });
     });
 

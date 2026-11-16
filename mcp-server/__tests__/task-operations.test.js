@@ -261,14 +261,15 @@ describe('Task Operations', () => {
       };
     });
 
-    it('should defer a whole task and return the deferred epic id', async () => {
+    it('should defer a whole task in place and return its own epic', async () => {
       const result = await deferTask({
         taskId: 'task-123',
         reason: 'pushed to next sprint',
       });
 
       expect(result.success).toBe(true);
-      expect(result.deferredEpicId).toBe('epic-deferred-1');
+      expect(result.status).toBe('deferred');
+      expect(result.epicId).toBe('epic-source-1');
       expect(result.newTaskId).toBeUndefined();
       expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeferTask', {
         taskId: 'task-123',

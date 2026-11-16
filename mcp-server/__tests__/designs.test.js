@@ -360,6 +360,36 @@ describe('Design Operations', () => {
       });
     });
 
+    it('passes paging, search, theme, source and sort, and joins statuses (#3815)', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ designs: [], total: 0, hasMore: false });
+
+      await listDesigns({
+        organizationId: 'org-1',
+        projectId: 'proj-1',
+        statuses: ['active', 'draft'],
+        search: 'button',
+        theme: 'any',
+        source: 'library',
+        sortBy: 'name',
+        sortDir: 'asc',
+        limit: 25,
+        offset: 50,
+      });
+
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListDesigns', {
+        organizationId: 'org-1',
+        projectId: 'proj-1',
+        status: 'active,draft',
+        search: 'button',
+        theme: 'any',
+        source: 'library',
+        sortBy: 'name',
+        sortDir: 'asc',
+        limit: 25,
+        offset: 50,
+      });
+    });
+
     it('should omit unspecified filters', async () => {
       mockCallEzmodoAPI.mockResolvedValueOnce({ designs: [] });
 

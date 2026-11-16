@@ -12,6 +12,7 @@ import { callEzmodoAPI } from '../lib/http-client.js';
 import { readConfig } from '../lib/local-cache.js';
 
 const PATH_MODES = ['add', 'remove', 'replace'];
+const BUMPS = ['patch', 'minor', 'major'];
 
 /**
  * The caller's projectId, else the one in this repo's .ezmodo/config.json.
@@ -48,15 +49,15 @@ export async function manageDeliverable(args = {}) {
   case 'create': {
     need(args, ['name'], action);
     return callEzmodoAPI('mcpCreateDeliverable', {
-      projectId: await projectIdFor(args, action), ...pick(args, ['key', 'name', 'route', 'paths']),
+      projectId: await projectIdFor(args, action), ...pick(args, ['key', 'name', 'route', 'paths', 'versioning']),
     });
   }
   case 'update': {
     need(args, ['deliverable'], action);
-    const body = pick(args, ['key', 'name', 'position', 'route', 'paths']);
+    const body = pick(args, ['key', 'name', 'position', 'route', 'paths', 'versioning']);
     if (args.makeDefault) body.makeDefault = true;
     if (Object.keys(body).length === 0) {
-      throw new Error('update needs at least one of key, name, position, makeDefault, route, paths.');
+      throw new Error('update needs at least one of key, name, position, makeDefault, route, paths, versioning.');
     }
     return callEzmodoAPI('mcpUpdateDeliverable', {
       projectId: await projectIdFor(args, action), deliverable: args.deliverable, ...body,
@@ -84,7 +85,44 @@ export async function manageDeliverable(args = {}) {
     return callEzmodoAPI('mcpDeleteDeliverable', {
       projectId: await projectIdFor(args, action), deliverable: args.deliverable,
     });
+  case 'versions':
+    need(args, ['deliverable'], action);
+    return callEzmodoAPI('mcpReleaseVersionPlan', {
+      projectId: await projectIdFor(args, action), deliverable: args.deliverable, ...pick(args, ['check']),
+    });
+  case 'version_on_main':
+    need(args, ['deliverable'], action);
+    return callEzmodoAPI('mcpDeliverableVersionsOnMain', {
+      projectId: await projectIdFor(args, action), deliverable: args.deliverable,
+    });
+  case 'next_version': {
+    need(args, ['deliverable'], action);
+    if (args.bump !== undefined && !BUMPS.includes(args.bump)) {
+      throw new Error(`next_version bump must be one of ${BUMPS.join(', ')}.`);
+    }
+    return callEzmodoAPI('mcpReleaseNextVersion', {
+      projectId: await projectIdFor(args, action), deliverable: args.deliverable, format: 'json',
+      ...pick(args, ['bump', 'releaseId', 'milestoneId']),
+    });
+  }
+  case 'bump':
+    return callEzmodoAPI('mcpBumpDeliverables', {
+      projectId: await projectIdFor(args, action), items: bumpItems(args), ...pick(args, ['release']),
+    });
   default:
     throw new Error(`Unknown action: ${action}`);
   }
+}
+
+/**
+ * The deliverables a bump names: items, or one deliverable + version.
+ */
+function bumpItems(args) {
+  if (Array.isArray(args.items) && args.items.length) {
+    const bad = args.items.filter((it) => !it || !it.deliverable || !it.version);
+    if (bad.length) throw new Error('bump items each need deliverable and version.');
+    return args.items.map(({ deliverable, version }) => ({ deliverable, version }));
+  }
+  if (args.deliverable && args.version) return [{ deliverable: args.deliverable, version: args.version }];
+  throw new Error('bump needs items ([{deliverable, version}]) or deliverable + version.');
 }

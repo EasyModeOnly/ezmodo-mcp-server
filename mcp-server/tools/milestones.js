@@ -186,10 +186,6 @@ export const MILESTONE_TOOLS = [
           type: 'string',
           description: 'Release notes (release)',
         },
-        confirmDeferred: {
-          type: 'boolean',
-          description: 'Release even though the deferred epic still has open tasks (release)',
-        },
         // --- freeze fields ---
         freezeType: {
           type: 'string',

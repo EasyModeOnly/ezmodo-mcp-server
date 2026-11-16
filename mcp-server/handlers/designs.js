@@ -107,7 +107,12 @@ export async function listDesigns(args) {
   if (args.kind) params.kind = args.kind;
   if (args.status) params.status = args.status;
   if (args.includeOrgWide != null) params.includeOrgWide = args.includeOrgWide;
+  if (Array.isArray(args.statuses) && args.statuses.length > 0) params.status = args.statuses.join(',');
+  for (const k of ['search', 'theme', 'source', 'sortBy', 'sortDir']) {
+    if (args[k]) params[k] = args[k];
+  }
   if (args.limit != null) params.limit = args.limit;
+  if (args.offset != null) params.offset = args.offset;
   if (args.includeContent != null) params.includeContent = args.includeContent;
   return callEzmodoAPI('mcpListDesigns', params);
 }

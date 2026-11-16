@@ -342,3 +342,38 @@ describe('manage_task suggested edits', () => {
     });
   });
 });
+
+/**
+ * #3818: deferred is a task status. defer is an alias for it, so it no longer
+ * sends the bucket epic's milestone override, and deferring ends the session
+ * like the other statuses that take a task out of play.
+ */
+describe('manage_task deferred status', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('defer sends the reason and unblockedBy, not targetMilestoneId', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({ status: 'deferred', epicId: 'epic-1', parentUpdated: true });
+
+    const result = await manageTask({
+      action: 'defer', taskId: 'task-1', reason: 'after 1.6.0', unblockedBy: '#3796', targetMilestoneId: 'ms-2',
+    });
+
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpDeferTask', {
+      taskId: 'task-1', reason: 'after 1.6.0', stepId: undefined, unblockedBy: '#3796',
+    });
+    expect(result.status).toBe('deferred');
+  });
+
+  it('update to deferred passes deferReason and clears the active session', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({ taskId: 'task-1' });
+
+    await manageTask({ action: 'update', taskId: 'task-1', status: 'deferred', deferReason: 'later', unblockedBy: 'x' });
+
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateTask', expect.objectContaining({
+      taskId: 'task-1', status: 'deferred', deferReason: 'later', unblockedBy: 'x',
+    }));
+    expect(mockClearActiveSession).toHaveBeenCalled();
+  });
+});

@@ -118,6 +118,24 @@ export async function getReleaseReadiness(args = {}) {
     'or milestoneId, or listGateTypes: true.');
 }
 
+/**
+ * The body of a release run's preview or start (E-331 #3804). deliverables
+ * takes keys ("api") or {deliverable, version} objects; omitted, the API
+ * picks the default selection.
+ */
+async function runBody(args, action) {
+  if (!args.milestoneId && !args.epicId) {
+    throw new Error(`${action} needs milestoneId (release a milestone) or epicId (try an epic on Development).`);
+  }
+  const body = pick(args, ['milestoneId', 'epicId', 'target', 'freeze']);
+  if (args.epicId) body.projectId = await projectIdFor(args, action);
+  else if (args.projectId) body.projectId = args.projectId;
+  if (Array.isArray(args.deliverables)) {
+    body.deliverables = args.deliverables.map((d) => (typeof d === 'string' ? { deliverable: d } : d));
+  }
+  return body;
+}
+
 export async function manageRelease(args = {}) {
   const { action } = args;
   switch (action) {
@@ -178,6 +196,22 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpReleaseToDev', {
       projectId: await projectIdFor(args, action), ...pick(args, ['deliverable', 'epicId', 'milestoneId', 'commitSha']),
     });
+  case 'preview_run':
+  case 'start':
+    return callEzmodoAPI(action === 'start' ? 'mcpStartReleaseRun' : 'mcpPreviewReleaseRun',
+      await runBody(args, action));
+  case 'run_status':
+    if (args.runId) return callEzmodoAPI('mcpGetReleaseRun', { id: args.runId });
+    if (args.milestoneId) return callEzmodoAPI('mcpCurrentReleaseRun', { milestoneId: args.milestoneId });
+    if (args.epicId) {
+      return callEzmodoAPI('mcpCurrentReleaseRun', {
+        projectId: await projectIdFor(args, action), epicId: args.epicId,
+      });
+    }
+    throw new Error('run_status needs runId, milestoneId or epicId.');
+  case 'stop_run':
+    need(args, ['runId'], action);
+    return callEzmodoAPI('mcpStopReleaseRun', { id: args.runId, ...pick(args, ['reason']) });
   case 'list_dev_releases':
     return callEzmodoAPI('mcpListDevReleases', {
       projectId: await projectIdFor(args, action),
@@ -315,6 +349,9 @@ export async function manageRelease(args = {}) {
     return callEzmodoAPI('mcpListReleases', {
       projectId: await projectIdFor(args, action), ...pick(args, ['deliverable', 'milestoneId', 'limit']),
     });
+  case 'live_now':
+    // What each environment runs, per deliverable (#3794): "what's on staging?"
+    return callEzmodoAPI('mcpLiveNow', { projectId: await projectIdFor(args, action) });
   case 'create_release':
     need(args, ['version'], action);
     return callEzmodoAPI('mcpCreateRelease', {

@@ -94,3 +94,17 @@ describe('create_tasks parity with manage_task', () => {
     expect(missingFromManageTask).toEqual([]);
   });
 });
+
+describe('task status (#3818)', () => {
+  const manageTask = () => tool(TASK_TOOLS, 'manage_task');
+
+  it('manage_task can set deferred, with a reason', () => {
+    const props = manageTask().inputSchema.properties;
+    expect(props.status.enum).toContain('deferred');
+    expect(props.deferReason).toBeDefined();
+  });
+
+  it('create_tasks cannot create a task already deferred, which needs a reason', () => {
+    expect(TASK_ITEM_PROPERTIES.status.enum).not.toContain('deferred');
+  });
+});

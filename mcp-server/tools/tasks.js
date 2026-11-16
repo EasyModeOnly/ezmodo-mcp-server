@@ -299,8 +299,15 @@ export const TASK_TOOLS = [
         // --- Update-only fields ---
         status: {
           type: 'string',
-          enum: ['backlog', 'todo', 'in_progress', 'in_review', 'blocked', 'completed', 'cancelled'],
-          description: 'Task status (update only)',
+          enum: ['backlog', 'todo', 'in_progress', 'in_review', 'blocked', 'completed', 'cancelled', 'deferred'],
+          description: 'Task status (update only). "deferred" takes the task out of its milestone\'s scope ' +
+            'while it keeps its epic: it is left out of progress, forecasts, sprint metrics and release ' +
+            'readiness, and never blocks a release. It needs deferReason, can be reached from any open ' +
+            'status, and is left only for backlog or todo.',
+        },
+        deferReason: {
+          type: 'string',
+          description: 'Why the task is deferred. Required with status:"deferred" (update); ignored otherwise.',
         },
         addReviewer: {
           type: 'object',
@@ -460,23 +467,19 @@ export const TASK_TOOLS = [
         // --- Defer fields ---
         reason: {
           type: 'string',
-          description: 'Why this work is being deferred. Required for defer.',
+          description: 'Why this work is being deferred. Required for defer. "defer" is the same as ' +
+            'action "update" status:"deferred" with deferReason: the task keeps its epic.',
         },
         stepId: {
           type: 'string',
-          description: 'If set on defer, promotes this step on the source task into a new task ' +
-            'inside the deferred epic; otherwise the whole task is reparented. Idempotent — ' +
+          description: 'If set on defer, promotes this step on the source task into a new deferred task ' +
+            'in the same epic; otherwise the task itself becomes deferred. Idempotent — ' +
             're-running with the same stepId returns the existing promoted task.',
         },
         unblockedBy: {
           type: 'string',
-          description: 'Optional free-form note describing what would unblock this deferred work. ' +
-            'Helpful for the PM review at milestone close. (defer only)',
-        },
-        targetMilestoneId: {
-          type: 'string',
-          description: 'Optional milestone override. When set, the deferred work attaches to this ' +
-            'milestone\'s deferred epic instead of the source task\'s milestone. (defer only)',
+          description: 'Optional free-form note describing what would unblock this deferred work ' +
+            '(defer, or update with status:"deferred").',
         },
         // --- Commit linking fields ---
         sha: {
@@ -602,7 +605,7 @@ export const TASK_TOOLS = [
         },
         status: {
           type: 'string',
-          enum: ['backlog', 'todo', 'in_progress', 'in_review', 'blocked', 'completed', 'cancelled'],
+          enum: ['backlog', 'todo', 'in_progress', 'in_review', 'blocked', 'completed', 'cancelled', 'deferred'],
           description: 'Filter by status',
         },
         priority: {

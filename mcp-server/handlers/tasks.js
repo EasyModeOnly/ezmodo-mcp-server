@@ -449,7 +449,7 @@ async function updateTask(allArgs) {
 
   // Manage active session file based on status transitions
   if (args.status) {
-    const endStatuses = ['completed', 'cancelled', 'in_review'];
+    const endStatuses = ['completed', 'cancelled', 'in_review', 'deferred'];
     if (args.status === 'in_progress') {
       // Fetch full task data to populate session file
       try {
@@ -493,7 +493,6 @@ async function deferTask(args) {
     reason: args.reason,
     stepId: args.stepId,
     unblockedBy: args.unblockedBy,
-    targetMilestoneId: args.targetMilestoneId,
   });
 }
 

@@ -36,7 +36,9 @@ describe('manage_deliverable (E-280)', () => {
     expect(tool).toBeDefined();
     expect(HANDLERS.manage_deliverable).toBe(manageDeliverable);
     expect(isRemoteSafe('manage_deliverable')).toBe(true);
-    expect(tool.inputSchema.properties.action.enum).toEqual(['list', 'create', 'update', 'paths', 'route', 'delete']);
+    expect(tool.inputSchema.properties.action.enum).toEqual([
+      'list', 'create', 'update', 'paths', 'route', 'delete', 'versions', 'version_on_main', 'next_version', 'bump',
+    ]);
   });
 
   it('states the hard rule: a release axis only, never linked to work', () => {
@@ -54,7 +56,8 @@ describe('manage_deliverable (E-280)', () => {
       'mcpReleaseTaskShipping', 'mcpGetRelease', 'mcpUpdateRelease', 'mcpCreateReleaseCandidateForRelease',
       'mcpAddReleaseChecklistItemForRelease', 'mcpApplyReleaseChecklistForRelease', 'mcpGetReleaseContents',
       'mcpDeriveReleaseContents', 'mcpAddReleaseContent', 'mcpRemoveReleaseContent', 'mcpReleaseChangelog',
-      'mcpLookupReleaseCandidate',
+      'mcpLookupReleaseCandidate', 'mcpLiveNow', 'mcpDeliverableVersionsOnMain', 'mcpBumpDeliverables', 'mcpReleaseVersionPlan',
+      'mcpReleaseNextVersion',
     ];
     expect(used.filter((e) => !ENDPOINT_MAP[e])).toEqual([]);
   });
@@ -123,6 +126,47 @@ describe('manage_deliverable (E-280)', () => {
     await expect(manageDeliverable({ action: 'route', projectId: 'p1', deliverable: 'desktop' })).rejects.toThrow(/needs route/);
   });
 
+  it('create and update carry the versioning settings whole (E-331)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({});
+    const versioning = { scheme: 'date', pattern: 'YYYY.MM.DD', source: 'ezmodo' };
+    await manageDeliverable({ action: 'create', projectId: 'p1', name: 'Site', versioning });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpCreateDeliverable', { projectId: 'p1', name: 'Site', versioning });
+    await manageDeliverable({ action: 'update', projectId: 'p1', deliverable: 'site', versioning });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpUpdateDeliverable', { projectId: 'p1', deliverable: 'site', versioning });
+  });
+
+  it('versions, version_on_main and next_version read the deliverable (E-331)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({});
+    await manageDeliverable({ action: 'versions', projectId: 'p1', deliverable: 'api', check: '1.6.0' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReleaseVersionPlan', { projectId: 'p1', deliverable: 'api', check: '1.6.0' });
+    await manageDeliverable({ action: 'version_on_main', projectId: 'p1', deliverable: 'cli' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpDeliverableVersionsOnMain', { projectId: 'p1', deliverable: 'cli' });
+    await manageDeliverable({ action: 'next_version', projectId: 'p1', deliverable: 'web', bump: 'minor' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpReleaseNextVersion', {
+      projectId: 'p1', deliverable: 'web', format: 'json', bump: 'minor',
+    });
+    await expect(manageDeliverable({ action: 'next_version', projectId: 'p1', deliverable: 'web', bump: 'huge' }))
+      .rejects.toThrow(/bump must be one of/);
+    await expect(manageDeliverable({ action: 'versions', projectId: 'p1' })).rejects.toThrow(/needs deliverable/);
+  });
+
+  it('bump takes items, or one deliverable + version (E-331)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({});
+    await manageDeliverable({ action: 'bump', projectId: 'p1', release: '1.6.0',
+      items: [{ deliverable: 'api', version: '1.6.0', extra: 1 }, { deliverable: 'web', version: '1.6.0' }] });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpBumpDeliverables', {
+      projectId: 'p1', release: '1.6.0',
+      items: [{ deliverable: 'api', version: '1.6.0' }, { deliverable: 'web', version: '1.6.0' }],
+    });
+    await manageDeliverable({ action: 'bump', projectId: 'p1', deliverable: 'cli', version: '1.6.0' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpBumpDeliverables', {
+      projectId: 'p1', items: [{ deliverable: 'cli', version: '1.6.0' }],
+    });
+    await expect(manageDeliverable({ action: 'bump', projectId: 'p1', deliverable: 'cli' })).rejects.toThrow(/bump needs items/);
+    await expect(manageDeliverable({ action: 'bump', projectId: 'p1', items: [{ deliverable: 'cli' }] }))
+      .rejects.toThrow(/each need deliverable and version/);
+  });
+
   it('delete by key', async () => {
     mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
     await manageDeliverable({ action: 'delete', projectId: 'p1', deliverable: 'web' });
@@ -139,7 +183,8 @@ describe('manage_release with deliverables (E-280)', () => {
     const { enum: actions } = TOOLS.find((t) => t.name === 'manage_release').inputSchema.properties.action;
     for (const a of [
       'create_candidate', 'promote', 'report_check', 'report_deployment', 'list_gates',
-      'list_releases', 'create_release', 'get_release', 'update_release', 'get_contents', 'derive_contents',
+      'list_releases', 'live_now', 'create_release', 'get_release', 'update_release', 'get_contents',
+      'derive_contents',
       'add_content', 'remove_content', 'release_changelog', 'task_shipping',
     ]) expect(actions).toContain(a);
   });
@@ -181,6 +226,13 @@ describe('manage_release with deliverables (E-280)', () => {
       projectId: 'p1', deliverable: 'api', version: '0.2.0', milestoneId: 'm1',
     });
     await expect(manageRelease({ action: 'create_release', projectId: 'p1' })).rejects.toThrow(/needs version/);
+  });
+
+  it('live_now asks what each environment runs for the project (#3794)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({ environments: [], deliverables: [] });
+    await manageRelease({ action: 'live_now', projectId: 'p1' });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpLiveNow', { projectId: 'p1' });
+    expect(ENDPOINT_MAP.mcpLiveNow).toEqual({ route: 'mcp/v1/releases/releases/live', method: 'GET' });
   });
 
   it('get_release by id, or by deliverable + version', async () => {

@@ -176,7 +176,9 @@ async function unlinkSuiteFromMilestone(args) {
  * naming each blocking gate and how to waive it.
  */
 async function releaseMilestone(args) {
-  const { projectId, milestoneId, milestoneSlug, environment, candidateId, version, notes, confirmDeferred } = args;
+  // Deferred work never blocks a release (#3818); the response's deferredCount
+  // is the reminder. confirmDeferred is gone.
+  const { projectId, milestoneId, milestoneSlug, environment, candidateId, version, notes } = args;
   if (!environment) throw new Error('release needs environment.');
   const body = { projectId, environment };
   if (milestoneId) body.milestoneId = milestoneId;
@@ -184,7 +186,6 @@ async function releaseMilestone(args) {
   if (candidateId) body.candidateId = candidateId;
   if (version) body.version = version;
   if (notes) body.notes = notes;
-  if (confirmDeferred) body.confirmDeferred = true;
   return callEzmodoAPI('mcpReleaseMilestone', body);
 }
 

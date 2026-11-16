@@ -100,6 +100,24 @@ export const RELEASE_TOOLS = [
       'first, each with runStatus, runUrl and state: waiting (no workflow started yet) | started (no run matched) | ' +
       'running | deployed | failed | cancelled; milestoneId includes its epics\' releases; hasMore pages them. Use it to ' +
       'answer "is my epic on dev yet?"); ' +
+      'RELEASE RUNS (E-331) — "release 1.6.0", "try this epic on dev": ' +
+      'preview_run (milestoneId, or epicId + projectId?; target?: first_stop (default)|staging|all; deliverables?: ' +
+      '["api", {deliverable: "web", version: "1.6.0"}] — omitted, the ones changed since their last release or already ' +
+      'planned (an epic: the ones its work touched); freeze? — the dry run: per deliverable its last release, changes, ' +
+      'suggested version, versionOnMain and bump (none|pr), the ordered plan, and checks (severity ok|info|warn|error; ' +
+      'canStart is false while any is an error: no deploy workflow, a version that already reached production, nothing ' +
+      'picked, a run already going). Show the user the plan and checks before start); ' +
+      'start (same arguments — starts it: a milestone run attaches a release at each version to the milestone, starts ' +
+      'the deploy of deliverables main already has at that version, and bumps the rest one at a time (one bump per commit); ' +
+      'an epic run releases each deliverable to dev as main is, no version. Gates and approvals still apply at every ' +
+      'stop: a run never promotes or approves anything. One running run per milestone (409). Only on the user\'s ' +
+      'explicit instruction); ' +
+      'run_status (runId, or milestoneId / epicId for its current run — each deliverable\'s state: queued|waiting|' +
+      'running|blocked|done|cancelled|skipped, currentStep: bump|build|deploy|approval|done, waitingOn: merge|manual_bump|' +
+      'previous_bump|ci|approval|gate|checklist|suite|external, detail in words, link, plus a one-line summary. Use it ' +
+      'to answer "how is the release going?"); ' +
+      'stop_run (runId, reason? — cancels every step that hasn\'t started; merged bumps and running deploys aren\'t ' +
+      'undone, and notes say what to close by hand). ' +
       'waive (candidateId, environment, targetType: gate|checklist_item|epic, targetId, reason, ' +
       'evidenceType?: none|link|note|feature_flag, evidence?: {url}|{text}|{flagKey}) — feature_flag evidence is ' +
       'verified: the flag must be served OFF in that environment, or the waiver does not hold; ' +
@@ -154,6 +172,11 @@ export const RELEASE_TOOLS = [
       'releaseId or by deliverable + version: ' +
       'list_releases (projectId?, deliverable?, milestoneId?, limit? — each with its candidates and the furthest ' +
       'environment it reached); ' +
+      'live_now (projectId? — what each environment runs now, per deliverable: one cell per environment with ' +
+      'state deployed|none (on the route, never deployed)|off_route, the build (version, versionLabel e.g. ' +
+      '1.5.0+build.3, candidateStatus, commitSha, url, deployedAt) and ahead (newer than the next environment). ' +
+      'Answers "what\'s on staging?". Dev deploys without a version bump are not reported, so dev can run ' +
+      'newer code); ' +
       'create_release (version, deliverable?, milestoneId?, notes? — returns the existing release at that version ' +
       'if there is one); ' +
       'get_release (the release page: route environments, candidates, checklist, contents, effective gates; the ' +
@@ -177,14 +200,15 @@ export const RELEASE_TOOLS = [
           type: 'string',
           enum: [
             'create_candidate', 'update_candidate', 'promote', 'sign_off', 'approve', 'cancel_approval', 'release_to_dev',
-            'list_dev_releases',
+            'list_dev_releases', 'preview_run', 'start', 'run_status', 'stop_run',
             'waive', 'revoke_waiver',
             'apply_checklist', 'add_checklist_item', 'assign_steps', 'set_item_state', 'update_checklist_item',
             'delete_checklist_item', 'item_to_task',
             'add_gate', 'update_gate', 'delete_gate', 'add_recommended_gates', 'list_gates',
             'list_templates', 'save_template', 'get_settings', 'save_settings',
             'report_check', 'report_deployment',
-            'list_releases', 'create_release', 'get_release', 'update_release', 'get_contents', 'derive_contents',
+            'list_releases', 'live_now', 'create_release', 'get_release', 'update_release', 'get_contents',
+            'derive_contents',
             'add_content', 'remove_content', 'release_changelog', 'task_shipping',
           ],
           description: 'Action to perform',
@@ -219,7 +243,7 @@ export const RELEASE_TOOLS = [
         rejectionReason: { type: 'string', description: 'update_candidate with status rejected: why it will not ship (reason also works)' },
         targetType: { type: 'string', enum: ['gate', 'checklist_item', 'epic'] },
         targetId: { type: 'string' },
-        reason: { type: 'string', description: 'Why this is going out anyway (waive). Shown on the release record and changelog. cancel_approval: why it was withdrawn.' },
+        reason: { type: 'string', description: 'Why this is going out anyway (waive). Shown on the release record and changelog. cancel_approval: why it was withdrawn. stop_run: why the run was stopped.' },
         evidenceType: { type: 'string', enum: ['none', 'link', 'note', 'feature_flag'] },
         evidence: {
           type: 'object',
@@ -315,7 +339,31 @@ export const RELEASE_TOOLS = [
         },
         version: { type: 'string', description: 'Release version, e.g. "0.23.0": with deliverable, names a release' },
         releaseId: { type: 'string', description: 'Release id (a deliverable at a version)' },
-        epicId: { type: 'string', description: 'release_to_dev: the epic the release is for (optional)' },
+        epicId: {
+          type: 'string',
+          description: 'release_to_dev: the epic the release is for (optional). preview_run / start / run_status: the epic to try on Development',
+        },
+        runId: { type: 'string', description: 'run_status / stop_run: the release run' },
+        target: {
+          type: 'string',
+          enum: ['first_stop', 'staging', 'all'],
+          description: 'preview_run / start: how far to take each deliverable now (default first_stop)',
+        },
+        freeze: { type: 'boolean', description: 'preview_run / start: freeze the milestone when the run starts' },
+        deliverables: {
+          type: 'array',
+          items: {
+            oneOf: [
+              { type: 'string' },
+              {
+                type: 'object',
+                properties: { deliverable: { type: 'string' }, version: { type: 'string' } },
+                required: ['deliverable'],
+              },
+            ],
+          },
+          description: 'preview_run / start: deliverable keys, or {deliverable, version} to pick a version',
+        },
         limit: { type: 'number', description: 'list_releases: how many. list_dev_releases: how many (default 20, max 100). get_contents: page size per section (default 50, max 200)' },
         offset: { type: 'number', description: 'list_dev_releases: rows to skip. get_contents: rows to skip in the section' },
         section: {
@@ -346,13 +394,32 @@ export const RELEASE_TOOLS = [
       '(default replace)) — used to derive a release\'s contents; the default deliverable with no paths is the ' +
       'whole repo; ' +
       'route (deliverable, route: environment ids or keys it is promoted through; [] = every environment); ' +
-      'delete (deliverable — refused for the default and for any deliverable with releases).',
+      'delete (deliverable — refused for the default and for any deliverable with releases). ' +
+      'VERSIONING (E-331): create and update take versioning — {scheme: semver|date|number|custom, pattern? ' +
+      '(date: YYYY.MM.DD, YYYY.MM.MICRO, YY.WW; custom: r{n}, {yyyy}-Q{q}.{n}), source: files|tags|ezmodo|unknown ' +
+      '(where the version lives; unknown = CI reports it, the default), files?: [{path, format?, key?, pattern?}] ' +
+      '(format guessed from the path: package_json, json, pubspec, cargo_toml, pyproject_toml, gradle, info_plist, ' +
+      'csproj, version_file, go_const, or pattern with a line containing {version}; deliverables listing the same ' +
+      'file bump together), tagPattern? ("cli-v{version}"), buildLabel: build (+build.N) | rc (-rc.N, for npm) | ' +
+      'store (a store build number), repo?: {provider, repo, branch?}, bumpWorkflow?: {provider, repo, workflow, ' +
+      'ref?}} — sent whole, it replaces the settings. ' +
+      'versions (deliverable, check? — last shipped, suggested next versions and hotfix in its scheme, open ' +
+      'releases holding a version, and whether check is valid and newer); ' +
+      'version_on_main (deliverable — what each version file holds on the connected repo\'s base branch); ' +
+      'next_version (deliverable, bump?: patch|minor|major, releaseId?, milestoneId? — RESERVES: the version a ' +
+      'build should carry when EzModo assigns it, held by its release until it ships, plus the next build label); ' +
+      'bump (items: [{deliverable, version}] or deliverable + version, release? — on a connected repo EzModo ' +
+      'opens one PR with one commit per deliverable, or dispatches the deliverable\'s bump workflow; it never ' +
+      'merges. Without a connected repo, edit the files yourself from versioning.files and open the PR).',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['list', 'create', 'update', 'paths', 'route', 'delete'],
+          enum: [
+            'list', 'create', 'update', 'paths', 'route', 'delete',
+            'versions', 'version_on_main', 'next_version', 'bump',
+          ],
           description: 'Action to perform',
         },
         projectId: { type: 'string', description: 'Project id (default: .ezmodo/config.json)' },
@@ -374,6 +441,62 @@ export const RELEASE_TOOLS = [
         mode: {
           type: 'string', enum: ['add', 'remove', 'replace'], description: 'paths: how to apply them (default replace)',
         },
+        versioning: {
+          type: 'object',
+          description: 'create, update: the versioning settings, whole (see the description)',
+          properties: {
+            scheme: { type: 'string', enum: ['semver', 'date', 'number', 'custom'] },
+            pattern: { type: 'string' },
+            source: { type: 'string', enum: ['files', 'tags', 'ezmodo', 'unknown'] },
+            files: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  path: { type: 'string' },
+                  format: { type: 'string' },
+                  key: { type: 'string' },
+                  pattern: { type: 'string' },
+                },
+                required: ['path'],
+              },
+            },
+            tagPattern: { type: 'string' },
+            buildLabel: { type: 'string', enum: ['build', 'rc', 'store'] },
+            repo: {
+              type: 'object',
+              properties: { provider: { type: 'string' }, repo: { type: 'string' }, branch: { type: 'string' } },
+            },
+            bumpWorkflow: {
+              type: 'object',
+              properties: {
+                provider: { type: 'string' },
+                repo: { type: 'string' },
+                workflow: { type: 'string' },
+                ref: { type: 'string' },
+              },
+            },
+          },
+        },
+        check: {
+          type: 'string', description: 'versions: a version to check against the scheme and the last shipped',
+        },
+        bump: {
+          type: 'string', enum: ['patch', 'minor', 'major'], description: 'next_version: semver bump (default patch)',
+        },
+        releaseId: { type: 'string', description: 'next_version: answer for this open release' },
+        milestoneId: { type: 'string', description: 'next_version: attach a release it starts to this milestone' },
+        version: { type: 'string', description: 'bump: the version for deliverable' },
+        items: {
+          type: 'array',
+          description: 'bump: [{deliverable, version}]',
+          items: {
+            type: 'object',
+            properties: { deliverable: { type: 'string' }, version: { type: 'string' } },
+            required: ['deliverable', 'version'],
+          },
+        },
+        release: { type: 'string', description: 'bump: the release this is for, named in the PR title' },
       },
       required: ['action'],
     },

@@ -70,7 +70,8 @@ export function createMockCallEzmodoAPI() {
       case 'mcpDeferTask':
         return {
           success: true,
-          deferredEpicId: 'epic-deferred-1',
+          status: 'deferred',
+          epicId: 'epic-source-1',
           newTaskId: args.stepId ? 'task-promoted-1' : undefined,
           newTaskNumber: args.stepId ? 42 : undefined,
           parentUpdated: true,
