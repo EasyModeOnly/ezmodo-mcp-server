@@ -26,6 +26,7 @@ import { isRemoteRequest } from '../lib/request-context.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
 import { applyCommitToManifest } from '../lib/commit-manifest.js';
 import { latestReviewFeedback } from '../lib/review-feedback.js';
+import { getAgentSessionId } from '../lib/agent-session.js';
 
 /**
  * Dispatch manage_task actions to the appropriate handler
@@ -543,7 +544,10 @@ export async function searchTasks(args) {
 }
 
 export async function getTask(args) {
-  const result = await callEzmodoAPI('mcpGetTask', args);
+  // The session that asked questions on this task reading it counts as it
+  // checking for answers (#3893).
+  const sessionId = getAgentSessionId();
+  const result = await callEzmodoAPI('mcpGetTask', sessionId ? { ...args, sessionId } : args);
   const webUrl = await buildTaskUrl(result?.task?.taskNumber);
   if (webUrl && result?.task) result.task.webUrl = webUrl;
   return withReviewFeedback(result);

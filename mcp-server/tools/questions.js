@@ -29,18 +29,34 @@ export const QUESTION_TOOLS = [
       'what, why and what each option costs in body (markdown). blocking:true holds the task ' +
       'blocked until it is answered. The owner (who answers) defaults to the person you work for. ' +
       'Read the answer later with list_questions (answeredSince). "update" changes an open ' +
-      'question (questionId plus the fields); "withdraw" takes it back when you no longer need it.',
+      'question (questionId plus the fields); "withdraw" takes it back when you no longer need it.\n\n' +
+      'WAIT: when you cannot go on without the answer, call action "wait" with questionIds (the ids ' +
+      'of the questions, or decisions to make, you asked). It holds up to ~50 s and returns as soon ' +
+      'as one is answered: answered (rows with the answer), waiting (ids still open), timedOut. ' +
+      'While you keep calling it, the person\'s Inbox shows you as "waiting for your answer"; stop ' +
+      'and it turns grey within 3 minutes. On timedOut, call wait again; if you can do other work ' +
+      'meanwhile, do it and check back with list_questions instead.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'withdraw'],
-          description: 'create (taskId or epicId, kind, title), update (questionId + fields), withdraw (questionId)',
+          enum: ['create', 'update', 'withdraw', 'wait'],
+          description: 'create (taskId or epicId, kind, title), update (questionId + fields), withdraw (questionId), ' +
+            'wait (questionIds: hold until one is answered, ~50 s at most)',
         },
         questionId: {
           type: 'string',
           description: 'The question to change or withdraw (update, withdraw)',
+        },
+        questionIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Ids of the questions or decisions to make you asked and are waiting on, at most 20 (wait)',
+        },
+        timeoutSeconds: {
+          type: 'number',
+          description: 'How long to wait before returning with timedOut, 1-50 (wait; default 50)',
         },
         taskId: {
           type: 'string',
@@ -77,7 +93,8 @@ export const QUESTION_TOOLS = [
         },
         sessionId: {
           type: 'string',
-          description: 'Your session id, so the person can tell which session asked (create)',
+          description: 'Your session id, so the person can tell which session asked (create). ' +
+            'Optional: the local server fills in its own, which is what lets your later reads count as waiting.',
         },
         followUpTaskId: {
           type: 'string',

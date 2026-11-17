@@ -426,6 +426,7 @@ export const ENDPOINT_MAP = {
   'mcpUpdateQuestion': { route: 'mcp/v1/questions', method: 'PUT' },
   'mcpWithdrawQuestion': { route: 'mcp/v1/questions/withdraw', method: 'POST' },
   'mcpListQuestions': { route: 'mcp/v1/questions', method: 'GET' },
+  'mcpWaitQuestions': { route: 'mcp/v1/questions/wait', method: 'POST' },
 
   // Recurring task schedules (E-211) — "what task to create, on what cadence".
   'mcpCreateRecurringTask': { route: 'mcp/v1/recurring-tasks', method: 'POST' },

@@ -16,6 +16,7 @@ import { CONFIG } from './config/index.js';
 import { createServer } from './lib/create-server.js';
 import { initLogger, getLogger } from './lib/logger.js';
 import { describeCredentialSync } from './lib/credentials.js';
+import { startAgentSession } from './lib/agent-session.js';
 
 // ============================================================
 // Configuration Validation
@@ -66,6 +67,9 @@ console.error('');
 // cannot differ between them.
 
 async function main() {
+  // One process is one agent session: name it, so the questions this session
+  // asks and the reads it makes can be matched (#3893).
+  startAgentSession();
   // serveStdio, not server.connect(new StdioServerTransport()): a Server wired
   // straight to the transport speaks only the 2025-era protocol (SDK v2
   // migration guide). serveStdio lets the client's opening message pick the

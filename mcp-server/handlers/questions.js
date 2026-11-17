@@ -5,6 +5,10 @@
  */
 
 import { callEzmodoAPI } from '../lib/http-client.js';
+import { getAgentSessionId } from '../lib/agent-session.js';
+
+/** The longest a single wait call may hold (the API caps it at 50 s too). */
+const MAX_WAIT_SECONDS = 50;
 
 /** Dispatch manage_question actions. */
 export async function manageQuestion(args = {}) {
@@ -13,8 +17,9 @@ export async function manageQuestion(args = {}) {
   case 'create': return createQuestion(params);
   case 'update': return updateQuestion(params);
   case 'withdraw': return withdrawQuestion(params);
+  case 'wait': return waitForAnswer(params);
   default:
-    throw new Error(`Unknown action: ${action}. Expected create, update or withdraw.`);
+    throw new Error(`Unknown action: ${action}. Expected create, update, withdraw or wait.`);
   }
 }
 
@@ -23,7 +28,10 @@ async function createQuestion({ taskId, epicId, kind, title, body, link, blockin
     throw new Error('taskId or epicId is required: ask on the task (or epic) the answer unblocks');
   }
   return callEzmodoAPI('mcpCreateQuestion', compact({
-    taskId, epicId, kind, title, body, link, blocking, ownerId, sessionId, followUpTaskId,
+    taskId, epicId, kind, title, body, link, blocking, ownerId,
+    // Default to this process's session, so reads from it can be matched (#3893).
+    sessionId: sessionId ?? getAgentSessionId() ?? undefined,
+    followUpTaskId,
   }));
 }
 
@@ -37,6 +45,22 @@ async function withdrawQuestion({ questionId }) {
   return callEzmodoAPI('mcpWithdrawQuestion', { questionId });
 }
 
+/**
+ * wait (#3893): hold until one of the questions (or decisions to make) you
+ * asked is answered, or about 50 seconds pass. While you wait the person's
+ * Inbox shows you as waiting for their answer. Call it again to keep waiting.
+ */
+async function waitForAnswer({ questionId, questionIds, timeoutSeconds }) {
+  const ids = [...new Set([...(questionIds || []), ...(questionId ? [questionId] : [])])];
+  if (ids.length === 0) {
+    throw new Error('questionIds is required: the questions (or decisions to make) you asked and are waiting on');
+  }
+  const seconds = Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
+    ? Math.min(Math.floor(timeoutSeconds), MAX_WAIT_SECONDS)
+    : undefined;
+  return callEzmodoAPI('mcpWaitQuestions', compact({ questionIds: ids, timeoutSeconds: seconds }));
+}
+
 /** list_questions: by task, by epic, or everything asked with this key. */
 export async function listQuestions(args = {}) {
   const { taskId, epicId, organizationId, answeredSince, status, unseen, limit, offset } = args;
@@ -48,6 +72,9 @@ export async function listQuestions(args = {}) {
     unseen: unseen ? 'true' : undefined,
     limit: limit || undefined,
     offset: offset || undefined,
+    // The asking session reading its own open questions counts as it
+    // checking for answers (#3893).
+    sessionId: getAgentSessionId() ?? undefined,
   }));
 }
 
