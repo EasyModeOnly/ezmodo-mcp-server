@@ -163,6 +163,11 @@ describe('manage_deliverable (E-280)', () => {
     expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpBumpDeliverables', {
       projectId: 'p1', items: [{ deliverable: 'cli', version: '1.6.0' }],
     });
+    const sha = 'a'.repeat(40);
+    await manageDeliverable({ action: 'bump', projectId: 'p1', items: [{ deliverable: 'worker', version: '43', commit: sha }] });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpBumpDeliverables', {
+      projectId: 'p1', items: [{ deliverable: 'worker', version: '43', commit: sha }],
+    });
     await expect(manageDeliverable({ action: 'bump', projectId: 'p1', deliverable: 'cli' })).rejects.toThrow(/bump needs items/);
     await expect(manageDeliverable({ action: 'bump', projectId: 'p1', items: [{ deliverable: 'cli' }] }))
       .rejects.toThrow(/each need deliverable and version/);

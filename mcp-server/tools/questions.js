@@ -90,7 +90,10 @@ export const QUESTION_TOOLS = [
       'rejected), blocking, the answer {text, by, at} once there is one, and the task and epic it is ' +
       'on. answeredSince (an ISO time) returns only what changed since then: answered, done, ' +
       'dismissed and reopened questions and decided decisions. Check it when you resume work you ' +
-      'asked about. Paged: read total and hasMore.',
+      'asked about. unseen:true returns only what no agent with your key has been shown yet ' +
+      '("answered while you were away") and marks it shown, so each answer reaches you once; ' +
+      'get_task and get_current_project_context already lead with it. A row with reopened:true was ' +
+      'put back to open by the person: its earlier answer no longer stands. Paged: read total and hasMore.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -108,6 +111,10 @@ export const QUESTION_TOOLS = [
           type: 'string',
           enum: ['open'],
           description: 'Only open ones. Omit for every status.',
+        },
+        unseen: {
+          type: 'boolean',
+          description: 'Only what changed that no agent with your key has been shown yet, then mark it shown',
         },
         limit: { type: 'number', description: 'Page size (default 50, max 200)' },
         offset: { type: 'number', description: 'Rows to skip (default 0)' },

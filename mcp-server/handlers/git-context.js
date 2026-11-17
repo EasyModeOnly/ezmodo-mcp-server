@@ -20,6 +20,7 @@ import { listRepositories } from './github.js';
 import { getOrganization } from './organizations.js';
 import { getLogger } from '../lib/logger.js';
 import { listTags } from './tags.js';
+import { answeredWhileAway } from './questions.js';
 import { CONFIG } from '../config/index.js';
 
 /**
@@ -471,6 +472,17 @@ export async function detectGitRepository(args) {
   }
 }
 
+/**
+ * Lead the session-start context with what people answered on questions this
+ * key asked while no agent was there (#3831), so a new session acts on the
+ * answers before anything else. Each answer is reported once. Omitted when
+ * there is nothing, and never fails session start.
+ */
+async function withAnsweredWhileAway(organizationId, context) {
+  const away = await answeredWhileAway(organizationId);
+  return away.length > 0 ? { answeredWhileAway: away, ...context } : context;
+}
+
 export async function getCurrentProjectContext(args) {
   const { workingDirectory = process.cwd() } = args;
 
@@ -524,7 +536,7 @@ export async function getCurrentProjectContext(args) {
             warnings: [],
           };
 
-          return {
+          return withAnsweredWhileAway(config.organizationId, {
             success: true,
             found: true,
             projectId: activeProject.id,
@@ -544,7 +556,7 @@ export async function getCurrentProjectContext(args) {
             projectType: config.projectType || null,
             terminology: config.terminology || null,
             validation,
-          };
+          });
         }
 
         // Stale/missing cache — refresh from server
@@ -620,7 +632,7 @@ export async function getCurrentProjectContext(args) {
           }
         }
 
-        return {
+        return withAnsweredWhileAway(config.organizationId, {
           success: true,
           found: true,
           projectId: activeProject.id,
@@ -636,7 +648,7 @@ export async function getCurrentProjectContext(args) {
           projectType,
           terminology,
           validation,
-        };
+        });
       } catch {
         // Config file resolved but unreadable/malformed — treat as not found.
       }

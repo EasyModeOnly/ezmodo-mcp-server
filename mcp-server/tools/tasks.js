@@ -713,7 +713,10 @@ export const TASK_TOOLS = [
       'Responses include `descriptionDocumentId` — the id of the backing rich-description Document ' +
       'when the description has been promoted to one (E-189), otherwise omitted. ' +
       'A task sent back from review has a top-level `reviewFeedback` {content, addedBy, addedAt}, ' +
-      'the newest reviewer feedback: address it before anything else.',
+      'the newest reviewer feedback: address it before anything else. ' +
+      'When a person answered questions you (or an earlier session) asked on the task, it leads with ' +
+      '`answeredWhileAway`: answered, done, not needed and reopened questions and decided decisions ' +
+      'not shown to an agent yet (each is shown once). Act on those answers before continuing.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -39,15 +39,33 @@ async function withdrawQuestion({ questionId }) {
 
 /** list_questions: by task, by epic, or everything asked with this key. */
 export async function listQuestions(args = {}) {
-  const { taskId, epicId, organizationId, answeredSince, status, limit, offset } = args;
+  const { taskId, epicId, organizationId, answeredSince, status, unseen, limit, offset } = args;
   if (!taskId && !epicId && !organizationId) {
     throw new Error('Pass taskId, epicId, or organizationId');
   }
   return callEzmodoAPI('mcpListQuestions', compact({
     taskId, epicId, organizationId, answeredSince, status,
+    unseen: unseen ? 'true' : undefined,
     limit: limit || undefined,
     offset: offset || undefined,
   }));
+}
+
+/**
+ * "Answered while you were away" for session start (#3831): what people
+ * answered on questions asked with this key that no agent has been shown yet.
+ * Best effort: session start must not fail because of it, so any error
+ * returns an empty list.
+ */
+export async function answeredWhileAway(organizationId) {
+  if (!organizationId) return [];
+  try {
+    const result = await callEzmodoAPI('mcpListQuestions', { organizationId, unseen: 'true', limit: 20 });
+    const data = result?.data ?? result;
+    return Array.isArray(data?.items) ? data.items : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Drops undefined values so they are not sent as empty fields. */

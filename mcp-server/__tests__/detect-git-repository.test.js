@@ -43,6 +43,10 @@ jest.unstable_mockModule('../handlers/tags.js', () => ({
   listTags: jest.fn(),
 }));
 
+jest.unstable_mockModule('../handlers/questions.js', () => ({
+  answeredWhileAway: jest.fn().mockResolvedValue([]),
+}));
+
 jest.unstable_mockModule('../config/index.js', () => ({
   CONFIG: { environment: 'production' },
 }));

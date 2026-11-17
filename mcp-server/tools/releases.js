@@ -479,10 +479,11 @@ export const RELEASE_TOOLS = [
       'version_on_main (deliverable — what each version file holds on the connected repo\'s base branch); ' +
       'next_version (deliverable, bump?: patch|minor|major, releaseId?, milestoneId? — RESERVES: the version a ' +
       'build should carry when EzModo assigns it, held by its release until it ships, plus the next build label); ' +
-      'bump (items: [{deliverable, version}] or deliverable + version, release? — on a connected repo EzModo ' +
-      'opens one PR with one commit per deliverable, or dispatches the deliverable\'s bump workflow; it never ' +
-      'merges. Without a connected repo, edit the files yourself from versioning.files and open the PR, then ' +
-      'report_bump); ' +
+      'bump (items: [{deliverable, version, commit?}] or deliverable + version, release? — on a connected repo ' +
+      'EzModo opens one PR with one commit per deliverable, or dispatches the deliverable\'s bump workflow; it ' +
+      'never merges. A deliverable versioned by tags has its tag (tagPattern) pushed instead, on the base ' +
+      'branch\'s head or on commit (a full SHA): no PR, no merge. Without a connected repo, edit the files ' +
+      'yourself from versioning.files (or push the tag) and open the PR, then report_bump); ' +
       'report_bump (deliverable, version, number?, url?, branch?, repo?, commitSha?, state?: opened|merged, ' +
       'source? — records a bump you made: the PR you opened (opened until you report it again with state merged), ' +
       'or a commit straight on main (merged). The release page and the release run show it, and with no ' +
@@ -566,10 +567,10 @@ export const RELEASE_TOOLS = [
         version: { type: 'string', description: 'bump: the version for deliverable' },
         items: {
           type: 'array',
-          description: 'bump: [{deliverable, version}]',
+          description: 'bump: [{deliverable, version, commit?}] — commit: the full SHA a tags-versioned deliverable\'s tag goes on',
           items: {
             type: 'object',
-            properties: { deliverable: { type: 'string' }, version: { type: 'string' } },
+            properties: { deliverable: { type: 'string' }, version: { type: 'string' }, commit: { type: 'string' } },
             required: ['deliverable', 'version'],
           },
         },

@@ -133,7 +133,8 @@ function bumpItems(args) {
   if (Array.isArray(args.items) && args.items.length) {
     const bad = args.items.filter((it) => !it || !it.deliverable || !it.version);
     if (bad.length) throw new Error('bump items each need deliverable and version.');
-    return args.items.map(({ deliverable, version }) => ({ deliverable, version }));
+    return args.items.map(({ deliverable, version, commit }) => (
+      commit ? { deliverable, version, commit } : { deliverable, version }));
   }
   if (args.deliverable && args.version) return [{ deliverable: args.deliverable, version: args.version }];
   throw new Error('bump needs items ([{deliverable, version}]) or deliverable + version.');
