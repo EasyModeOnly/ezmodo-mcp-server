@@ -20,7 +20,8 @@ export const QUESTION_TOOLS = [
       'withdraw it. Use it instead of ending a session with a list of things left for the person: ' +
       'each item becomes a question in their Inbox, linked to the work it blocks.\n\n' +
       'KINDS: "todo" = a step only a person can do (say exactly what, and put a deep link to the ' +
-      'exact place in link; if the API cannot do it, also file the API gap as a task); "question" = ' +
+      'exact place in link; if the API cannot do it, also file the API gap as a task and pass its id as ' +
+      'followUpTaskId); "question" = ' +
       'you need a free-text reply; "approval" = it needs approving somewhere else (link to where; ' +
       'nobody approves from the card). For a choice between options, ask a DECISION instead: ' +
       'manage_decision action "create" with taskId, question, choices and recommendation.\n\n' +
@@ -77,6 +78,12 @@ export const QUESTION_TOOLS = [
         sessionId: {
           type: 'string',
           description: 'Your session id, so the person can tell which session asked (create)',
+        },
+        followUpTaskId: {
+          type: 'string',
+          description: 'The task you filed so you can do this yourself next time, e.g. the API gap ' +
+            'behind a to do. The card shows "The agent filed a follow-up task" with a link. ' +
+            '"" clears it (create, update)',
         },
       },
       required: ['action'],

@@ -18,18 +18,18 @@ export async function manageQuestion(args = {}) {
   }
 }
 
-async function createQuestion({ taskId, epicId, kind, title, body, link, blocking, ownerId, sessionId }) {
+async function createQuestion({ taskId, epicId, kind, title, body, link, blocking, ownerId, sessionId, followUpTaskId }) {
   if (!taskId && !epicId) {
     throw new Error('taskId or epicId is required: ask on the task (or epic) the answer unblocks');
   }
   return callEzmodoAPI('mcpCreateQuestion', compact({
-    taskId, epicId, kind, title, body, link, blocking, ownerId, sessionId,
+    taskId, epicId, kind, title, body, link, blocking, ownerId, sessionId, followUpTaskId,
   }));
 }
 
-async function updateQuestion({ questionId, title, body, link, blocking, ownerId }) {
+async function updateQuestion({ questionId, title, body, link, blocking, ownerId, followUpTaskId }) {
   if (!questionId) throw new Error('questionId is required');
-  return callEzmodoAPI('mcpUpdateQuestion', compact({ questionId, title, body, link, blocking, ownerId }));
+  return callEzmodoAPI('mcpUpdateQuestion', compact({ questionId, title, body, link, blocking, ownerId, followUpTaskId }));
 }
 
 async function withdrawQuestion({ questionId }) {

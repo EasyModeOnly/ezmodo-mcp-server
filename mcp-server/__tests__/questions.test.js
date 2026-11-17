@@ -34,6 +34,16 @@ describe('manage_question', () => {
     });
   });
 
+  it('passes the follow-up task the agent filed, on create and update (#3876)', async () => {
+    mockCallEzmodoAPI.mockResolvedValue({});
+    await manageQuestion({ action: 'create', taskId: 't1', kind: 'todo', title: 'x', followUpTaskId: 't9' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpCreateQuestion', {
+      taskId: 't1', kind: 'todo', title: 'x', followUpTaskId: 't9',
+    });
+    await manageQuestion({ action: 'update', questionId: 'q1', followUpTaskId: '' });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpUpdateQuestion', { questionId: 'q1', followUpTaskId: '' });
+  });
+
   it('refuses a create with neither task nor epic before calling the API', async () => {
     await expect(manageQuestion({ action: 'create', kind: 'question', title: 'x' })).rejects.toThrow(/taskId or epicId/);
     expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
