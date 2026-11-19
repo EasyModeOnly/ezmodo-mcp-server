@@ -145,7 +145,8 @@ export const MILESTONE_TOOLS = [
           type: 'boolean',
           description: 'link_epic only: an epic already in another milestone is moved here ' +
             '(unlinked there, linked here, one transaction) instead of refused. ' +
-            'The result names the milestone(s) it left in movedFrom',
+            'The result names the milestone(s) it left in movedFrom. A moved epic keeps its status; ' +
+            'only an epic linked to its first milestone is promoted from backlog to ready',
         },
         confirmReleased: {
           type: 'boolean',
@@ -240,7 +241,13 @@ export const MILESTONE_TOOLS = [
             '(E-309): forecast {expectedDate, earliest, latest, ratePerWeek, remaining, addedPerWeek, creepDate, basis}, ' +
             'onTrack (on_track|at_risk|off_track|unknown), state, stalled, lowData, a plain-language reason (say it ' +
             'as given), and for a parent milestone children[] / ownEpics. The forecast counts tasks first reaching ' +
-            'in review or completed in the last 14 days; with too little history it gives counts only, no date',
+            'in review or completed in the last 14 days; with too little history it gives counts only, no date. ' +
+            'progress.children[] (a parent only) is each direct sub-milestone in display order (target date, then ' +
+            'version, then creation) with {id, name, slug, status, version, targetDate, targetDateDerived, ' +
+            'effectiveStartDate, childCount, epicCount, completedEpics, taskCount, tasksResolved, deferredCount, ' +
+            'percentage} over its subtree; each progress.epics[] row says milestoneId (the milestone holding it) and ' +
+            'childMilestoneId (the sub-milestone it groups under; absent for the milestone\'s own epics), with its ' +
+            'startDate/endDate',
         },
         // --- List filters (used when no milestoneId/milestoneSlug) ---
         type: {
