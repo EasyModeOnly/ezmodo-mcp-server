@@ -12,6 +12,8 @@ export const REVIEW_TOOLS = [
       'test cases (total, pass, fail, blocked, skip, notRun) and a one-line summary. ' +
       'Read-only: agents cannot approve or send back; a human decides in the web app. ' +
       'approvePolicy says who may approve in this project. Paged: read total and hasMore. ' +
+      'Pass assignee to narrow by who the task is assigned to: "me" (you, the key\'s user), "agents" ' +
+      '(any AI assignee), "unassigned", or a user or agent id; several are OR\'d. ' +
       'A task sent back returns to in_progress with reviewFeedback on get_task; address that first.',
     inputSchema: {
       type: 'object',
@@ -27,6 +29,13 @@ export const REVIEW_TOOLS = [
         offset: {
           type: 'number',
           description: 'Rows to skip, for paging past the first page (default 0)',
+        },
+        assignee: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 50,
+          description: 'Only tasks assigned to any of these: "me", "agents" (any AI assignee), "unassigned", ' +
+            'or a user or agent id. Omit for everyone. Applied before paging, so total counts only matches.',
         },
       },
       required: ['projectId'],

@@ -1,6 +1,7 @@
 /**
  * Review Handlers (E-302 #3444)
- * list_review_queue: the project's in_review tasks, oldest submission first.
+ * list_review_queue: the project's in_review tasks, oldest submission first,
+ * optionally narrowed by assignee (E-336 #3939).
  *
  * Read-only on purpose. Approve / send back is not on the MCP route group:
  * OIDC callers there (the remote connector) are not marked as AI, so the API
@@ -32,17 +33,27 @@ export function formatQueueTask(task) {
   };
 }
 
+/** The assignee filter as the API reads it: one comma-separated value (E-336 #3939). */
+function assigneeParam(assignee) {
+  const list = (Array.isArray(assignee) ? assignee : assignee ? [assignee] : [])
+    .map((a) => String(a).trim())
+    .filter(Boolean);
+  return list.length > 0 ? list.join(',') : undefined;
+}
+
 export async function listReviewQueue(args = {}) {
   const { projectId, limit, offset } = args;
   if (!projectId) {
     throw new Error('projectId is required');
   }
+  const assignee = assigneeParam(args.assignee);
 
   const result = await callEzmodoAPI('mcpListReviewQueue', {
     projectId,
     ...(limit ? { limit } : {}),
     // offset 0 is the default; sending it would only be query-string noise.
     ...(offset ? { offset } : {}),
+    ...(assignee ? { assignee } : {}),
   });
 
   const tasks = Array.isArray(result?.tasks) ? result.tasks : [];

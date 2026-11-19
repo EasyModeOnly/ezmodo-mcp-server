@@ -61,6 +61,21 @@ describe('list_review_queue', () => {
     expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListReviewQueue', { projectId: 'p-1' });
   });
 
+  it('sends the assignee filter as one comma-separated value (E-336 #3939)', async () => {
+    mockCallEzmodoAPI.mockResolvedValueOnce({ tasks: [] });
+    await listReviewQueue({ projectId: 'p-1', assignee: ['me', ' agents ', '', 'u-9'] });
+    expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListReviewQueue', { projectId: 'p-1', assignee: 'me,agents,u-9' });
+
+    mockCallEzmodoAPI.mockResolvedValueOnce({ tasks: [] });
+    await listReviewQueue({ projectId: 'p-1', assignee: [] });
+    expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpListReviewQueue', { projectId: 'p-1' });
+  });
+
+  it('declares the assignee filter on the tool', () => {
+    const tool = TOOLS.find((t) => t.name === 'list_review_queue');
+    expect(tool.inputSchema.properties.assignee).toMatchObject({ type: 'array', items: { type: 'string' } });
+  });
+
   it('requires projectId', async () => {
     await expect(listReviewQueue({})).rejects.toThrow('projectId is required');
     expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
