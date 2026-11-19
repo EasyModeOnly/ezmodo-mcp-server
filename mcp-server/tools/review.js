@@ -7,20 +7,44 @@
 export const REVIEW_TOOLS = [
   {
     name: 'list_review_queue',
-    description: 'List a project\'s tasks waiting for review (status in_review), oldest submission first. ' +
-      'Each row has the task number, title, assignee, submittedAt, verification counts from linked ' +
+    description: 'List what is waiting for review (tasks in_review, and documents submitted for review), ' +
+      'oldest submission first. Two modes. With projectId (and no projectIds): that project\'s tasks, ' +
+      'with the project\'s approvePolicy. Without projectId, or with projectIds: YOUR cross-project queue ' +
+      'in an organization, the same as the web Inbox\'s Review tab: every project you may decide reviews in ' +
+      '(member or above), narrowed to projectIds when given; each row names its project and that project\'s ' +
+      'approvePolicy, and documents are included when your key can read documents (type narrows to one). ' +
+      'Each task row has the task number, title, assignee, submittedAt, verification counts from linked ' +
       'test cases (total, pass, fail, blocked, skip, notRun) and a one-line summary. ' +
       'Read-only: agents cannot approve or send back; a human decides in the web app. ' +
-      'approvePolicy says who may approve in this project. Paged: read total and hasMore. ' +
-      'Pass assignee to narrow by who the task is assigned to: "me" (you, the key\'s user), "agents" ' +
-      '(any AI assignee), "unassigned", or a user or agent id; several are OR\'d. ' +
+      'Paged: read total and hasMore. ' +
+      'Pass assignee to narrow by who the task is assigned to (a document by its owner): ' +
+      '"me" (you, the key\'s user), "agents" (any AI assignee), "unassigned", ' +
+      'or a user or agent id; several are OR\'d. ' +
       'A task sent back returns to in_progress with reviewFeedback on get_task; address that first.',
     inputSchema: {
       type: 'object',
       properties: {
         projectId: {
           type: 'string',
-          description: 'The project whose review queue to list (required)',
+          description: 'One project\'s review queue. Omit it for your cross-project queue.',
+        },
+        projectIds: {
+          type: 'array',
+          items: { type: 'string' },
+          maxItems: 100,
+          description: 'Cross-project mode: only these projects of your review scope ' +
+            '(a project outside it is refused). Omit for every project you review in. ' +
+            'projectId is merged in when both are sent.',
+        },
+        organizationId: {
+          type: 'string',
+          description: 'Cross-project mode: the organization whose queue to list. Defaults to this checkout\'s ' +
+            '.ezmodo/config.json organization; required where there is none (the remote connector).',
+        },
+        type: {
+          type: 'string',
+          enum: ['task', 'document'],
+          description: 'Cross-project mode: list only tasks or only documents. Omit for both.',
         },
         limit: {
           type: 'number',
@@ -38,7 +62,6 @@ export const REVIEW_TOOLS = [
             'or a user or agent id. Omit for everyone. Applied before paging, so total counts only matches.',
         },
       },
-      required: ['projectId'],
     },
   },
 ];

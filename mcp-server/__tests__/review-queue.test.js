@@ -10,6 +10,16 @@ jest.unstable_mockModule('../lib/active-session.js', () => ({
   writeActiveSession: jest.fn(),
   clearActiveSession: jest.fn(),
 }));
+const mockReadConfig = jest.fn(async () => null);
+jest.unstable_mockModule('../lib/local-cache.js', () => ({
+  isCacheFresh: jest.fn(),
+  findConfigPath: jest.fn(async () => null),
+  readConfig: mockReadConfig,
+  writeConfig: jest.fn(),
+  getCachedTags: jest.fn(async () => null),
+  updateCacheSections: jest.fn(),
+  invalidateCacheSection: jest.fn(),
+}));
 jest.unstable_mockModule('../lib/logger.js', () => ({
   getLogger: () => ({ info() {}, warn() {}, debug() {}, error() {} }),
 }));
@@ -76,9 +86,102 @@ describe('list_review_queue', () => {
     expect(tool.inputSchema.properties.assignee).toMatchObject({ type: 'array', items: { type: 'string' } });
   });
 
-  it('requires projectId', async () => {
-    await expect(listReviewQueue({})).rejects.toThrow('projectId is required');
+  it('needs projectId, or an organization for the cross-project queue', async () => {
+    await expect(listReviewQueue({})).rejects.toThrow(/organizationId for your cross-project queue/);
     expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+  });
+
+  describe('cross-project mode (E-336 #4008)', () => {
+    const personQueue = {
+      organizationId: 'org-1',
+      items: [
+        {
+          type: 'task', projectId: 'p-1', projectName: 'Ezmodo', projectSlug: 'ezmodo', approvePolicy: 'humans',
+          submittedAt: '2026-11-04T10:00:00Z', task: apiRow,
+        },
+        {
+          type: 'document', projectId: 'p-2', projectName: 'Saltpig', approvePolicy: 'humans_and_agents',
+          submittedAt: '2026-11-05T10:00:00Z',
+          document: { id: 'd-1', title: 'Runbook', projectId: 'p-2', reviewNote: 'Please check step 3\nmore', reviewSubmittedAgent: 'Claude' },
+        },
+      ],
+      counts: { tasks: 1, documents: 1, total: 2 },
+      total: 2, limit: 25, offset: 0, hasMore: false,
+      projects: [{ id: 'p-1', name: 'Ezmodo', slug: 'ezmodo', approvePolicy: 'humans', count: 1 }],
+      assignees: [], unassignedCount: 0,
+    };
+
+    it('calls the person queue route with projectIds, assignee and type when projectId is omitted', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce(personQueue);
+      await listReviewQueue({
+        organizationId: 'org-1', projectIds: ['p-1', ' p-2 ', 'p-1'], assignee: ['agents'], type: 'task', limit: 10, offset: 5,
+      });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListPersonReviewQueue', {
+        organizationId: 'org-1', projectIds: 'p-1,p-2', assignee: 'agents', type: 'task', limit: 10, offset: 5,
+      });
+      expect(ENDPOINT_MAP.mcpListPersonReviewQueue).toEqual({ route: 'mcp/v1/review-queue', method: 'GET' });
+    });
+
+    it('merges projectId into projectIds when both are sent', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce(personQueue);
+      await listReviewQueue({ organizationId: 'org-1', projectId: 'p-3', projectIds: ['p-1'] });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListPersonReviewQueue', { organizationId: 'org-1', projectIds: 'p-1,p-3' });
+    });
+
+    it("defaults the organization to the checkout's config", async () => {
+      mockReadConfig.mockResolvedValueOnce({ organizationId: 'org-local', projectId: 'p-1' });
+      mockCallEzmodoAPI.mockResolvedValueOnce(personQueue);
+      await listReviewQueue({});
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListPersonReviewQueue', { organizationId: 'org-local' });
+    });
+
+    it('formats task and document rows with their project', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce(personQueue);
+      const result = await listReviewQueue({ organizationId: 'org-1' });
+      expect(result).toMatchObject({
+        organizationId: 'org-1', total: 2, hasMore: false, offset: 0, counts: { tasks: 1, documents: 1, total: 2 },
+        projects: [{ id: 'p-1', name: 'Ezmodo', approvePolicy: 'humans', count: 1 }],
+      });
+      expect(result.items[0]).toEqual({
+        type: 'task',
+        project: { id: 'p-1', name: 'Ezmodo' },
+        approvePolicy: 'humans',
+        taskId: 't-1',
+        taskNumber: 42,
+        title: 'Add the thing',
+        taskType: 'feature',
+        priority: 'high',
+        assignee: { type: 'human', name: 'Sam' },
+        submittedAt: '2026-11-04T10:00:00Z',
+        verification: { total: 3, pass: 2, fail: 1, blocked: 0, skip: 0, notRun: 0 },
+        summary: 'Shipped the thing.',
+      });
+      expect(result.items[1]).toEqual({
+        type: 'document',
+        project: { id: 'p-2', name: 'Saltpig' },
+        approvePolicy: 'humans_and_agents',
+        documentId: 'd-1',
+        title: 'Runbook',
+        submittedAt: '2026-11-05T10:00:00Z',
+        submittedByAgent: 'Claude',
+        summary: 'Please check step 3',
+      });
+      expect(result.note).toMatch(/cannot approve/);
+    });
+
+    it('keeps the per-project route when only projectId is sent', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ tasks: [] });
+      await listReviewQueue({ projectId: 'p-1', organizationId: 'org-1' });
+      expect(mockCallEzmodoAPI).toHaveBeenCalledWith('mcpListReviewQueue', { projectId: 'p-1' });
+    });
+
+    it('declares projectIds, organizationId and type, and requires nothing', () => {
+      const tool = TOOLS.find((t) => t.name === 'list_review_queue');
+      expect(tool.inputSchema.properties.projectIds).toMatchObject({ type: 'array', items: { type: 'string' } });
+      expect(tool.inputSchema.properties.type.enum).toEqual(['task', 'document']);
+      expect(tool.inputSchema.properties.organizationId.type).toBe('string');
+      expect(tool.inputSchema.required).toBeUndefined();
+    });
   });
 
   it('formats each row with verification and a one-line summary', async () => {

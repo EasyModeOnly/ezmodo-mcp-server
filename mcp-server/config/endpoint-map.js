@@ -72,6 +72,8 @@ export const ENDPOINT_MAP = {
   'mcpGetTaskCommits': { route: 'mcp/v1/tasks/commits', method: 'GET' },
   // Review queue (E-302 #3444), read-only. Deciding is deliberately not here.
   'mcpListReviewQueue': { route: 'mcp/v1/projects/{projectId}/review-queue', method: 'GET' },
+  // The caller's cross-project queue (E-336 #4008): list_review_queue without a projectId.
+  'mcpListPersonReviewQueue': { route: 'mcp/v1/review-queue', method: 'GET' },
   'mcpGenerateTaskHowItWorks': { route: 'mcp/v1/tasks/generate-how-it-works', method: 'POST' },
   'mcpApplyTaskHowItWorks': { route: 'mcp/v1/tasks/apply-how-it-works', method: 'POST' },
   'mcpTaskHowItWorksContext': { route: 'mcp/v1/tasks/how-it-works-context', method: 'GET' },

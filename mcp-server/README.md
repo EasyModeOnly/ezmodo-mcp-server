@@ -241,14 +241,23 @@ watched tasks.
 - `limit` (optional): Max results (default: 20, max: 100)
 
 ### 11. `list_review_queue`
-A project's tasks waiting for review, oldest submission first, each with its
-assignee, `submittedAt`, verification counts from linked test cases and a
-one-line summary. Read-only: agents cannot approve or send back. A task sent
-back comes out of `get_task` with a top-level `reviewFeedback`, the reviewer's
-newest feedback, which the agent should address first.
+What is waiting for review, oldest submission first. With `projectId`, that
+project's tasks, each with its assignee, `submittedAt`, verification counts
+from linked test cases and a one-line summary. Without `projectId` (or with
+`projectIds`), your cross-project queue in an organization, the web Inbox's
+Review tab: tasks and documents in every project you may decide reviews in,
+each row naming its project and approve policy. Read-only: agents cannot
+approve or send back. A task sent back comes out of `get_task` with a
+top-level `reviewFeedback`, the reviewer's newest feedback, which the agent
+should address first.
 
 **Parameters:**
-- `projectId` (required): Project to list
+- `projectId` (optional): One project's queue
+- `projectIds` (optional): Cross-project mode, only these projects
+- `organizationId` (optional): Cross-project mode's organization (defaults to
+  the checkout's `.ezmodo/config.json`; required on the remote connector)
+- `type` (optional): Cross-project mode, `task` or `document`
+- `assignee` (optional): `me`, `agents`, `unassigned` or an id; several OR'd
 - `limit` (optional): Page size (default: 25, max: 100)
 - `offset` (optional): Rows to skip (default: 0)
 
