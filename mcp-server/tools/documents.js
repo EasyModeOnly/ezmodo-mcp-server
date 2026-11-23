@@ -5,6 +5,54 @@
 
 import { LINKS_ARRAY_SCHEMA, RELATED_ITEM_SCHEMA } from './link-params.js';
 
+/**
+ * Folder contents filters (E-343 #3958), shared by get_document's list mode
+ * and list_org_documents: they run on the server over the whole folder, so a
+ * filtered page never misses a match that sat on a later page.
+ */
+const CONTENTS_FILTER_PROPERTIES = {
+  q: {
+    type: 'string',
+    description: 'Search titles and summaries, case-insensitive (list mode). Also matches child folder names.',
+  },
+  statuses: {
+    type: 'array',
+    items: { type: 'string', enum: ['draft', 'in_review', 'published', 'archived'] },
+    description: 'Only these statuses (list mode). ["in_review"] is what is waiting for review.',
+  },
+  types: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Only these document types, e.g. ["guide", "adr"] (list mode)',
+  },
+  ownerIds: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Only documents created by these user ids (list mode)',
+  },
+  tagIds: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Only documents with any of these tag ids (list mode)',
+  },
+  sort: {
+    type: 'string',
+    enum: ['manual', 'updated', 'name', 'created'],
+    description: 'Order (list mode): "manual" (the folder\'s drag order, default), "updated" or "created" ' +
+      '(newest first), "name" (A to Z). dir reverses it.',
+  },
+  dir: { type: 'string', enum: ['asc', 'desc'], description: 'Sort direction; defaults to the sort\'s natural one' },
+  cursor: {
+    type: 'string',
+    description: 'nextCursor from the previous page, with the same filters and sort. Keep going while ' +
+      'hasMore is true: a page can hold fewer documents than limit when some are hidden from you.',
+  },
+  includeIndex: {
+    type: 'boolean',
+    description: 'Include the folder\'s index page in the list (it is left out by default)',
+  },
+};
+
 export const DOCUMENT_TOOLS = [
   {
     name: 'manage_document',
@@ -26,6 +74,8 @@ export const DOCUMENT_TOOLS = [
       'Editing a PUBLISHED document makes it a draft and readers keep seeing the published copy: when your ' +
       'change is ready, action:"submit_for_review" (documentId, optional note for the reviewer) asks a person ' +
       'to approve and publish it; action:"withdraw_review" takes that back. Agents cannot publish. ' +
+      'action:"discard_edits" (documentId + expectedUpdatedAt) throws those edits away instead and puts the ' +
+      'document back to its published version, recorded in its history. ' +
       'action:"add_image" uploads an image (PNG, JPEG, GIF or WebP, up to 10 MB; no SVG) and places it ' +
       'below the block holding an anchor: documentId, alt, one of filePath or base64+mimeType, and one of ' +
       'afterHeading, afterText or append:true. For a help page or how-to: one screenshot per step where the ' +
@@ -55,11 +105,15 @@ export const DOCUMENT_TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['create', 'update', 'create_version', 'restore', 'submit_for_review', 'withdraw_review', 'add_image', 'import', 'export'],
+          enum: [
+            'create', 'update', 'create_version', 'restore', 'submit_for_review', 'withdraw_review',
+            'discard_edits', 'add_image', 'import', 'export',
+          ],
           description: 'Action to perform. "create_version" saves the current document as a named version ' +
             '(documentId, optional note). "restore" makes a history entry the current version ' +
             '(documentId + historyEntryId). "submit_for_review" asks a person to approve and publish the ' +
-            'document (documentId, optional note); "withdraw_review" returns it to draft. "add_image" ' +
+            'document (documentId, optional note); "withdraw_review" returns it to draft. "discard_edits" puts ' +
+            'a published document back to its published version (documentId + expectedUpdatedAt). "add_image" ' +
             'uploads an image and places it in the document (see filePath, base64, alt, afterHeading). ' +
             '"import" turns a .md/.markdown file or a .zip of them into draft documents and folders ' +
             '(projectId, filePath or base64+name, optional folderId and dryRun). ' +
@@ -290,7 +344,10 @@ export const DOCUMENT_TOOLS = [
       'These are documents created with organizationId and no projectId — e.g. cross-project ' +
       'ADRs and "how it works" overviews living in the org\'s reserved document areas ' +
       '(Goals, Features, ADRs, How it works; see get_org_areas). ' +
-      'Optionally filter to a single area/folder via folderId.',
+      'Optionally filter to a single area/folder via folderId. ' +
+      'With q, statuses, types, ownerIds, tagIds, sort or cursor it lists ONE folder (folderId, or the ' +
+      'workspace root) like the web\'s folder page: child folders first with item counts, then a page of ' +
+      'documents with summary, owner, status, hasUnpublishedEdits and restricted, plus total and nextCursor.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -298,6 +355,7 @@ export const DOCUMENT_TOOLS = [
           type: 'string',
           description: 'Organization ID (required)',
         },
+        ...CONTENTS_FILTER_PROPERTIES,
         folderId: {
           type: 'string',
           description: 'Optional area/folder ID to scope the list to. Omit to list all of ' +
@@ -361,6 +419,10 @@ export const DOCUMENT_TOOLS = [
     description: 'Retrieve a single document, or list all docs for a project. ' +
       'Provide documentId (or projectId + slug) for single lookup. ' +
       'Provide just projectId to list all docs. ' +
+      'To list ONE folder the way the web\'s folder page does, add folderId (omit for the project root) and ' +
+      'any of q, statuses, types, ownerIds, tagIds, sort, limit, cursor: filters run on the server over the ' +
+      'whole folder; the answer has child folders (first page) with item counts, documents with summary, ' +
+      'owner, status, hasUnpublishedEdits and restricted, total, and nextCursor/hasMore. ' +
       'Single-doc content is saved to .ezmodo/docs/ and returns a file path; edit that file and push it ' +
       'with manage_document update fromFile:true. A re-download never overwrites edits you have not pushed ' +
       '(overwriteLocal:true discards them). ' +
@@ -397,6 +459,15 @@ export const DOCUMENT_TOOLS = [
           default: 'markdown',
         },
         // --- List mode filters ---
+        folderId: {
+          type: 'string',
+          description: 'List this folder\'s contents (list mode; omit with a filter for the project root)',
+        },
+        limit: {
+          type: 'number',
+          description: 'Documents per page for a folder listing (default 50, max 200)',
+        },
+        ...CONTENTS_FILTER_PROPERTIES,
         docType: {
           type: 'string',
           enum: ['setup', 'api', 'architecture', 'troubleshooting', 'guide', 'diagram', 'process', 'context', 'other'],

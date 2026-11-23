@@ -14,6 +14,7 @@ import { loadImportFile, summarizeImport, validateImportArgs } from '../lib/doc-
 import { computeEdits } from '../lib/text-edits.js';
 import { attachLinks } from '../lib/links-at-create.js';
 import { historyMode, summarizeEntry } from '../lib/version-history.js';
+import { contentsHint, contentsRequest, wantsContents } from '../lib/doc-contents.js';
 import { MAX_INLINE_BYTES, exportsRoot, safeExportFilename, writeExportFile } from '../lib/doc-exports.js';
 
 /**
@@ -31,6 +32,7 @@ export async function manageDocument(args) {
   case 'import': return importDocuments(params);
   case 'export': return exportDocuments(params);
   case 'create_version': return createVersion(params);
+  case 'discard_edits': return discardEdits(params);
   default: throw new Error(`Unknown action: ${action}`);
   }
 }
@@ -188,7 +190,11 @@ export async function getDocument(args) {
     throw new Error('History needs a single document: pass documentId (or projectId + slug).');
   }
 
-  // List mode
+  // List mode. Folder, search, filters, sort or a cursor ask for the
+  // folder contents list (E-343 #3958); without them, the older list.
+  if (wantsContents({ ...rest, status: undefined, docType: undefined })) {
+    return listContents({ projectId: rest.projectId }, { ...rest, status, docType });
+  }
   const listArgs = { projectId: rest.projectId };
   if (docType) listArgs.docType = docType;
   if (tags) listArgs.tags = tags;
@@ -253,6 +259,32 @@ async function createVersion({ documentId, note, changeNote }) {
   const label = (changeNote ?? note ?? '').trim();
   if (label) params.changeNote = label;
   return callEzmodoAPI('mcpCreateDocumentHistoryEntry', params);
+}
+
+/**
+ * manage_document action:"discard_edits" (E-343 #3961): put a published
+ * document's working copy back to its published version. expectedUpdatedAt is
+ * required, so edits saved after the agent read the document are not thrown
+ * away unseen (the API answers 409). A downloaded copy of the document is then
+ * stale, so the response says so.
+ */
+async function discardEdits({ documentId, expectedUpdatedAt }) {
+  if (!documentId) throw new Error('documentId is required for discard_edits');
+  if (!expectedUpdatedAt) {
+    throw new Error('expectedUpdatedAt is required for discard_edits: send the updatedAt from get_document, ' +
+      'so edits saved since you read it are not discarded unseen.');
+  }
+  const result = await callEzmodoAPI('mcpDiscardDocumentEdits', { documentId, expectedUpdatedAt });
+  const local = await findDownloadedDoc(documentId);
+  if (local) {
+    return {
+      ...result,
+      localFile: local.file,
+      note: `${local.file} still holds the discarded edits: re-download it with get_document ` +
+        'overwriteLocal:true before editing it again.',
+    };
+  }
+  return result;
 }
 
 /**
@@ -589,7 +621,23 @@ function fraction(ts) {
  * Params: organizationId (required), folderId (optional), limit (optional).
  */
 export async function listOrgDocuments(args) {
+  // A search, filter, sort or cursor asks for the contents list (E-343 #3958).
+  // folderId alone keeps the older flat list, which callers rely on.
+  const { folderId, limit, ...rest } = args;
+  if (wantsContents(rest)) {
+    return listContents({ organizationId: args.organizationId }, args);
+  }
   return callEzmodoAPI('mcpListOrgDocuments', args);
+}
+
+/**
+ * One page of a folder's contents (E-343 #3958): child folders first on the
+ * first page, then documents, filtered and sorted on the server.
+ */
+async function listContents(scope, args) {
+  const result = await callEzmodoAPI('mcpListDocumentContents', contentsRequest(scope, args));
+  const hint = contentsHint(result);
+  return hint ? { ...result, hint } : result;
 }
 
 // Document Template helpers

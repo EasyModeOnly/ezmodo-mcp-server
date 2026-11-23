@@ -160,6 +160,8 @@ export const ENDPOINT_MAP = {
   // Documentation
   'mcpGetDocumentation': { route: 'mcp/v1/documents', method: 'GET' },
   'mcpGetDocument': { route: 'mcp/v1/documents/by-id', method: 'GET' },
+  // A folder's contents: filters, sort, keyset paging (E-343 #3958)
+  'mcpListDocumentContents': { route: 'mcp/v1/documents/contents', method: 'GET' },
   'mcpCreateDocument': { route: 'mcp/v1/documents', method: 'POST' },
   'mcpUpdateDocument': { route: 'mcp/v1/documents', method: 'PUT' },
   // Org-scoped (project-less) document listing (E-195)
@@ -174,6 +176,8 @@ export const ENDPOINT_MAP = {
   'mcpRestoreDocumentHistory': { route: 'mcp/v1/document-history/restore', method: 'POST' },
   // Submit a document for review or withdraw it; there is no publish (E-304 #3454).
   'mcpReviewDocument': { route: 'mcp/v1/document-review', method: 'POST' },
+  // Put a published document's working copy back to its published version (E-343 #3961)
+  'mcpDiscardDocumentEdits': { route: 'mcp/v1/documents/discard-edits', method: 'POST' },
   // Place an image in a document (#3449): a signed upload URL, then the insert.
   'mcpDocumentImageUploadURL': { route: 'mcp/v1/documents/media/upload-url', method: 'POST' },
   'mcpInsertDocumentImage': { route: 'mcp/v1/documents/images', method: 'POST' },
