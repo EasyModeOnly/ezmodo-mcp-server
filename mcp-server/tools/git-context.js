@@ -41,7 +41,8 @@ export const GIT_CONTEXT_TOOLS = [
       'Write anything a person reads in those words: a marketing project calls ' +
       'an epic a "Campaign". Keep the API field ' +
       'names (epicId, taskId) as they are. A null `terminology` means plain ' +
-      'English, not an error.',
+      'English, not an error. `projectRef` is the project\'s reference ' +
+      '(e.g. P:2601) for citing it in text; null until the cache is next refreshed.',
     inputSchema: {
       type: 'object',
       properties: {

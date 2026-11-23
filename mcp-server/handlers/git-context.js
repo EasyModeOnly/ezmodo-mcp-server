@@ -483,6 +483,16 @@ async function withAnsweredWhileAway(organizationId, context) {
   return away.length > 0 ? { answeredWhileAway: away, ...context } : context;
 }
 
+/**
+ * The active project's canonical reference (E-335 #4015), e.g. "P:2601", as
+ * cached in the config. Kept per project id because a monorepo config serves
+ * several projects. null until a refresh has fetched it (a config written by
+ * an older server has none), never a guess.
+ */
+export function cachedProjectRef(config, projectId) {
+  return config?.projectRefs?.[projectId] || null;
+}
+
 export async function getCurrentProjectContext(args) {
   const { workingDirectory = process.cwd() } = args;
 
@@ -541,6 +551,7 @@ export async function getCurrentProjectContext(args) {
             found: true,
             projectId: activeProject.id,
             projectName: activeProject.name,
+            projectRef: cachedProjectRef(config, activeProject.id),
             orgSlug: config.orgSlug,
             organizationId: config.organizationId,
             isMonorepo,
@@ -571,6 +582,7 @@ export async function getCurrentProjectContext(args) {
         let projectSettings = null;
         let projectType = null;
         let terminology = null;
+        let projectRef = cachedProjectRef(config, activeProject.id);
         try {
           // Check if project exists and user has access
           const ctx = await getProject({ projectId: activeProject.id });
@@ -580,6 +592,8 @@ export async function getCurrentProjectContext(args) {
           // unrecognised type has no template, which means plain English.
           projectType = ctx?.type || null;
           terminology = ctx?.terminology || null;
+          // E-335: the project's ref (P:2601), so an agent can cite it.
+          projectRef = ctx?.ref || projectRef;
         } catch (error) {
           const errorMsg = error.message || String(error);
           if (errorMsg.includes('404') || errorMsg.includes('not found')) {
@@ -622,6 +636,9 @@ export async function getCurrentProjectContext(args) {
             config.tags = tags;
             config.projectType = projectType;
             config.terminology = terminology;
+            if (projectRef) {
+              config.projectRefs = { ...config.projectRefs, [activeProject.id]: projectRef };
+            }
             config.settings = {
               ...config.settings,
               aiConfig: projectSettings?.aiConfig || config.settings?.aiConfig || null,
@@ -637,6 +654,7 @@ export async function getCurrentProjectContext(args) {
           found: true,
           projectId: activeProject.id,
           projectName: activeProject.name,
+          projectRef,
           orgSlug: config.orgSlug,
           organizationId: config.organizationId,
           isMonorepo,
