@@ -381,12 +381,13 @@ async function addImage(args) {
 async function importDocuments(args) {
   validateImportArgs(args);
   const file = await loadImportFile(args);
-  const request = {
-    projectId: args.projectId,
+  // projectId, or organizationId alone for the workspace's docs (#4016).
+  const request = args.projectId ? { projectId: args.projectId } : { organizationId: args.organizationId };
+  Object.assign(request, {
     name: file.name,
     contentBase64: file.bytes.toString('base64'),
     dryRun: args.dryRun === true,
-  };
+  });
   if (args.folderId) request.folderId = args.folderId;
 
   const report = await callEzmodoAPI('mcpImportDocuments', request);

@@ -86,7 +86,8 @@ export const DOCUMENT_TOOLS = [
       'person\'s own private things (other tabs, notifications, their email). Use a test workspace, crop it ' +
       'out or skip the image; do not blur. Alt text says what the image shows and why it matters for the ' +
       'step, in a sentence. ' +
-      'action:"import" brings Markdown in: projectId, optional folderId (default the project root), and ' +
+      'action:"import" brings Markdown in: projectId (or organizationId alone, for the workspace docs; ' +
+      'not into a reserved area such as ADRs), optional folderId (default the root), and ' +
       'one .md/.markdown file or a .zip of them, as filePath or base64+name. Each .md becomes a DRAFT ' +
       'document titled by its first "# Heading" (else its file name); folders in the zip become folders; ' +
       'a README.md or index.md becomes its folder\'s index page when the folder has none. Existing ' +
@@ -116,13 +117,13 @@ export const DOCUMENT_TOOLS = [
             'a published document back to its published version (documentId + expectedUpdatedAt). "add_image" ' +
             'uploads an image and places it in the document (see filePath, base64, alt, afterHeading). ' +
             '"import" turns a .md/.markdown file or a .zip of them into draft documents and folders ' +
-            '(projectId, filePath or base64+name, optional folderId and dryRun). ' +
+            '(projectId or organizationId, filePath or base64+name, optional folderId and dryRun). ' +
             '"export" downloads a document, folder or the project root as Markdown or PDF (see format).',
         },
         // --- Identifiers ---
         projectId: {
           type: 'string',
-          description: 'Project ID. Provide for a PROJECT-SCOPED document; required for import. ' +
+          description: 'Project ID. Provide for a PROJECT-SCOPED document; for import, this or organizationId. ' +
             'Mutually exclusive with organizationId — supply exactly one when creating. For export, ' +
             'projectId alone (no documentId or folderId) exports the whole Documentation root.',
         },
@@ -132,7 +133,8 @@ export const DOCUMENT_TOOLS = [
             'ORG-SCOPED (project-less) document. Exactly one of projectId or organizationId. ' +
             'Org-scoped docs live in the org\'s document areas (Goals, Features, ADRs, How it ' +
             'works — see get_org_areas / list_org_documents); leaving folderId empty for an ' +
-            '"adr" or "how-it-works" type auto-files the doc into the matching reserved area. (E-195)',
+            '"adr" or "how-it-works" type auto-files the doc into the matching reserved area. (E-195) ' +
+            'For import, organizationId with no projectId imports into the workspace docs.',
         },
         documentId: {
           type: 'string',
@@ -283,7 +285,8 @@ export const DOCUMENT_TOOLS = [
         folderId: {
           type: 'string',
           description: 'Folder ID to organize the document (create, update). For import, the folder the ' +
-            'imported documents and folders go into; omitted = the project root. For export, the folder to ' +
+            'imported documents and folders go into; omitted = the project or workspace root. ' +
+            'For export, the folder to ' +
             'export. (create, update, import, export)',
         },
         isIndex: {

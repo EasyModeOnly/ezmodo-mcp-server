@@ -43,7 +43,14 @@ function tooBig(source, size) {
 
 /** Check the arguments' shape. Throws a message the agent can act on. */
 export function validateImportArgs(args) {
-  if (!present(args.projectId)) throw new Error('projectId is required for import.');
+  const scopes = ['projectId', 'organizationId'].filter((k) => present(args[k]));
+  if (scopes.length !== 1) {
+    throw new Error(
+      scopes.length === 0
+        ? 'projectId is required for import, or organizationId alone to import into the workspace docs.'
+        : 'import goes to one place: pass projectId or organizationId, not both.'
+    );
+  }
   if (args.dryRun !== undefined && typeof args.dryRun !== 'boolean') {
     throw new Error('dryRun must be true or false.');
   }

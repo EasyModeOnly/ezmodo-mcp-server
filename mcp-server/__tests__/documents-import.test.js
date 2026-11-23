@@ -94,6 +94,14 @@ describe('manage_document import (#3456): what is sent', () => {
     expect(importBody().contentBase64).toBe(ZIP.toString('base64'));
   });
 
+  it('sends organizationId alone to import into the workspace docs (#4016)', async () => {
+    await imp({ projectId: undefined, organizationId: 'org1', filePath: 'guide.md', folderId: 'wf1' });
+    const body = importBody();
+    expect(body.organizationId).toBe('org1');
+    expect(body.projectId).toBeUndefined();
+    expect(body.folderId).toBe('wf1');
+  });
+
   it('works without a checkout for base64', async () => {
     hasCheckout = false;
     await imp({ base64: Buffer.from(MD).toString('base64'), name: 'guide.markdown' });
@@ -106,6 +114,7 @@ describe('manage_document import: refusals before any network call', () => {
 
   it.each([
     [{ projectId: undefined, filePath: 'guide.md' }, /projectId is required/],
+    [{ organizationId: 'org1', filePath: 'guide.md' }, /projectId or organizationId, not both/],
     [{}, /filePath.*or base64 \+ name/],
     [{ filePath: 'guide.md', base64: 'eA==', name: 'a.md' }, /not both/],
     [{ base64: 'eA==' }, /name is required/],
