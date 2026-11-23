@@ -176,6 +176,7 @@ export const HANDLERS = {
   manage_link: linkHandlers.manageLink,
   list_links: linkHandlers.listLinks,
   resolve_links: linkHandlers.resolveLinks,
+  resolve_refs: linkHandlers.resolveRefs,
   preview_links: linkHandlers.previewLinks,
 
   // Entity access control (#2170) — polymorphic over the types the access

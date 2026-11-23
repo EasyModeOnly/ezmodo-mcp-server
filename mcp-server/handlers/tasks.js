@@ -27,6 +27,7 @@ import { normalizeChangedFiles } from '../lib/changed-files.js';
 import { applyCommitToManifest } from '../lib/commit-manifest.js';
 import { latestReviewFeedback } from '../lib/review-feedback.js';
 import { getAgentSessionId } from '../lib/agent-session.js';
+import { withRefResolved } from '../lib/ref-lookup.js';
 
 /**
  * Dispatch manage_task actions to the appropriate handler
@@ -543,7 +544,8 @@ export async function searchTasks(args) {
   return callEzmodoAPI('mcpSearchTasks', args);
 }
 
-export async function getTask(args) {
+export async function getTask(rawArgs) {
+  const args = await withRefResolved(rawArgs, 'taskId', 'task');
   // The session that asked questions on this task reading it counts as it
   // checking for answers (#3893).
   const sessionId = getAgentSessionId();

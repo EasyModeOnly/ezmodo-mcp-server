@@ -13,6 +13,7 @@ import {
   attachSuggestionIds,
 } from '../lib/autolink.js';
 import { callEzmodoAPI } from '../lib/http-client.js';
+import { localProjectFor } from '../lib/local-project.js';
 
 /**
  * Dispatch manage_link to add or remove a link.
@@ -128,6 +129,29 @@ export async function resolveLinks({ projectId, paths }) {
     },
     unmatchedPaths: unresolved,
     count: features.length,
+  };
+}
+
+/**
+ * resolve_refs — references (E-335: T:42, web/FF:3, #12 …) to entities.
+ *
+ * The project defaults to the checkout's, so a bare T:42 means this repo's
+ * task #42 without the agent having to say so.
+ */
+export async function resolveRefs({ text, refs, projectId, organizationId }) {
+  if (!text && !(refs && refs.length)) {
+    throw new Error('Pass text and/or refs to resolve.');
+  }
+  const project = projectId || (await localProjectFor(organizationId));
+  const result = await callEzmodoAPI('mcpResolveRefs', {
+    text, refs, projectId: project, organizationId,
+  });
+  const resolved = result?.refs || [];
+  return {
+    refs: resolved,
+    invalid: result?.invalid || [],
+    resolvedCount: resolved.filter((r) => r.resolved).length,
+    unresolvedCount: resolved.filter((r) => !r.resolved).length,
   };
 }
 

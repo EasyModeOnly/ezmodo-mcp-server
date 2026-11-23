@@ -167,6 +167,7 @@ export const REMOTE_SAFE_TOOLS = Object.freeze([
   'resolve_concepts',
   'resolve_link_suggestions',
   'resolve_links',
+  'resolve_refs',
   'resolve_unmapped',
   'manage_plan_proposal',
   'run_agent_now',

@@ -734,6 +734,11 @@ export const TASK_TOOLS = [
           type: 'string',
           description: 'The project ID. Required when using taskNumber instead of taskId.',
         },
+        ref: {
+          type: 'string',
+          description: 'A task reference instead of taskId/taskNumber: "T:42", "web/T:42" for another ' +
+            'project, or the older "#42". A bare ref means projectId, else this checkout\'s project.',
+        },
       },
     },
   },

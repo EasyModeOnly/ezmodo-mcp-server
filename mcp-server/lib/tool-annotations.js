@@ -94,6 +94,8 @@ export const READ_ONLY_TOOLS = new Set([
   'list_watched',
   'preview_links',
   'resolve_concepts',
+  // POST to refs/resolve, mounted behind OptionalReadScopeMiddleware (E-335).
+  'resolve_refs',
   'search_epics',
   'search_features',
   'search_tasks',

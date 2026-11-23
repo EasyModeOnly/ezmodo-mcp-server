@@ -258,6 +258,8 @@ export const ENDPOINT_MAP = {
   // and file paths may legitimately contain commas.
   'mcpResolvePaths': { route: 'mcp/v1/links/resolve-paths', method: 'POST' },
   'mcpPreviewLinks': { route: 'mcp/v1/links/preview', method: 'POST' },
+  // E-335 references: T:42, web/FF:3, #12 … resolved to entities. POST: text.
+  'mcpResolveRefs': { route: 'mcp/v1/refs/resolve', method: 'POST' },
   // No 'mcpLinkSuggestions' here on purpose: mcp/v1/links/suggestions reads the
   // same agent_suggestions rows as mcpListAgentSuggestions below, which already
   // has a tool. Two ways to read one queue is how they drift apart (#2297).

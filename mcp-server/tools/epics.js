@@ -327,6 +327,11 @@ export const EPIC_TOOLS = [
           type: 'string',
           description: 'The project ID. Required when using epicNumber instead of epicId.',
         },
+        ref: {
+          type: 'string',
+          description: 'An epic reference instead of epicId/epicNumber: "E:7", "web/E:7" for another ' +
+            'project, or the older "E-7". A bare ref means projectId, else this checkout\'s project.',
+        },
         includeTasks: {
           type: 'boolean',
           description: 'If true, includes lightweight task info (id, title, status, priority, assignee) ' +

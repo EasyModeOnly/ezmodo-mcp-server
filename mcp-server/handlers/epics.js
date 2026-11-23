@@ -18,6 +18,7 @@ import { attachLinks } from '../lib/links-at-create.js';
 import { attachLinkUpdates, hasLinkUpdates } from '../lib/link-updates.js';
 import { normalizeChangedFiles } from '../lib/changed-files.js';
 import { moveOutDeferredFromEpic } from './move-out-deferred.js';
+import { withRefResolved } from '../lib/ref-lookup.js';
 
 // Statuses an epic may be created in (#3224). "active" is accepted only with
 // `tasks`; the API enforces the same rule and answers 400 otherwise.
@@ -228,7 +229,8 @@ export async function listEpics(args) {
   return callEzmodoAPI('mcpListEpics', args);
 }
 
-export async function getEpic(args) {
+export async function getEpic(rawArgs) {
+  const args = await withRefResolved(rawArgs, 'epicId', 'epic');
   const result = await callEzmodoAPI('mcpGetEpic', args);
   const webUrl = await buildEpicUrl(result?.epic?.epicNumber);
   if (webUrl && result?.epic) result.epic.webUrl = webUrl;

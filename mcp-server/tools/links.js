@@ -166,6 +166,40 @@ export const LINK_TOOLS = [
     },
   },
   {
+    name: 'resolve_refs',
+    description:
+      'Resolve references such as T:42, E:335, web/T:12, D:3, F:7, FF:2, web/FF:2, M:4, I:9, PR:2609, ' +
+      'P:2601, DOC:release-runbook, G:5, S:48 (and the older #123 / E-45) to the entities they name: ' +
+      'id, title, status, project and canonical `ref`. Read-only.\n\n' +
+      'Pass `text` to find every reference in a description, comment or commit message (code spans, ' +
+      'fenced code and URLs are skipped), and/or `refs` to resolve specific ones. Bare task, epic, ' +
+      'design, milestone, issue, PR and document refs mean the current project (`projectId`, which ' +
+      'defaults to this checkout\'s project); prefix a project slug for another one (web/T:12). A bare ' +
+      'FF:n is always the workspace-wide flag; a project flag is always slug/FF:n. Features, goals, ' +
+      'sprints and projects are workspace-wide. A reference that does not resolve comes back with ' +
+      '`resolved:false` and a `reason` (not_found, unknown_project, no_project, unsupported), never ' +
+      'dropped. Write references in the canonical PREFIX:number form yourself.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Text to scan for references' },
+        refs: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Individual references to resolve, e.g. ["T:42", "web/FF:2"] (max 200)',
+        },
+        projectId: {
+          type: 'string',
+          description: 'The current project, for bare project-scoped refs. Defaults to the checkout\'s project.',
+        },
+        organizationId: {
+          type: 'string',
+          description: 'Organization, when there is no project',
+        },
+      },
+    },
+  },
+  {
     name: 'preview_links',
     description:
       'Show what ezmodo WOULD link an entity to, without writing anything. Each proposal reports ' +
