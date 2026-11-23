@@ -87,7 +87,8 @@ export const DOCUMENT_TOOLS = [
       'out or skip the image; do not blur. Alt text says what the image shows and why it matters for the ' +
       'step, in a sentence. ' +
       'action:"import" brings Markdown in: projectId (or organizationId alone, for the workspace docs; ' +
-      'not into a reserved area such as ADRs), optional folderId (default the root), and ' +
+      'into the ADRs or How it works area the documents get type adr or how-it-works, except index pages; ' +
+      'the Goals and Features areas are refused), optional folderId (default the root), and ' +
       'one .md/.markdown file or a .zip of them, as filePath or base64+name. Each .md becomes a DRAFT ' +
       'document titled by its first "# Heading" (else its file name); folders in the zip become folders; ' +
       'a README.md or index.md becomes its folder\'s index page when the folder has none. Existing ' +
