@@ -14,7 +14,10 @@ export const REVIEW_TOOLS = [
       '(member or above), narrowed to projectIds when given; each row names its project and that project\'s ' +
       'approvePolicy, and documents are included when your key can read documents (type narrows to one). ' +
       'Each task row has the task number, title, assignee, submittedAt, verification counts from linked ' +
-      'test cases (total, pass, fail, blocked, skip, notRun) and a one-line summary. ' +
+      'test cases (total, pass, fail, blocked, skip, notRun), a one-line summary, and referenced: every ' +
+      'entity its title, description, comments, completion notes and knowledge cite (type, ref, id, title, ' +
+      'status), so you can review those too without looking each up; absent when it cites nothing, and ' +
+      'never anything you may not open. ' +
       'Read-only: agents cannot approve or send back; a human decides in the web app. ' +
       'Paged: read total and hasMore. ' +
       'Pass assignee to narrow by who the task is assigned to (a document by its owner): ' +

@@ -223,6 +223,46 @@ describe('list_review_queue', () => {
     expect(result.tasks[0].summary).toBe('latest progress');
   });
 
+  describe('referenced (#3885)', () => {
+    const referenced = [
+      { entityType: 'task', ref: 'T:7', resolved: true, id: 't-7', title: 'Parser', status: 'completed', projectId: 'p-1', projectSlug: 'ezmodo', number: 7 },
+      { entityType: 'task', ref: 'web/T:3', resolved: true, id: 'w-3', title: 'Web bit', status: 'todo', projectId: 'p-2', projectSlug: 'web', number: 3 },
+      { entityType: 'feature', ref: 'F:2', resolved: true, id: 'f-2', title: 'Refs', status: 'active', number: 2 },
+      { entityType: 'task', ref: 'T:99', resolved: false },
+    ];
+
+    it('lists what the task cites, trimmed, on the per-project queue', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ tasks: [{ ...apiRow, referenced }], total: 1 });
+      const result = await listReviewQueue({ projectId: 'p-1' });
+      expect(result.tasks[0].referenced).toEqual([
+        { type: 'task', ref: 'T:7', id: 't-7', title: 'Parser', status: 'completed' },
+        { type: 'task', ref: 'web/T:3', id: 'w-3', title: 'Web bit', status: 'todo', projectSlug: 'web' },
+        { type: 'feature', ref: 'F:2', id: 'f-2', title: 'Refs', status: 'active' },
+      ]);
+    });
+
+    it('lists it on cross-project task rows too', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({
+        organizationId: 'org-1',
+        items: [{ type: 'task', projectId: 'p-1', projectName: 'Ezmodo', approvePolicy: 'humans', submittedAt: 'x', task: { ...apiRow, referenced } }],
+        total: 1,
+      });
+      const result = await listReviewQueue({ organizationId: 'org-1' });
+      expect(result.items[0].referenced.map((r) => r.ref)).toEqual(['T:7', 'web/T:3', 'F:2']);
+    });
+
+    it('is absent when the task cites nothing', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ tasks: [{ ...apiRow, referenced: [] }], total: 1 });
+      const result = await listReviewQueue({ projectId: 'p-1' });
+      expect(result.tasks[0]).not.toHaveProperty('referenced');
+    });
+
+    it('is described on the tool', () => {
+      const tool = TOOLS.find((t) => t.name === 'list_review_queue');
+      expect(tool.description).toMatch(/referenced/);
+    });
+  });
+
   it('returns an empty queue cleanly', async () => {
     mockCallEzmodoAPI.mockResolvedValueOnce({ projectId: 'p-1', tasks: [], total: 0, limit: 25, offset: 0, hasMore: false, approvePolicy: 'humans_and_agents' });
 

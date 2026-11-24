@@ -20,9 +20,29 @@ function newestNote(notes) {
   return notes.reduce((a, b) => (Date.parse(b?.addedAt) >= Date.parse(a?.addedAt) ? b : a));
 }
 
+/**
+ * One referenced entity (#3885), trimmed: the ref to cite or look up, the id
+ * for get_* tools, and what it is now. Keeps the project slug only when the
+ * ref is qualified with it, since a bare ref already means the task's project.
+ */
+export function formatReference(r) {
+  return {
+    type: r.entityType,
+    ref: r.ref,
+    id: r.id,
+    ...(r.title ? { title: r.title } : {}),
+    ...(r.status ? { status: r.status } : {}),
+    ...(r.projectSlug && typeof r.ref === 'string' && r.ref.startsWith(`${r.projectSlug}/`)
+      ? { projectSlug: r.projectSlug } : {}),
+  };
+}
+
 /** One queue row, trimmed to what an agent needs to pick a task. */
 export function formatQueueTask(task) {
   const summary = firstLine(task.completionNotes) || firstLine(newestNote(task.notes)?.content);
+  const referenced = Array.isArray(task.referenced)
+    ? task.referenced.filter((r) => r && r.resolved !== false && r.id).map(formatReference)
+    : [];
   return {
     taskId: task.id,
     taskNumber: task.taskNumber,
@@ -33,6 +53,8 @@ export function formatQueueTask(task) {
     submittedAt: task.submittedAt,
     verification: task.verification,
     ...(summary ? { summary } : {}),
+    // Everything the task's text cites, for the reviewer to open too (#3885).
+    ...(referenced.length > 0 ? { referenced } : {}),
   };
 }
 
