@@ -15,6 +15,7 @@
 import { LINKS_ARRAY_SCHEMA, RELATED_ITEM_SCHEMA } from './link-params.js';
 import { TASK_ITEM_PROPERTIES } from './task-item-schema.js';
 import { TASK_TYPE_PROPERTY } from './task-type.js';
+import { REF_HINT } from './ref-hint.js';
 
 export const TASK_TOOLS = [
   {
@@ -29,7 +30,7 @@ export const TASK_TOOLS = [
       'search_features), and pass changedFiles — the files resolve to the features that own those paths. ' +
       '"link_commit" also applies the commit to the project\'s context manifest (added, modified, deleted ' +
       'and renamed files) and returns `manifest.needsSummary`: write a summary for each of those paths ' +
-      'with update_manifest_entries. Pass updateManifest:false to skip the manifest.',
+      'with update_manifest_entries. Pass updateManifest:false to skip the manifest. ' + REF_HINT,
     inputSchema: {
       type: 'object',
       properties: {
@@ -549,7 +550,7 @@ export const TASK_TOOLS = [
       'would duplicate them. ' +
       'Limited to 40 tasks per call — split anything larger. ' +
       'For a single task, keep using manage_task action:"create", which also resolves ' +
-      'code context and applies links.',
+      'code context and applies links. ' + REF_HINT,
     inputSchema: {
       type: 'object',
       properties: {

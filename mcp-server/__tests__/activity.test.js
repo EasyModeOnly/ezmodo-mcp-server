@@ -67,8 +67,8 @@ describe('Activity Operations', () => {
 
       const result = await getProjectChanges({ projectId: 'proj-1' });
 
-      expect(result.events[0].humanDescription).toBe("Sarah completed task #42 'Fix login bug'");
-      expect(result.events[1].humanDescription).toBe("Sarah created epic E-5 'User Auth'");
+      expect(result.events[0].humanDescription).toBe("Sarah completed task T:42 'Fix login bug'");
+      expect(result.events[1].humanDescription).toBe("Sarah created epic E:5 'User Auth'");
     });
 
     it('should parse relative duration "7d"', async () => {

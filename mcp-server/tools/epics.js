@@ -15,6 +15,7 @@
 import { LINKS_ARRAY_SCHEMA, RELATED_ITEM_SCHEMA } from './link-params.js';
 import { TASK_ITEM_PROPERTIES } from './task-item-schema.js';
 import { MOVE_OUT_DEFERRED_DESCRIPTION, MOVE_OUT_DEFERRED_PROPERTIES } from './move-out-deferred-params.js';
+import { REF_HINT } from './ref-hint.js';
 
 // A link staged on a plan or planned task before it exists (#2199, #2752).
 // Mirrors the desktop LinkDraft shape so a plan an AI saves back keeps the
@@ -52,7 +53,7 @@ export const EPIC_TOOLS = [
       'BREAKING DOWN A FEATURE: pass the child tasks in the `tasks` array on create and the epic and its ' +
       'whole breakdown are created in ONE request — do not follow a create with a separate create_tasks call. ' +
       'Besides the saved request, it removes the gap between the two: a failure part-way can no longer ' +
-      'leave an epic with no tasks that you then have to reconcile.',
+      'leave an epic with no tasks that you then have to reconcile. ' + REF_HINT,
     inputSchema: {
       type: 'object',
       properties: {

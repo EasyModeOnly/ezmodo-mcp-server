@@ -65,10 +65,10 @@ function actorLabel(actor) {
   return actor?.type === 'ai' && actor?.name ? `${name} (AI)` : name;
 }
 
-/** "#42" for a task, "Epic #7" style is the caller's business; this is the bare ref. */
+/** The entity's canonical ref (E-335): "T:42" for a task, "E:7" for an epic. */
 function refOf(entityType, metadata) {
-  if (entityType === 'task' && metadata?.taskNumber) return `#${metadata.taskNumber}`;
-  if (entityType === 'epic' && metadata?.epicNumber) return `#${metadata.epicNumber}`;
+  if (entityType === 'task' && metadata?.taskNumber) return `T:${metadata.taskNumber}`;
+  if (entityType === 'epic' && metadata?.epicNumber) return `E:${metadata.epicNumber}`;
   return null;
 }
 

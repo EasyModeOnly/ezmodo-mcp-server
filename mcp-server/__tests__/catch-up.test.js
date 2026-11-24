@@ -61,9 +61,9 @@ describe('grouping (E-283 #3180)', () => {
       ev({ eventType: 'task_comment_added', timestamp: at(21) }),
     ];
     const [item] = rankGroups(groupEvents(events));
-    expect(item.ref).toBe('#42');
+    expect(item.ref).toBe('T:42');
     expect(item.events).toBe(5);
-    expect(item.line).toContain('#42 “Fix login”');
+    expect(item.line).toContain('T:42 “Fix login”');
     expect(item.line).toContain('created');
     expect(item.line).toContain('todo → in_progress → in_review');
     expect(item.line).toContain('2 comments');

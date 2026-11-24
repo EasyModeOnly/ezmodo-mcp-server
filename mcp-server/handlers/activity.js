@@ -45,8 +45,8 @@ export function parseSinceParam(since) {
 function formatEventDescription(event) {
   const actor = event.actor?.name || 'Someone';
   const title = event.entityTitle || event.entityId;
-  const taskNum = event.metadata?.taskNumber ? `#${event.metadata.taskNumber}` : '';
-  const epicNum = event.metadata?.epicNumber ? `E-${event.metadata.epicNumber}` : '';
+  const taskNum = event.metadata?.taskNumber ? `T:${event.metadata.taskNumber}` : '';
+  const epicNum = event.metadata?.epicNumber ? `E:${event.metadata.epicNumber}` : '';
   const entityLabel = taskNum || epicNum || '';
   const titleWithNum = entityLabel ? `${entityLabel} '${title}'` : `'${title}'`;
 
