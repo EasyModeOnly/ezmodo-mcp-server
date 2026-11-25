@@ -42,19 +42,24 @@ const EXPORT_VERSIONS = new Set(['current', 'published']);
 
 /**
  * The export request the API takes: exactly one target (documentId, else
- * folderId, else projectId for the project's Documentation root), a format,
- * and for folders whether to include subfolders and which version to export.
+ * folderId, else projectId for the project's Documentation root, else
+ * organizationId for the workspace's docs root, #4053), a format, and for
+ * folders whether to include subfolders and which version to export.
  * Every refusal here happens before the network.
  */
 export function exportRequest(args) {
-  const { documentId, folderId, projectId, format, includeSubfolders, version } = args;
+  const { documentId, folderId, projectId, organizationId, format, includeSubfolders, version } = args;
   if (documentId && folderId) {
     throw new Error('Export one thing at a time: pass documentId OR folderId (or projectId alone for the ' +
-      'whole Documentation root), not both.');
+      'whole Documentation root, or organizationId alone for the workspace docs), not both.');
   }
-  if (!documentId && !folderId && !projectId) {
-    throw new Error('Pass what to export: documentId (one document), folderId (a folder), or projectId ' +
-      'alone (every document in the project).');
+  if (!documentId && !folderId && projectId && organizationId) {
+    throw new Error('Export one root at a time: projectId alone for a project\'s Documentation root, or ' +
+      'organizationId alone for the workspace docs, not both.');
+  }
+  if (!documentId && !folderId && !projectId && !organizationId) {
+    throw new Error('Pass what to export: documentId (one document), folderId (a folder), projectId ' +
+      'alone (every document in the project), or organizationId alone (the workspace docs).');
   }
   if (!EXPORT_FORMATS.has(format)) {
     throw new Error('format must be "md" (Markdown: a .md, or a .zip with images and folders) or "pdf".');
@@ -68,7 +73,8 @@ export function exportRequest(args) {
   const request = { format };
   if (documentId) request.documentId = documentId;
   else if (folderId) request.folderId = folderId;
-  else request.projectId = projectId;
+  else if (projectId) request.projectId = projectId;
+  else request.organizationId = organizationId;
   if (!documentId) {
     request.includeSubfolders = includeSubfolders ?? true;
     request.version = version ?? 'current';

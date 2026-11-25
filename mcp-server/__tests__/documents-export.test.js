@@ -73,8 +73,25 @@ describe('manage_document export: the request', () => {
     expect(sentBody()).toEqual({ projectId: 'proj-1', format: 'pdf', includeSubfolders: false, version: 'published' });
   });
 
+  it('sends organizationId alone as the workspace docs root (#4053)', async () => {
+    await manageDocument({ action: 'export', organizationId: 'org-1', format: 'md' });
+    expect(sentBody()).toEqual({ organizationId: 'org-1', format: 'md', includeSubfolders: true, version: 'current' });
+  });
+
+  it('lets a document or folder win over organizationId', async () => {
+    await manageDocument({ action: 'export', folderId: 'f-1', organizationId: 'org-1', format: 'md' });
+    expect(sentBody()).toEqual({ folderId: 'f-1', format: 'md', includeSubfolders: true, version: 'current' });
+  });
+
+  it('documents the workspace root in the tool schema', () => {
+    const tool = DOCUMENT_TOOLS.find((t) => t.name === 'manage_document');
+    expect(tool.description).toMatch(/organizationId alone \(the workspace docs/);
+    expect(tool.inputSchema.properties.organizationId.description).toMatch(/exports the workspace docs root/);
+  });
+
   it.each([
     [{ documentId: 'd', folderId: 'f', format: 'md' }, /one thing at a time/],
+    [{ projectId: 'p', organizationId: 'o', format: 'md' }, /one root at a time/],
     [{ format: 'md' }, /Pass what to export/],
     [{ documentId: 'd' }, /format must be/],
     [{ documentId: 'd', format: 'docx' }, /format must be/],

@@ -99,7 +99,8 @@ export const DOCUMENT_TOOLS = [
       'action:"export" downloads documents as files: documentId (one document: format "md" gives a .md, or a ' +
       '.zip with an images/ folder when it has images; "pdf" gives a PDF), folderId (a folder: "md" gives a ' +
       '.zip of .md files with folders kept and links between them made relative, "pdf" one PDF with a ' +
-      'contents page), or projectId alone (every document in the project). Only documents you can read are ' +
+      'contents page), projectId alone (every document in the project), or organizationId alone (the ' +
+      'workspace docs: every project-less folder and document). Only documents you can read are ' +
       'included, up to 500. In a checkout the file is written to .ezmodo/exports/ and its path returned; over ' +
       'the remote connector it comes back as base64, up to 5 MB.',
     inputSchema: {
@@ -119,7 +120,8 @@ export const DOCUMENT_TOOLS = [
             'uploads an image and places it in the document (see filePath, base64, alt, afterHeading). ' +
             '"import" turns a .md/.markdown file or a .zip of them into draft documents and folders ' +
             '(projectId or organizationId, filePath or base64+name, optional folderId and dryRun). ' +
-            '"export" downloads a document, folder or the project root as Markdown or PDF (see format).',
+            '"export" downloads a document, folder, the project root or the workspace docs root as Markdown or ' +
+            'PDF (see format).',
         },
         // --- Identifiers ---
         projectId: {
@@ -135,7 +137,8 @@ export const DOCUMENT_TOOLS = [
             'Org-scoped docs live in the org\'s document areas (Goals, Features, ADRs, How it ' +
             'works — see get_org_areas / list_org_documents); leaving folderId empty for an ' +
             '"adr" or "how-it-works" type auto-files the doc into the matching reserved area. (E-195) ' +
-            'For import, organizationId with no projectId imports into the workspace docs.',
+            'For import, organizationId with no projectId imports into the workspace docs. For export, ' +
+            'organizationId alone (no documentId, folderId or projectId) exports the workspace docs root.',
         },
         documentId: {
           type: 'string',
@@ -155,11 +158,13 @@ export const DOCUMENT_TOOLS = [
           type: 'string',
           enum: ['md', 'pdf'],
           description: 'Required for export. "md": a .md for one document (a .zip with images/ when it has ' +
-            'images), a .zip of .md files for a folder or the project root. "pdf": one PDF. (export)',
+            'images), a .zip of .md files for a folder, the project root or the workspace root. "pdf": one ' +
+            'PDF. (export)',
         },
         includeSubfolders: {
           type: 'boolean',
-          description: 'Include the documents in subfolders (folder or project-root export; default true). (export)',
+          description: 'Include the documents in subfolders (folder, project-root or workspace-root export; default ' +
+            'true). (export)',
         },
         version: {
           type: 'string',
