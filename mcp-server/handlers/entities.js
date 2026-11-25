@@ -45,7 +45,7 @@ export async function getGoal(args) {
   if (args.goalId || args.goalNumber) {
     const result = await callEzmodoAPI('mcpGetGoal', args);
     const goalId = result?.goal?.id || result?.goal?.goalId;
-    const webUrl = await buildGoalUrl(goalId);
+    const webUrl = await buildGoalUrl(goalId, result?.goal);
     if (webUrl && result?.goal) result.goal.webUrl = webUrl;
     return result;
   }
@@ -58,7 +58,7 @@ export async function getGoal(args) {
 
 async function createGoal(args) {
   const result = await callEzmodoAPI('mcpCreateGoal', args);
-  const webUrl = await buildGoalUrl(result?.goalId);
+  const webUrl = await buildGoalUrl(result?.goalId, result);
   if (webUrl) result.webUrl = webUrl;
   return result;
 }
@@ -76,7 +76,7 @@ async function deleteGoal(args) {
 async function generateGoalHowItWorks({ goalId }) {
   const result = await callEzmodoAPI('mcpGenerateGoalHowItWorks', { goalId });
   const id = result?.goal?.id || result?.goal?.goalId || goalId;
-  const webUrl = await buildGoalUrl(id);
+  const webUrl = await buildGoalUrl(id, result?.goal);
   if (webUrl && result?.goal) result.goal.webUrl = webUrl;
   return result;
 }
@@ -96,7 +96,7 @@ async function goalHowItWorksContext({ goalId }) {
 async function applyGoalHowItWorks({ goalId, markdown, sources }) {
   const result = await callEzmodoAPI('mcpApplyGoalHowItWorks', { goalId, markdown, sources });
   const id = result?.goal?.id || result?.goal?.goalId || goalId;
-  const webUrl = await buildGoalUrl(id);
+  const webUrl = await buildGoalUrl(id, result?.goal);
   if (webUrl && result?.goal) result.goal.webUrl = webUrl;
   return result;
 }

@@ -247,7 +247,7 @@ async function createTask(args) {
   }
 
   // Enrich with web URL
-  const webUrl = await buildTaskUrl(result?.taskNumber);
+  const webUrl = await buildTaskUrl(result?.taskNumber, result);
   if (webUrl) result.webUrl = webUrl;
 
   // Write active session file if task starts in_progress
@@ -550,7 +550,7 @@ export async function getTask(rawArgs) {
   // checking for answers (#3893).
   const sessionId = getAgentSessionId();
   const result = await callEzmodoAPI('mcpGetTask', sessionId ? { ...args, sessionId } : args);
-  const webUrl = await buildTaskUrl(result?.task?.taskNumber);
+  const webUrl = await buildTaskUrl(result?.task?.taskNumber, result?.task);
   if (webUrl && result?.task) result.task.webUrl = webUrl;
   return withReviewFeedback(result);
 }

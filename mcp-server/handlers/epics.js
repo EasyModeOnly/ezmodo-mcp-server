@@ -189,7 +189,7 @@ async function createEpic(args) {
   await attachLinks(result, { sourceType: 'epic', sourceId: result?.epicId, links });
 
   // Enrich with web URL
-  const webUrl = await buildEpicUrl(result?.epicNumber);
+  const webUrl = await buildEpicUrl(result?.epicNumber, result);
   if (webUrl) result.webUrl = webUrl;
 
   return result;
@@ -232,7 +232,7 @@ export async function listEpics(args) {
 export async function getEpic(rawArgs) {
   const args = await withRefResolved(rawArgs, 'epicId', 'epic');
   const result = await callEzmodoAPI('mcpGetEpic', args);
-  const webUrl = await buildEpicUrl(result?.epic?.epicNumber);
+  const webUrl = await buildEpicUrl(result?.epic?.epicNumber, result?.epic);
   if (webUrl && result?.epic) result.epic.webUrl = webUrl;
   return result;
 }

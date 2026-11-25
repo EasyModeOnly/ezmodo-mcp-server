@@ -20,7 +20,8 @@ export const QUESTION_TOOLS = [
       'withdraw it. Use it instead of ending a session with a list of things left for the person: ' +
       'each item becomes a question in their Inbox, linked to the work it blocks.\n\n' +
       'KINDS: "todo" = a step only a person can do (say exactly what, and put a deep link to the ' +
-      'exact place in link; if the API cannot do it, also file the API gap as a task and pass its id as ' +
+      'exact place in link, as a ref like DOC:slug or T:42 for anything in ezmodo; if the API ' +
+      'cannot do it, also file the API gap as a task and pass its id as ' +
       'followUpTaskId); "question" = ' +
       'you need a free-text reply; "approval" = it needs approving somewhere else (link to where; ' +
       'nobody approves from the card). For a choice between options, ask a DECISION instead: ' +
@@ -81,7 +82,11 @@ export const QUESTION_TOOLS = [
         },
         link: {
           type: 'string',
-          description: 'A deep link to where the person does it: a web page, a PR, a console screen (create, update)',
+          description: 'Where the person does it (create, update). For anything in ezmodo pass its REF ' +
+            '("DOC:story-threads", "T:902", "web/E:7", "F:12"), or the webUrl an ezmodo response gave you: ' +
+            'a ref is turned into the right page URL and stored as that, and one that names nothing you can ' +
+            'see is refused. Never type an ezmodo URL by hand: one that matches no page is saved but comes ' +
+            'back in `warnings`. Anything else (a PR, a console screen) as a full URL.',
         },
         blocking: {
           type: 'boolean',

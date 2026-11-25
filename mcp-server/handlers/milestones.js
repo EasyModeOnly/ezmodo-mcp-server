@@ -71,14 +71,14 @@ export async function getMilestone(args) {
 
 async function createMilestone(args) {
   const result = await callEzmodoAPI('mcpCreateMilestone', dropEmptyStartDate(args));
-  const webUrl = await buildMilestoneUrl(result?.slug);
+  const webUrl = await buildMilestoneUrl(result?.slug, result);
   if (webUrl) result.webUrl = webUrl;
   return result;
 }
 
 async function fetchSingleMilestone(args) {
   const result = await callEzmodoAPI('mcpGetMilestone', args);
-  const webUrl = await buildMilestoneUrl(result?.milestone?.slug);
+  const webUrl = await buildMilestoneUrl(result?.milestone?.slug, result?.milestone);
   if (webUrl && result?.milestone) result.milestone.webUrl = webUrl;
   return result;
 }
