@@ -490,7 +490,19 @@ async function fetchSingleDocument(args) {
   };
 }
 
+/**
+ * `tags` was advertised on manage_document but the API reads `tagIds`, so it
+ * was dropped without a word (#4094). Refuse it rather than accept it: the
+ * values agents sent were often names, and a tag id is what is stored.
+ */
+function rejectLegacyTags(args) {
+  if (args.tags !== undefined) {
+    throw new Error('manage_document takes tagIds (tag ids from list_tags), not tags.');
+  }
+}
+
 async function createDocument(args) {
+  rejectLegacyTags(args);
   // Support both top-level summary/keyPoints and nested aiContext input.
   // `links` is applied by the MCP layer after the document exists (E-225).
   const { summary, keyPoints, aiContext, links, ...rest } = args;
@@ -516,6 +528,7 @@ async function createDocument(args) {
 }
 
 async function updateDocument(args) {
+  rejectLegacyTags(args);
   // Support both top-level summary/keyPoints and nested aiContext input
   const { summary, keyPoints, aiContext, addRelatedItem, removeRelatedItem, ...rest } = args;
   const hasFlatFields = summary !== undefined || keyPoints !== undefined;

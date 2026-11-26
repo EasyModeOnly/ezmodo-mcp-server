@@ -303,10 +303,11 @@ export const DOCUMENT_TOOLS = [
           type: 'number',
           description: 'Sort order within folder (lower = higher in list). Auto-assigned if omitted on create. (create, update)',
         },
-        tags: {
+        tagIds: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Tags for categorizing and searching (create, update)',
+          description: 'Tag ids (from list_tags or get_current_project_context), not names. On update this ' +
+            'REPLACES the set; [] clears it. (create, update)',
         },
         relatedTaskIds: {
           type: 'array',

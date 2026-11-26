@@ -296,6 +296,23 @@ describe('Document Operations', () => {
     });
   });
 
+  // #4094: the tool advertised `tags`, the API reads `tagIds`, and the
+  // values were silently dropped.
+  describe('tags', () => {
+    it('sends tagIds through on update', async () => {
+      mockCallEzmodoAPI.mockResolvedValueOnce({ success: true });
+      await manageDocument({ action: 'update', documentId: 'doc-1', tagIds: ['t1'] });
+      expect(mockCallEzmodoAPI)
+        .toHaveBeenCalledWith('mcpUpdateDocument', { documentId: 'doc-1', tagIds: ['t1'] });
+    });
+
+    it.each(['create', 'update'])('refuses the old tags argument on %s', async (action) => {
+      await expect(manageDocument({ action, documentId: 'doc-1', projectId: 'p', title: 'x', tags: ['api'] }))
+        .rejects.toThrow(/tagIds/);
+      expect(mockCallEzmodoAPI).not.toHaveBeenCalled();
+    });
+  });
+
   describe('updateDocument', () => {
     it('should update a document', async () => {
       mockCallEzmodoAPI.mockResolvedValueOnce({ success: true, message: 'Document updated' });
