@@ -241,7 +241,10 @@ export const MILESTONE_TOOLS = [
             '(E-309): forecast {expectedDate, earliest, latest, ratePerWeek, remaining, addedPerWeek, creepDate, basis}, ' +
             'onTrack (on_track|at_risk|off_track|unknown), state, stalled, lowData, a plain-language reason (say it ' +
             'as given), and for a parent milestone children[] / ownEpics. The forecast counts tasks first reaching ' +
-            'in review or completed in the last 14 days; with too little history it gives counts only, no date. ' +
+            'in review or completed in the last 14 days; with too little history (under 2 days, or under 5 ' +
+            'finished) it gives counts only, no date. A young milestone (under 14 days) may take its optimistic ' +
+            'date from the project\'s last-7-day pace (basis.optimisticFrom "project_pace", basis.projectPacePerWeek); ' +
+            'the expected date stays on its own pace, so that lifts Off track to At risk at most. ' +
             'progress.children[] (a parent only) is each direct sub-milestone in display order (target date, then ' +
             'version, then creation) with {id, name, slug, status, version, targetDate, targetDateDerived, ' +
             'effectiveStartDate, childCount, epicCount, completedEpics, taskCount, tasksResolved, deferredCount, ' +
