@@ -308,6 +308,8 @@ export const ENDPOINT_MAP = {
   'mcpReleaseGateTypes': { route: 'mcp/v1/releases/gate-types', method: 'GET' },
   'mcpMilestoneRelease': { route: 'mcp/v1/releases/milestones/{milestoneId}', method: 'GET' },
   'mcpMilestoneReleaseStatus': { route: 'mcp/v1/releases/milestones/{milestoneId}/status', method: 'GET' }, // #3295
+  // #4089: what a parent's direct sub-milestones released.
+  'mcpMilestoneNestedReleases': { route: 'mcp/v1/releases/milestones/{milestoneId}/nested-releases', method: 'GET' },
   'mcpCreateReleaseCandidate': { route: 'mcp/v1/releases/milestones/{milestoneId}/candidates', method: 'POST' },
   'mcpAddReleaseChecklistItem': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist', method: 'POST' },
   'mcpApplyReleaseChecklist': { route: 'mcp/v1/releases/milestones/{milestoneId}/checklist/apply', method: 'POST' },

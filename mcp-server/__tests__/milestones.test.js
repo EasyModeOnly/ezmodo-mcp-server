@@ -454,4 +454,59 @@ describe('Milestone Operations', () => {
       expect(get.description).toContain('onRelease');
     });
   });
+  describe('get_milestone includeNestedReleases (#4089)', () => {
+    const nested = {
+      milestoneId: 'ms-parent', total: 2, notListed: [],
+      releases: [{ milestoneId: 'ms-child', version: '1.6.1', state: 'released', releasedAt: '2026-11-18T20:00:00Z' }],
+    };
+
+    it('maps the MCP nested-releases route', () => {
+      expect(ENDPOINT_MAP.mcpMilestoneNestedReleases).toEqual({
+        route: 'mcp/v1/releases/milestones/{milestoneId}/nested-releases', method: 'GET',
+      });
+    });
+
+    it('fetches the nested releases by id and returns them beside the milestone', async () => {
+      mockCallEzmodoAPI
+        .mockResolvedValueOnce({ success: true, milestone: { id: 'ms-parent' } })
+        .mockResolvedValueOnce(nested);
+      const result = await getMilestone({ projectId: 'proj-1', milestoneId: 'ms-parent', includeNestedReleases: true });
+      expect(mockCallEzmodoAPI).toHaveBeenNthCalledWith(1, 'mcpGetMilestone', {
+        projectId: 'proj-1', milestoneId: 'ms-parent',
+      });
+      expect(mockCallEzmodoAPI).toHaveBeenNthCalledWith(2, 'mcpMilestoneNestedReleases', { milestoneId: 'ms-parent' });
+      expect(result.nestedReleases).toEqual(nested);
+    });
+
+    it('resolves a slug lookup to the milestone id first', async () => {
+      mockCallEzmodoAPI
+        .mockResolvedValueOnce({ success: true, milestone: { id: 'ms-parent', slug: 'v1-7-0' } })
+        .mockResolvedValueOnce(nested);
+      await getMilestone({ projectId: 'proj-1', milestoneSlug: 'v1-7-0', includeNestedReleases: true });
+      expect(mockCallEzmodoAPI).toHaveBeenLastCalledWith('mcpMilestoneNestedReleases', { milestoneId: 'ms-parent' });
+    });
+
+    it('does not ask when the option is off, nor in list mode', async () => {
+      mockCallEzmodoAPI.mockResolvedValue({ success: true, milestone: { id: 'ms-parent' }, milestones: [] });
+      const single = await getMilestone({ projectId: 'proj-1', milestoneId: 'ms-parent' });
+      expect(single.nestedReleases).toBeUndefined();
+      await getMilestone({ projectId: 'proj-1', includeNestedReleases: true });
+      const endpoints = mockCallEzmodoAPI.mock.calls.map(([e]) => e);
+      expect(endpoints).not.toContain('mcpMilestoneNestedReleases');
+    });
+
+    it('passes an access refusal through', async () => {
+      mockCallEzmodoAPI
+        .mockResolvedValueOnce({ success: true, milestone: { id: 'ms-parent' } })
+        .mockRejectedValueOnce(createMockError('milestone not found', 404));
+      await expect(getMilestone({ projectId: 'proj-1', milestoneId: 'ms-parent', includeNestedReleases: true }))
+        .rejects.toThrow('milestone not found');
+    });
+
+    it('documents the option on get_milestone', () => {
+      const get = MILESTONE_TOOLS.find((t) => t.name === 'get_milestone');
+      expect(get.inputSchema.properties.includeNestedReleases.type).toBe('boolean');
+      expect(get.inputSchema.properties.includeNestedReleases.description).toContain('nestedReleases');
+    });
+  });
 });

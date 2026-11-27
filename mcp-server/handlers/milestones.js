@@ -45,7 +45,7 @@ export async function manageMilestone(args) {
  * - If includeProgress is true, also fetches progress data.
  */
 export async function getMilestone(args) {
-  const { includeProgress, type, status, ...rest } = args;
+  const { includeProgress, includeNestedReleases, type, status, ...rest } = args;
   const isSingleLookup = rest.milestoneId || rest.milestoneSlug;
 
   if (isSingleLookup) {
@@ -54,6 +54,12 @@ export async function getMilestone(args) {
     if (includeProgress) {
       const progress = await fetchMilestoneProgress(rest);
       result.progress = progress;
+    }
+
+    if (includeNestedReleases) {
+      // The route takes the id; a slug lookup learns it from the milestone.
+      const milestoneId = result?.milestone?.id || rest.milestoneId;
+      if (milestoneId) result.nestedReleases = await fetchNestedReleases(milestoneId);
     }
 
     return result;
@@ -150,6 +156,11 @@ async function draftMilestoneWhatsNew(args) {
 
 async function fetchMilestoneProgress(args) {
   return callEzmodoAPI('mcpGetMilestoneProgress', args);
+}
+
+// What a parent's direct sub-milestones released (#4089, the API's #4075).
+async function fetchNestedReleases(milestoneId) {
+  return callEzmodoAPI('mcpMilestoneNestedReleases', { milestoneId });
 }
 
 async function reorderMilestoneEpics(args) {

@@ -210,7 +210,7 @@ export const MILESTONE_TOOLS = [
     name: 'get_milestone',
     description: 'Retrieve a single milestone by ID, or list all milestones for a project. ' +
       'Provide milestoneId (or milestoneSlug) for single lookup, or just projectId to list all. ' +
-      'Optionally include progress data. ' +
+      'Optionally include progress data, or (includeNestedReleases) what its sub-milestones released. ' +
       'Responses include `descriptionDocumentId` — the id of the backing rich-description Document ' +
       'when the description has been promoted to one (E-189), otherwise omitted. ' +
       '`startDate` is the milestone\'s own start, if set. `effectiveStartDate` is when it actually starts: ' +
@@ -248,6 +248,17 @@ export const MILESTONE_TOOLS = [
             'percentage} over its subtree; each progress.epics[] row says milestoneId (the milestone holding it) and ' +
             'childMilestoneId (the sub-milestone it groups under; absent for the milestone\'s own epics), with its ' +
             'startDate/endDate',
+        },
+        includeNestedReleases: {
+          type: 'boolean',
+          description: 'Single lookup only. If true, also return `nestedReleases`: what the milestone\'s direct ' +
+            'sub-milestones released, for a parent such as 1.7.0 whose own releases are empty. ' +
+            '{milestoneId, evaluatedAt, total (direct sub-milestones), releases[], notListed[]}. releases[] are the ' +
+            'released and releasing children, releasing first, then newest released first; each is {milestoneId, ' +
+            'name, slug, version, status, state (released|releasing), releasedAt, releasedAtSource ' +
+            '(released_date|deployment), run (a release run going, if any), summary, deliverables[] (per-deliverable ' +
+            'release status)}. notListed[] are the children with nothing released and nothing on its way. ' +
+            'Grandchildren are left to their own parent.',
         },
         // --- List filters (used when no milestoneId/milestoneSlug) ---
         type: {
